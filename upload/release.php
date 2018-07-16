@@ -1,6 +1,6 @@
 <?php
-include_once("webid-auth/WebIdAuth.php");
-include_once("webid-auth/WebIdData.php");
+include_once("../../webid.dbpedia.org/WebIdAuth.php");
+include_once("../../webid.dbpedia.org/WebIdData.php");
 
 // add new beta accounts here
 $beta_accounts = array(
@@ -24,7 +24,9 @@ try
 		echo "Could not validate the signature of your Certificate with your WebId Public Key.\n";
 	}
 } catch(Exception $e) {
-	echo $e;
+	echo $e."\n";
+	die;
+
 }
 
 // check if registered
