@@ -33,7 +33,7 @@ package object testhelpers {
 
     val cl = Thread.currentThread().getContextClassLoader
 
-    managed(cl.getResourceAsStream(pkcs12BundleResourceName)).acquireAndGet { bundleStream =>
+    managed(cl.getResourceAsStream(pkcs12BundleResourceName)) apply { bundleStream =>
 
       pkcsClientCertSslContext(bundleStream)
     }
@@ -45,7 +45,7 @@ package object testhelpers {
 
     val builder = HttpClientBuilder.create()
     builder.disableRedirectHandling()
-    builder.setSslcontext(sslContext)
+    builder.setSSLContext(sslContext)
 
     builder.build()
   }

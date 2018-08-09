@@ -1,17 +1,11 @@
 package org.dbpedia.databus.dataidrepo.authentication
 
-import org.dbpedia.databus.dataidrepo.authentication._
-
 import com.typesafe.scalalogging.LazyLogging
-import org.bouncycastle.cert.X509CertificateHolder
 import org.scalatest.{FunSuite, Matchers}
 
-import scala.collection.JavaConverters._
 import scala.util.Success
 
-import java.security.Security
 import java.security.cert.X509Certificate
-import java.security.interfaces.RSAPublicKey
 
 class authenticationTest extends FunSuite with Matchers with LazyLogging {
 
@@ -44,27 +38,10 @@ class authenticationTest extends FunSuite with Matchers with LazyLogging {
       |-----END CERTIFICATE-----
     """.stripMargin
 
-  lazy val parsedCertBouncyCastle = bouncyCastle.parseSingleX059Cert(pemCertString)
 
-  lazy val parsedCertJCA = jca.parseSingleX059Cert(pemCertString)
+  lazy val parsedCertJCA = parseSingleX059Cert(pemCertString)
 
-  test("testParseSingleX059Cert [Bouncy Castle]") {
-
-    def cert = parsedCertBouncyCastle
-
-    cert shouldBe a[Success[_]]
-
-    cert.get shouldBe a[X509CertificateHolder]
-  }
-
-  test("getAlternativeNameURIs [Bouncy Castle]") {
-
-    val altNameURIs = bouncyCastle.getAlternativeNameURIs(parsedCertBouncyCastle.get)
-
-    altNameURIs shouldEqual List("https://neradis.github.io/webid.ttl#this")
-  }
-
-  test("parseSingleX059Cert [JCA]") {
+  test("parseSingleX059Cert") {
 
     def cert = parsedCertJCA
 
@@ -73,16 +50,16 @@ class authenticationTest extends FunSuite with Matchers with LazyLogging {
     cert.get shouldBe a[X509Certificate]
   }
 
-  test("getAlternativeNameURIs [JCA]") {
+  test("getAlternativeNameURIs") {
 
-    val altNameURIs = jca.getAlternativeNameURIs(parsedCertJCA.get)
+    val altNameURIs = getAlternativeNameURIs(parsedCertJCA.get)
 
     altNameURIs shouldEqual List("https://neradis.github.io/webid.ttl#this")
   }
 
-  test("getRSAModulusAndExponent [JCA]") {
+  test("getRSAModulusAndExponent") {
 
-    val modExp = parsedCertJCA.flatMap(jca.getRSAModulusAndExponent)
+    val modExp = parsedCertJCA.flatMap(getRSAModulusAndExponent)
 
     modExp shouldBe a[Success[_]]
 

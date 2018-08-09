@@ -1,95 +1,26 @@
 package org.dbpedia.databus.dataidrepo
 
-import org.dbpedia.databus.dataidrepo.authentication._
-
-import org.bouncycastle.asn1.DERIA5String
-import org.bouncycastle.asn1.x509.{Extension, GeneralName, GeneralNames}
-import org.bouncycastle.cert.X509CertificateHolder
-import org.bouncycastle.openssl.PEMParser
+import javax.servlet.http.HttpServletRequest
 
 import scalaz.std.AllInstances._
 import scalaz.syntax.equal._
 
 import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
+import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-import java.io.{ByteArrayInputStream, StringReader}
+import java.io.ByteArrayInputStream
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import java.security.cert.{CertificateFactory, X509Certificate}
 import java.security.interfaces.RSAPublicKey
-import javax.servlet.http.HttpServletRequest
 
 
 package object authentication {
 
   case class RSAModulusAndExponent(modulus: BigInteger, exponent: BigInteger)
 
-  object bouncyCastle {
-
-    def parsePemString(certString: String): Try[Seq[AnyRef]] = {
-
-      val parser = new PEMParser(new StringReader(certString))
-
-      val results = Stream.continually(Try(parser.readObject())).takeWhile {
-        case Success(null) => false
-        case _ => true
-      }
-
-      results.find(_.isFailure) match {
-
-        case Some(Failure(parseError)) => {
-
-          def msg = s"Error while parsing an object in PEM:\n$certString"
-
-          Failure(new RuntimeException(msg, parseError))
-        }
-
-        case None => Success(results collect { case Success(obj) => obj } toList)
-      }
-    }
-
-    def filterSingleX509Cert(pemObjects: Seq[AnyRef]) = {
-
-      val x509Certs = pemObjects collect { case cert: X509CertificateHolder => cert }
-
-      x509Certs match {
-
-        case singleCert :: Nil => Success(singleCert)
-
-        case Nil => Failure(new RuntimeException("No X509 certificate found in PEM."))
-
-        case multipleCerts => {
-
-          val msg = s"Multiple X509 certificates found in PEM:\n${multipleCerts} certificates"
-
-          Failure(new RuntimeException(msg))
-        }
-      }
-    }
-
-    def parseSingleX059Cert(certString: String) = {
-
-      parsePemString(certString).flatMap(filterSingleX509Cert)
-    }
-
-    def getAlternativeNameURIs(cert: X509CertificateHolder) = {
-
-      def getNameString(gn: GeneralName) = DERIA5String.getInstance(gn.getName).getString()
-
-      val altNames = GeneralNames.fromExtensions(cert.getExtensions, Extension.subjectAlternativeName).getNames
-
-      altNames.filter(_.getTagNo === GeneralName.uniformResourceIdentifier).map { uriName =>
-
-        DERIA5String.getInstance(uriName.getName).getString()
-      } toList
-    }
-  }
-
-  object jca {
-
-    def parseSingleX059Cert(certString: String) = {
+     def parseSingleX059Cert(certString: String) = {
 
       def bytes = certString.getBytes(StandardCharsets.US_ASCII)
 
@@ -174,7 +105,7 @@ package object authentication {
 
           val fixedCertString = fixPemStringFromApacheHttpd(singleCertString)
 
-          authentication.jca.parseSingleX059Cert(singleCertString)
+          authentication.parseSingleX059Cert(singleCertString)
         }
 
         case Nil => Failure(new RuntimeException(s"no client cert received"))
@@ -184,7 +115,6 @@ package object authentication {
     } flatten
 
 
-  }
 
   /**
     * Apache HTTPD offers a non-standard format for the PEM serialisation of client certificates when using

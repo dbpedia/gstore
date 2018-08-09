@@ -1,6 +1,5 @@
 package org.dbpedia.databus.dataidrepo
 
-import org.bouncycastle.openssl.PEMParser
 import org.scalatra._
 
 import scala.collection.JavaConverters._
@@ -29,11 +28,11 @@ class DataIdRepo extends ScalatraServlet {
 
   get("/client-cert-info") {
 
-    val fromContainer = authentication.jca.getSingleCertFromContainer(request)
-      .map(authentication.jca.describeX059Cert)
+    val fromContainer = authentication.getSingleCertFromContainer(request)
+      .map(authentication.describeX059Cert)
 
-    val fromHeader = authentication.jca.getSingleCertFromHeader(request)
-      .map(authentication.jca.describeX059Cert)
+    val fromHeader = authentication.getSingleCertFromHeader(request)
+      .map(authentication.describeX059Cert)
 
     s"""
       |client certificate from Servlet container:
