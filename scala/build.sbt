@@ -26,7 +26,9 @@ libraryDependencies ++= Seq(
   "org.scalaz" %% "scalaz-core" % "7.2.25",
   "org.scalactic" %% "scalactic" % "3.0.5",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0",
-  "com.github.pathikrit" %% "better-files-akka" % "3.5.0"
+  "com.github.pathikrit" %% "better-files" % "3.5.0",
+  "com.jsuereth" %% "scala-arm" % "2.0",
+  "org.scalaj" %% "scalaj-http" % "2.4.1" % "test"
 )
 
 //conflictManager := ConflictManager.strict

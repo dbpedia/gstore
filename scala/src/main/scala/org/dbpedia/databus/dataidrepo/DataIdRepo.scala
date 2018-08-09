@@ -27,7 +27,7 @@ class DataIdRepo extends ScalatraServlet {
     headerLines.mkString("received headers:\n", "\n", "")
   }
 
-  get("/client-cert-info/") {
+  get("/client-cert-info") {
 
     val fromContainer = authentication.jca.getSingleCertFromContainer(request)
       .map(authentication.jca.describeX059Cert)
