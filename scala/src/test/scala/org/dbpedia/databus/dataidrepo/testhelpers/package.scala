@@ -1,5 +1,7 @@
 package org.dbpedia.databus.dataidrepo
 
+import org.dbpedia.databus.dataidrepo.helpers.resourceAsStream
+
 import better.files.File
 import javax.net.ssl.{KeyManagerFactory, SSLContext}
 import org.apache.http.impl.client.HttpClientBuilder
@@ -31,9 +33,7 @@ package object testhelpers {
 
   def pkcsClientCertSslContext(pkcs12BundleResourceName: String): SSLContext = {
 
-    val cl = Thread.currentThread().getContextClassLoader
-
-    managed(cl.getResourceAsStream(pkcs12BundleResourceName)) apply { bundleStream =>
+    resourceAsStream(pkcs12BundleResourceName) apply { bundleStream =>
 
       pkcsClientCertSslContext(bundleStream)
     }
