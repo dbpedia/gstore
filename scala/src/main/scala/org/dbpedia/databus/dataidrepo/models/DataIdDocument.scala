@@ -1,8 +1,6 @@
 package org.dbpedia.databus.dataidrepo.models
 
 import org.dbpedia.databus.dataidrepo.errors
-import org.dbpedia.databus.dataidrepo.errors.DataIdRepoError
-import org.dbpedia.databus.dataidrepo.{DataIdRepo, errors}
 import org.dbpedia.databus.dataidrepo.rdf.conversions._
 import org.dbpedia.databus.dataidrepo.rdf.vocab._
 
@@ -19,17 +17,17 @@ class DataIdDocument(rdf: Model) {
 
     typeStatements map { stmt => new SingleFile(stmt.getSubject) }
   }
-
-
 }
 
 class SingleFile(res: Resource) {
 
-  implicit def errorGen: String => DataIdRepoError = errors.unexpectedDataIdFormat _
+  implicit def errorGen = errors.unexpectedDataIdFormat _
 
-  def associatedAgent = res.getRequiredFunctionalProperty(dataid.associatedAgent)
+  def associatedAgent = res.getRequiredFunctionalProperty(dataid.associatedAgent).coerceUriResource.get
 
-  def downloadURL = res.getRequiredFunctionalProperty(dcat.downloadURL)
+  def downloadURL = res.getRequiredFunctionalProperty(dcat.downloadURL).coerceUriResource.get
 
-  def signatureString = res.getRequiredFunctionalProperty(dataid.signature)
+  def signatureString = res.getRequiredFunctionalProperty(dataid.signature).coerceLiteral.map({
+    _.getString
+  }).get
 }
