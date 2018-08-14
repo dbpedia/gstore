@@ -21,8 +21,10 @@ libraryDependencies ++= Seq(
 
 libraryDependencies ++= Seq(
   "org.eclipse.jgit" % "org.eclipse.jgit" % "5.0.1.201806211838-r",
-  "org.apache.jena" % "jena-arq" % "3.8.0",
+  "org.apache.jena" % "apache-jena-libs" % "3.8.0",
   "org.scalaz" %% "scalaz-core" % "7.2.25",
+  "io.monix" %% "monix" % "2.3.3",
+  "com.google.guava" % "guava" % "26.0-jre",
   "org.scalactic" %% "scalactic" % "3.0.5",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0",
   "com.github.pathikrit" %% "better-files" % "3.5.0",

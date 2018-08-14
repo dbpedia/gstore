@@ -1,6 +1,7 @@
 package org.dbpedia.databus.dataidrepo.models
 
 import org.dbpedia.databus.dataidrepo.helpers._
+import org.dbpedia.databus.dataidrepo.helpers.conversions._
 
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.jena.rdf.model.ModelFactory
