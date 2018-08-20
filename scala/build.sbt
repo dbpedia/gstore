@@ -20,6 +20,7 @@ libraryDependencies ++= Seq(
 )
 
 libraryDependencies ++= Seq(
+  "org.dbpedia.databus" % "databus-shared-lib" % "1.0-SNAPSHOT",
   "org.eclipse.jgit" % "org.eclipse.jgit" % "5.0.1.201806211838-r",
   "org.apache.jena" % "apache-jena-libs" % "3.8.0",
   "org.scalaz" %% "scalaz-core" % "7.2.25",
@@ -38,3 +39,8 @@ enablePlugins(SbtTwirl)
 enablePlugins(ScalatraPlugin)
 
 containerPort in Jetty := 8088
+
+resolvers ++= Seq(
+  "Databus Archiva - Internal" at " http://95.216.13.238:8081/repository/internal/",
+  "Databus Archiva - Snapshots" at " http://95.216.13.238:8081/repository/snapshots/"
+)

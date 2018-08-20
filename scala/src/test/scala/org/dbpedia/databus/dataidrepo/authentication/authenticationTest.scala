@@ -1,5 +1,7 @@
 package org.dbpedia.databus.dataidrepo.authentication
 
+import org.dbpedia.databus.shared.RSAModulusAndExponent
+
 import com.typesafe.scalalogging.LazyLogging
 import org.scalatest.{FunSuite, Matchers}
 

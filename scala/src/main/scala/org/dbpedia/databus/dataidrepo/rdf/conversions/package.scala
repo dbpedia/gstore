@@ -43,7 +43,7 @@ package object conversions {
   implicit class RDFResourceW(val res: Resource) extends AnyVal {
 
     def getRequiredFunctionalProperty(prop: Property)
-      (implicit errorGen: String => DataIdRepoError) = {
+      (implicit errorGen: String => Throwable) = {
 
       res.listProperties(prop).asScala.toList match {
 
@@ -63,39 +63,23 @@ package object conversions {
     def statement: Statement
   }
 
-  case class SubjectInStatement(statement: Statement) extends NodeInStatement[Resource] {
+  case class SubjectInStatement(statement: Statement) extends NodeInStatement[Resource]
+    with ResourceCoercions {
 
     def node = statement.getSubject
   }
 
-  case class ObjectInStatement(statement: Statement) extends NodeInStatement[RDFNode] {
+  case class ObjectInStatement(statement: Statement) extends NodeInStatement[RDFNode]
+    with ResourceCoercions {
 
     def node = statement.getObject
   }
 
-  trait ResourceCoercions {
+  trait ResourceCoercions { this: NodeInStatement[_ <: RDFNode] =>
 
-    def nodeInStmt: NodeInStatement[_ <: RDFNode]
-
-    def node = nodeInStmt.node
-
-    def statement = nodeInStmt.statement
-
-    def coerceUriResource = if(node.isURIResource) Success(node.asResource()) else {
+   def coerceUriResource = if(node.isURIResource) Success(node.asResource()) else {
       Failure(errors.unexpectedRdfFormat(
         s"$node is not an URI-resource:\n$statement"))
-    }
-  }
-
-
-  implicit class NodeCoercion(val nodeInStmt: NodeInStatement[RDFNode]) extends ResourceCoercions {
-
-    def coerceResource = Try(node.asResource()).recoverWith {
-
-      case rre: ResourceRequiredException => Failure(errors.unexpectedRdfFormat(
-        s"$node is not a resource:\n$statement"))
-
-      case ex => Failure(ex)
     }
 
     def coerceLiteral = Try(node.asLiteral()).recoverWith {
@@ -106,11 +90,4 @@ package object conversions {
       case ex => Failure(ex)
     }
   }
-
-  implicit class ResourceCoercion(val nodeInStmt: NodeInStatement[Resource]) extends ResourceCoercions {
-
-    def resource = node
-
-  }
-
 }

@@ -1,5 +1,7 @@
 package org.dbpedia.databus.dataidrepo
 
+import org.dbpedia.databus.shared.RSAModulusAndExponent
+
 import javax.servlet.http.HttpServletRequest
 
 import scalaz.std.AllInstances._
@@ -18,21 +20,19 @@ import java.security.interfaces.RSAPublicKey
 
 package object authentication {
 
-  case class RSAModulusAndExponent(modulus: BigInteger, exponent: BigInteger)
+  def parseSingleX059Cert(certString: String) = {
 
-     def parseSingleX059Cert(certString: String) = {
+    def bytes = certString.getBytes(StandardCharsets.US_ASCII)
 
-      def bytes = certString.getBytes(StandardCharsets.US_ASCII)
+    def cf = CertificateFactory.getInstance("X.509");
 
-      def cf = CertificateFactory.getInstance("X.509");
+    Try(cf.generateCertificate(new ByteArrayInputStream(bytes))) flatMap {
 
-      Try(cf.generateCertificate(new ByteArrayInputStream(bytes))) flatMap {
+      case x509: X509Certificate => Success(x509)
 
-        case x509: X509Certificate => Success(x509)
-
-        case otherCert => Failure(new RuntimeException("Unexpected certificate type: " + otherCert.getType))
-      }
+      case otherCert => Failure(new RuntimeException("Unexpected certificate type: " + otherCert.getType))
     }
+  }
 
     def getAlternativeNameURIs(cert: X509Certificate) = {
 
