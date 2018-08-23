@@ -1,10 +1,9 @@
 package org.dbpedia.databus.dataidrepo
 
-import org.dbpedia.databus.dataidrepo.helpers.conversions.TapableW
+import org.dbpedia.databus.shared.helpers.conversions.TapableW
 
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.jena.query.Dataset
-import org.apache.jena.rdf.model.ResourceFactory
 import org.apache.jena.tdb2.TDB2Factory
 import resource.Resource
 
@@ -17,25 +16,6 @@ import scala.util.Try
   */
 package object rdf extends LazyLogging {
 
-  trait RDFNamespace {
-
-    def namespace: String
-
-    def resource(suffix: String) = ResourceFactory.createResource(namespace + suffix)
-
-    def property(suffix: String)= ResourceFactory.createProperty(namespace + suffix)
-
-    lazy val res = new Dynamic {
-
-      def selectDynamic(suffix: String) = resource(suffix)
-    }
-
-    lazy val prop = new Dynamic {
-
-      def selectDynamic(suffix: String) = property(suffix)
-    }
-  }
-
   lazy val repoTDB = TDB2Factory.connectDataset(config.tdbLocation.pathAsString) tap { dataset =>
 
     sys addShutdownHook {
@@ -46,7 +26,7 @@ package object rdf extends LazyLogging {
     }
   }
 
-  implicit def tdbTrancationResource = new Resource[Dataset] {
+  implicit def tdbTransationResource = new Resource[Dataset] {
 
     override def closeAfterException(r: Dataset, t: Throwable): Unit = {
       logger.warn("TDB rollback after error", t)

@@ -1,3 +1,9 @@
+import better.files.File
+
+import scala.tools.nsc.classpath.FileUtils
+
+import java.nio.file.Files
+
 val ScalatraVersion = "2.6.3"
 
 organization := "org.dbpedia"
@@ -20,7 +26,7 @@ libraryDependencies ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "org.dbpedia.databus" % "databus-shared-lib" % "1.0-SNAPSHOT",
+  ("org.dbpedia.databus" % "databus-shared-lib" % "0.1.2").changing(),
   "org.eclipse.jgit" % "org.eclipse.jgit" % "5.0.1.201806211838-r",
   "org.apache.jena" % "apache-jena-libs" % "3.8.0",
   "org.scalaz" %% "scalaz-core" % "7.2.25",
@@ -41,6 +47,16 @@ enablePlugins(ScalatraPlugin)
 containerPort in Jetty := 8088
 
 resolvers ++= Seq(
-  "Databus Archiva - Internal" at " http://95.216.13.238:8081/repository/internal/",
-  "Databus Archiva - Snapshots" at " http://95.216.13.238:8081/repository/snapshots/"
+  "Databus Archiva - Internal" at "http://95.216.13.238:8081/repository/internal/",
+  Resolver.mavenLocal
 )
+
+updateOptions := updateOptions.value
+  .withCachedResolution(false)
+
+lazy val updateBoth = taskKey[Unit]("update, then updateClassifiers")
+
+updateBoth := Def.sequential(
+  update,
+  updateClassifiers,
+).value

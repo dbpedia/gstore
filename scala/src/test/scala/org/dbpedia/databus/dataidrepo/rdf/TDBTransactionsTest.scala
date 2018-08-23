@@ -1,7 +1,7 @@
 package org.dbpedia.databus.dataidrepo.rdf
 
 import org.dbpedia.databus.dataidrepo.rdf.conversions._
-import org.dbpedia.databus.dataidrepo.helpers.conversions._
+import org.dbpedia.databus.shared.helpers.conversions._
 
 import monix.eval.Task
 import monix.execution.atomic.Atomic
@@ -17,9 +17,6 @@ import scala.collection.JavaConverters._
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-/**
-  * Created by Markus Ackermann.
-  */
 class TDBTransactionsTest extends FlatSpec with Matchers {
 
   val shouldBePersistedStr = "urn:shouldBePersisted"
@@ -28,7 +25,7 @@ class TDBTransactionsTest extends FlatSpec with Matchers {
 
   def checkOnWorkedTDB(checks: WorkedTDB => Unit) = {
 
-    val allTransactions = Random.nextInt(1000) + 100
+    val allTransactions = Random.nextInt(10) + 10
 
     val ds = TDB2Factory.createDataset()
 

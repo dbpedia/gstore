@@ -2,7 +2,7 @@ package org.dbpedia.databus.dataidrepo.rdf
 
 import org.dbpedia.databus.dataidrepo.errors
 import org.dbpedia.databus.dataidrepo.errors.DataIdRepoError
-import org.dbpedia.databus.dataidrepo.helpers.conversions.TapableW
+import org.dbpedia.databus.shared.helpers.conversions.TapableW
 
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.jena.query.{Dataset, TxnType}
