@@ -1,9 +1,5 @@
 import better.files.File
 
-import scala.tools.nsc.classpath.FileUtils
-
-import java.nio.file.Files
-
 val ScalatraVersion = "2.6.3"
 
 organization := "org.dbpedia"
@@ -26,10 +22,10 @@ libraryDependencies ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  ("org.dbpedia.databus" % "databus-shared-lib" % "0.1.2").changing(),
+  ("org.dbpedia.databus" % "databus-shared-lib" % "0.1.3").changing(),
   "org.eclipse.jgit" % "org.eclipse.jgit" % "5.0.1.201806211838-r",
   "org.apache.jena" % "apache-jena-libs" % "3.8.0",
-  "org.scalaz" %% "scalaz-core" % "7.2.25",
+  "org.scalaz" %% "scalaz-core" % "7.2.26",
   "io.monix" %% "monix" % "2.3.3",
   "com.google.guava" % "guava" % "26.0-jre",
   "org.scalactic" %% "scalactic" % "3.0.5",
@@ -54,9 +50,32 @@ resolvers ++= Seq(
 updateOptions := updateOptions.value
   .withCachedResolution(false)
 
-lazy val updateBoth = taskKey[Unit]("update, then updateClassifiers")
+val updateBoth = taskKey[Unit]("update, then updateClassifiers")
 
 updateBoth := Def.sequential(
   update,
   updateClassifiers,
 ).value
+
+val warTargetLocation = settingKey[String]("location to copy a war to for deployment")
+
+val packageAndDeployToTomcat = taskKey[Unit]("package the war and copy it to the Tomcat wabapps dir")
+
+warTargetLocation := "/var/lib/tomcat8/webapps/ROOT.war"
+
+packageAndDeployToTomcat := {
+
+  val warSourceLocation = File(sbt.Keys.`package`.value.toPath)
+
+  val targetLocation = Some(File(warTargetLocation.value)).collect {
+
+    case file if file.isRegularFile || file.isSymbolicLink  => file
+
+    case dir if dir.isDirectory => dir / warSourceLocation.name
+  }
+
+  targetLocation foreach { target =>
+
+    warSourceLocation.copyTo(target, overwrite = true)
+  }
+}

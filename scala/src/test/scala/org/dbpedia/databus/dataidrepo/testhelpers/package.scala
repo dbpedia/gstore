@@ -1,20 +1,19 @@
 package org.dbpedia.databus.dataidrepo
 
-import org.dbpedia.databus.dataidrepo.helpers.resourceAsStream
+import org.dbpedia.databus.shared.helpers.resourceAsStream
 
-import better.files.File
+import com.typesafe.scalalogging.LazyLogging
 import javax.net.ssl.{KeyManagerFactory, SSLContext}
 import org.apache.http.impl.client.HttpClientBuilder
-import resource._
 
-import java.io.{FileInputStream, InputStream}
+import java.io.InputStream
 import java.security.KeyStore
 
 /**
   * Created by Markus Ackermann.
   * No rights reserved.
   */
-package object testhelpers {
+package object testhelpers extends LazyLogging {
 
   def pkcsClientCertSslContext(pkcs12BundleInput: InputStream) = {
 

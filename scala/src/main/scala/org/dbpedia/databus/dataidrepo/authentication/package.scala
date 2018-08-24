@@ -1,6 +1,6 @@
 package org.dbpedia.databus.dataidrepo
 
-import org.dbpedia.databus.shared.RSAModulusAndExponent
+import org.dbpedia.databus.shared.authentification.RSAModulusAndExponent
 
 import javax.servlet.http.HttpServletRequest
 
