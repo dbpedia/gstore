@@ -1,7 +1,7 @@
 package org.dbpedia.databus.dataidrepo.models
 
 import org.dbpedia.databus.dataidrepo.errors
-import org.dbpedia.databus.dataidrepo.rdf.conversions._
+import org.dbpedia.databus.shared.rdf.conversions._
 import org.dbpedia.databus.shared.rdf.vocab
 
 import org.apache.jena.rdf.model.{Model, Resource}

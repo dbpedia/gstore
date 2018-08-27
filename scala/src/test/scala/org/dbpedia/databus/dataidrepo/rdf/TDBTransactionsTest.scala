@@ -4,18 +4,17 @@ import org.dbpedia.databus.dataidrepo.rdf.conversions._
 import org.dbpedia.databus.shared.helpers.conversions._
 
 import monix.eval.Task
-import monix.execution.atomic.Atomic
 import monix.execution.Scheduler.Implicits.global
-import org.apache.jena.graph.NodeFactory
+import monix.execution.atomic.Atomic
 import org.apache.jena.query.Dataset
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.tdb2.TDB2Factory
 import org.scalatest.{FlatSpec, Matchers}
 
-import scala.util.Random
 import scala.collection.JavaConverters._
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.util.Random
 
 class TDBTransactionsTest extends FlatSpec with Matchers {
 

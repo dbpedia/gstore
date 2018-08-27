@@ -3,8 +3,9 @@ package org.dbpedia.databus.dataidrepo
 import org.dbpedia.databus.shared.helpers.resourceAsStream
 
 import com.typesafe.scalalogging.LazyLogging
-import javax.net.ssl.{KeyManagerFactory, SSLContext}
+import javax.net.ssl._
 import org.apache.http.impl.client.HttpClientBuilder
+import scalaj.http.{BaseHttp, HttpConstants, HttpOptions}
 
 import java.io.InputStream
 import java.security.KeyStore
@@ -14,6 +15,14 @@ import java.security.KeyStore
   * No rights reserved.
   */
 package object testhelpers extends LazyLogging {
+
+  def defaultX509TrustManager = {
+
+    val tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm)
+
+    tmf.init(null.asInstanceOf[KeyStore])
+    tmf.getTrustManagers.collect({case x509: X509TrustManager => x509}).head
+  }
 
   def pkcsClientCertSslContext(pkcs12BundleInput: InputStream) = {
 
@@ -47,5 +56,14 @@ package object testhelpers extends LazyLogging {
     builder.setSSLContext(sslContext)
 
     builder.build()
+  }
+
+  def scalajHttpWithClientCert(pkcs12BundleResourceName: String) = {
+
+    val sslContext = pkcsClientCertSslContext(pkcs12BundleResourceName)
+
+    val defaultOptionsAndSSL = HttpConstants.defaultOptions :+ HttpOptions.sslSocketFactory(sslContext.getSocketFactory)
+
+    new BaseHttp(options = defaultOptionsAndSSL)
   }
 }
