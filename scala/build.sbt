@@ -22,7 +22,7 @@ libraryDependencies ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  ("org.dbpedia.databus" % "databus-shared-lib" % "0.1.4").changing(),
+  ("org.dbpedia.databus" % "databus-shared-lib" % "0.1.5").changing(),
   "org.eclipse.jgit" % "org.eclipse.jgit" % "5.0.1.201806211838-r",
   "org.apache.jena" % "apache-jena-libs" % "3.8.0",
   "org.scalaz" %% "scalaz-core" % "7.2.26",
@@ -32,7 +32,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0",
   "com.github.pathikrit" %% "better-files" % "3.5.0",
   "com.jsuereth" %% "scala-arm" % "2.0",
-  "org.scalaj" %% "scalaj-http" % "2.4.1" % "test"
+  "org.scalaj" %% "scalaj-http" % "2.4.1"
 )
 
 //conflictManager := ConflictManager.strict

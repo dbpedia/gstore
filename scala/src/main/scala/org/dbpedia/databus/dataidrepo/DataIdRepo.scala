@@ -1,6 +1,6 @@
 package org.dbpedia.databus.dataidrepo
 
-import org.dbpedia.databus.shared.signing
+import org.dbpedia.databus.dataidrepo.handlers.DataIdUploadHandler
 
 import javax.servlet.annotation.MultipartConfig
 import org.scalatra._
@@ -10,6 +10,7 @@ import resource._
 
 import scala.collection.JavaConverters._
 import scala.io.{Codec, Source}
+import scala.util.{Failure, Success}
 
 
 @MultipartConfig(maxFileSize=10*1024*1024)
@@ -52,6 +53,8 @@ class DataIdRepo extends ScalatraServlet with FileUploadSupport {
 
   post("/dataid/upload") {
 
+    import DataIdRepo.UploadPartNames._
+
     def notMultiPart = request.contentType.fold(true) { ct => !(ct startsWith "multipart/") }
 
     if(notMultiPart) {
@@ -62,40 +65,47 @@ class DataIdRepo extends ScalatraServlet with FileUploadSupport {
       halt(BadRequest(s"Missing required part(s): ${(expectedPartsForUpload -- fileParams.keySet).mkString(", ")}"))
     }
 
-    val dataIdPart = fileParams("dataid")
-    val signaturePart = fileParams("dataid-signature")
-    val paramsQueryString = managed(fileParams("params").getInputStream) apply { is =>
+     val clientCert = authentication.getSingleCertFromContainer(request) match {
 
-      Source.fromInputStream(is)(Codec.UTF8).mkString
+      case Failure(ex) => halt(BadRequest(s"Provision of a X509 client certificate expected, but so such certificate " +
+        "could be retrieved due to:\n" + ex.toString))
+
+      case Success(cert) => cert
     }
 
-    val formParams = MapQueryString.parseString(paramsQueryString)
+    val dataIdStream = managed(fileParams(dataId).getInputStream)
 
-    val clientCert = authentication.getSingleCertFromContainer(request)
+    val signature = fileParams(dataIdSignature).get()
 
-    val publicKey = clientCert.map(_.getPublicKey)
+    val uploadParamsMap = managed(fileParams(uploadParams).getInputStream) apply { is =>
 
-    val verification = publicKey map { pubKey =>
+      def paramsQueryString = Source.fromInputStream(is)(Codec.UTF8).mkString
 
-      managed(dataIdPart.getInputStream) apply { dataIdStream =>
-
-        signing.verifyInputStream(pubKey, signaturePart.get(), dataIdStream)
-       }
+      MapQueryString.parseString(paramsQueryString)
     }
 
-    s"""
-      |so far, so good
-      |formParams:
-      |${formParams mkString "\n"}
-      |client cert:
-      |${clientCert.map(authentication.describeX059Cert)}
-      |verification: $verification
-      |that's all, folks!
-    """.stripMargin
+    val handler = new DataIdUploadHandler(clientCert, dataIdStream, signature, uploadParamsMap)
+
+    handler.response
   }
 }
 
 object DataIdRepo {
 
-  lazy val expectedPartsForUpload = Set("dataid", "dataid-signature", "params")
+  lazy val expectedPartsForUpload = {
+
+    import UploadPartNames._
+
+    Set(dataId, dataIdSignature, uploadParams)
+  }
+
+  object UploadPartNames {
+
+    val (dataId, dataIdSignature, uploadParams) = ("dataid", "dataid-signature", "upload-params")
+  }
+
+  object UploadParams {
+
+    val (dataIdLocation, allowOverwrite) = ("DataIdLocation", "AllowOverwrite")
+  }
 }

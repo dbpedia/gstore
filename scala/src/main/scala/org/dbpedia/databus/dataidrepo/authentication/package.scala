@@ -12,7 +12,6 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 import java.io.ByteArrayInputStream
-import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import java.security.cert.{CertificateFactory, X509Certificate}
 import java.security.interfaces.RSAPublicKey
@@ -79,6 +78,7 @@ package object authentication {
     }
 
     def getSingleCertFromContainer(request: HttpServletRequest) = {
+
       val certOption = Option(request.getAttribute("javax.servlet.request.X509Certificate")).collect {
 
         case cert: X509Certificate => Success(cert)
