@@ -5,6 +5,9 @@
 *.swp
 *.out
 
+# project specific
+dataid-repo-tdb/
+
 # rails specific
 *.sqlite3
 src/main/scala/org/dbpedia/databus/dataidrepo/settings/database.yml
