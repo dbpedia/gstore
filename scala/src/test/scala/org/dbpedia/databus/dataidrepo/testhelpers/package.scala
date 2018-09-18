@@ -21,7 +21,7 @@ package object testhelpers extends LazyLogging {
     val tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm)
 
     tmf.init(null.asInstanceOf[KeyStore])
-    tmf.getTrustManagers.collect({case x509: X509TrustManager => x509}).head
+    tmf.getTrustManagers.collect({ case x509: X509TrustManager => x509 }).head
   }
 
   def pkcsClientCertSslContext(pkcs12BundleInput: InputStream) = {
@@ -62,8 +62,13 @@ package object testhelpers extends LazyLogging {
 
     val sslContext = pkcsClientCertSslContext(pkcs12BundleResourceName)
 
-    val defaultOptionsAndSSL = HttpConstants.defaultOptions :+ HttpOptions.sslSocketFactory(sslContext.getSocketFactory)
+    val httpOptions = Seq(
+      HttpOptions.connTimeout(1000),
+      HttpOptions.readTimeout(30000),
+      HttpOptions.followRedirects(false),
+      HttpOptions.sslSocketFactory(sslContext.getSocketFactory),
+    )
 
-    new BaseHttp(options = defaultOptionsAndSSL)
+    new BaseHttp(options = httpOptions)
   }
 }

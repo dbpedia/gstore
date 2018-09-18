@@ -36,18 +36,15 @@ class DataIdRepo extends ScalatraServlet with FileUploadSupport {
 
   get("/client-cert-info") {
 
-    val fromContainer = authentication.getSingleCertFromContainer(request)
+    lazy val fromContainer = authentication.getSingleCertFromContainer(request)
       .map(authentication.describeX059Cert)
 
-    val fromHeader = authentication.getSingleCertFromHeader(request)
+    lazy val fromHeader = authentication.getSingleCertFromHeader(request)
       .map(authentication.describeX059Cert)
 
     s"""
       |client certificate from Servlet container:
       |$fromContainer
-      |
-      |client certificate extracted from HTTP Header "${settings.clientCertHeaderName}":
-      |$fromHeader
     """.stripMargin
   }
 
@@ -107,5 +104,7 @@ object DataIdRepo {
   object UploadParams {
 
     val (dataIdLocation, allowOverwrite) = ("DataIdLocation", "AllowOverwrite")
+
+    val (dataIdIdentifier, dataIdVersion) = ("DataIdIdentifier", "DataIdVersion")
   }
 }

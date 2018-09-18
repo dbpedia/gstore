@@ -3,20 +3,33 @@ package org.dbpedia.databus.dataidrepo.rdf
 import org.dbpedia.databus.dataidrepo.rdf.conversions._
 import org.dbpedia.databus.shared.helpers.conversions._
 
+import better.files.File
+import com.typesafe.scalalogging.LazyLogging
 import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
 import monix.execution.atomic.Atomic
-import org.apache.jena.query.Dataset
-import org.apache.jena.rdf.model.{Model, ModelFactory}
+import org.apache.jena.query.{Dataset, TxnType}
+import org.apache.jena.rdf.model.{Model, ModelFactory, Resource}
 import org.apache.jena.tdb2.TDB2Factory
 import org.scalatest.{FlatSpec, Matchers}
+import org.scalactic.Requirements._
+import org.scalactic.Snapshots._
+import org.scalactic.TypeCheckedTripleEquals._
+
 
 import scala.collection.JavaConverters._
-import scala.concurrent.Await
+import scala.concurrent.{Await, Promise}
 import scala.concurrent.duration._
-import scala.util.Random
+import scala.concurrent.duration._
+import scala.util.{Random, Try}
+import scala.language.postfixOps
 
-class TDBTransactionsTest extends FlatSpec with Matchers {
+
+import java.util.concurrent.{Callable, CompletableFuture, Executors, Future}
+import java.util.concurrent.CompletableFuture._
+import java.util.function.Supplier
+
+class TDBTransactionsTest extends FlatSpec with Matchers with LazyLogging {
 
   val shouldBePersistedStr = "urn:shouldBePersisted"
 
@@ -47,7 +60,7 @@ class TDBTransactionsTest extends FlatSpec with Matchers {
           model.createResource(allowedIRI).addLiteral(prop, withSuccess)
         }
 
-        ds writeTransaction {
+        ds writeTransaction { dataset =>
 
           val namedModel = ModelFactory.createDefaultModel().tap(addAllowedStatement)
 
@@ -65,8 +78,8 @@ class TDBTransactionsTest extends FlatSpec with Matchers {
 
     val checked = Task.gatherUnordered(Random.shuffle(transactions)).map { _ =>
 
-      ds.readTransaction {
-        checks(WorkedTDB(ds, allTransactions, successCounter.get))
+      ds.readTransaction { dataset =>
+        checks(WorkedTDB(dataset, allTransactions, successCounter.get))
       }
     }
 
@@ -101,7 +114,87 @@ class TDBTransactionsTest extends FlatSpec with Matchers {
 
     checkOnWorkedTDB { case WorkedTDB(ds, _, _) =>
 
-        ds.listNames().asScala.find(_ contains "illegal") should be (None)
+      ds.listNames().asScala.find(_ contains "illegal") should be(None)
     }
+  }
+
+  "In a minimal exchange threads scenario there" should "be havoc concering transaction" in {
+
+    val tdb = TDB2Factory.connectDataset(File.newTemporaryDirectory().pathAsString)
+
+    val executorA = Executors.newSingleThreadExecutor()
+    val executorB = Executors.newSingleThreadExecutor()
+
+
+    val writePromiseA = Promise[Resource]()
+    val readPromiseB = Promise[Unit]()
+
+    val valueProp = tdb.getDefaultModel.createProperty("<urn:value>")
+
+
+    val writeAFut: CompletableFuture[Integer] = supplyAsync(() => {
+
+      writePromiseA.complete(Try {
+        logger.debug("starting write transaction " + snap(tdb.isInTransaction, tdb.transactionMode, Thread.currentThread))
+        tdb.begin(TxnType.WRITE)
+        logger.debug("adding statement " + snap(tdb.isInTransaction, tdb.transactionMode, Thread.currentThread))
+        tdb.getDefaultModel.createResource("<urn:A>").addLiteral(valueProp, "A").tap { res =>
+        }
+      })
+
+      logger.debug("reading from B complete:" + Await.result(readPromiseB.future, 5 seconds)
+        + "\n" + snap(tdb.isInTransaction, tdb.transactionMode, Thread.currentThread))
+
+      tdb.commit()
+      1
+    }, executorA)
+
+    val readBFut: CompletableFuture[Integer] = supplyAsync(() => {
+
+      readPromiseB.complete(Try {
+        logger.debug("starting read transaction " + snap(tdb.isInTransaction, tdb.transactionMode, Thread.currentThread))
+        tdb.begin(TxnType.READ)
+        logger.debug("add commands for resource complete:" + Await.result(writePromiseA.future, 5 seconds).getURI
+          + "\n" + snap(tdb.isInTransaction, tdb.transactionMode, Thread.currentThread))
+        logger.debug("statemens seen from B:\n" +
+          tdb.getDefaultModel.createResource("<urn:A>").listProperties().asScala.mkString("\n"))
+
+      })
+
+//      tdb.end()
+      2
+    }, executorB)
+
+    val commitA = writeAFut.thenRunAsync(() => {
+      logger.debug("commit for A " + snap(tdb.isInTransaction, tdb.transactionMode, Thread.currentThread))
+      tdb.commit
+      tdb.end()
+    }, executorA)
+
+    val endB = readBFut.thenRunAsync(() => {
+      logger.debug("txn end for B " + "\n" + snap(tdb.isInTransaction, tdb.transactionMode, Thread.currentThread))
+      tdb.end
+    }, executorB)
+
+    CompletableFuture.allOf(writeAFut, readBFut).join()
+
+    val persistedStatements = {
+      tdb.begin(TxnType.READ)
+      val stmts = tdb.getDefaultModel.listStatements().asScala.toList
+      tdb.end()
+      stmts
+    }
+
+    logger.debug("persisted statements:\n" + persistedStatements.mkString("\n"))
+
+    persistedStatements should have size (1)
+
+    persistedStatements.exists({
+      _.getObject.asLiteral().getString == "A"
+    }) should be(true)
+
+    persistedStatements.exists({
+      _.getObject.asLiteral().getString == "B"
+    }) should be(false)
   }
 }

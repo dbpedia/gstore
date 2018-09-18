@@ -16,17 +16,24 @@ import scala.util.Try
   */
 package object rdf extends LazyLogging {
 
-  lazy val repoTDB = TDB2Factory.connectDataset(config.tdbLocation.pathAsString) tap { dataset =>
+  lazy val repoTDB = {
 
-    sys addShutdownHook {
-      Try(dataset.close).fold(
-        ex => logger.error("Error while closing TDB store", ex),
-        _ => logger.info("TDB closed (from shutdown hook)")
-      )
+    logger.info(s"TDB location: ${config.persistence.tdbLocation.pathAsString}")
+
+    config.persistence.tdbLocation.createDirectories()
+
+    TDB2Factory.connectDataset(config.persistence.tdbLocation.pathAsString) tap { dataset =>
+
+      sys addShutdownHook {
+        Try(dataset.close).fold(
+          ex => logger.error("Error while closing TDB store", ex),
+          _ => logger.info("TDB closed (from shutdown hook)")
+        )
+      }
     }
   }
 
-  implicit def tdbTransationResource = new Resource[Dataset] {
+  implicit def tdbTransactionResource = new Resource[Dataset] {
 
     override def closeAfterException(r: Dataset, t: Throwable): Unit = {
       logger.warn("TDB rollback after error", t)

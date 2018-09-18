@@ -5,20 +5,23 @@ import org.dbpedia.databus.shared.helpers.conversions.TapableW
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.jena.query.{Dataset, TxnType}
 import resource.{Resource => _, _}
+import org.scalactic.Snapshots._
 
-import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
 
 
 package object conversions {
 
   implicit class DatasetW(val ds: Dataset) extends LazyLogging {
 
-    def readTransaction[T](work: => T) = inTransaction(TxnType.READ)(work)
+    def readTransaction[T](work: Dataset => T) = inTransaction(TxnType.READ)(work)
 
-    def writeTransaction[T](work: => T) = inTransaction(TxnType.WRITE)(work)
+    def writeTransaction[T](work: Dataset => T) = inTransaction(TxnType.WRITE)(work)
 
-    def inTransaction[T](txnType: TxnType)(work: => T) = {
+    def inTransaction[T](txnType: TxnType)(work: Dataset => T): T = {
+
+      logger.debug("inTransaction: " + snap(txnType))
 
       /*todo: It seems that transactions work properly also without nailing it to a specific thread
         -> can we rely on that ?
@@ -28,9 +31,17 @@ package object conversions {
 
       val fut = Future {
         logger.debug("starting TDB transaction")
-        managed(ds.tap(_.begin(txnType))).foreach(_ => work)
+        managed({
+          ds.tap({ dataset =>
+            logger.debug(s"dataset.begin($txnType)")
+            dataset.begin(txnType)})
+        }).apply({ ds =>
+          logger.debug(s"workin...")
+          work(ds)
+        })
       }
-      Await.result(fut, 1.minute)
+
+      Await.result(fut, 10.minute)
     }
   }
 }

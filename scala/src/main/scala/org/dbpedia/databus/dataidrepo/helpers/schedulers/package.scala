@@ -11,14 +11,14 @@ import java.util.concurrent.Executors
 
 package object schedulers extends LazyLogging {
 
-  implicit lazy val tdbTransactionExecutionContext = {
+  lazy val tdbTransactionExecutor = {
 
     def threadFactory = new ThreadFactoryBuilder().tap({ builder =>
       builder.setDaemon(true)
       builder.setNameFormat("tdb-txn-%d")
     }).build()
 
-    val executorService = Executors.newCachedThreadPool(threadFactory).tap { es =>
+    Executors.newCachedThreadPool(threadFactory).tap { es =>
 
       sys.addShutdownHook {
 
@@ -26,7 +26,24 @@ package object schedulers extends LazyLogging {
         es.shutdown()
       }
     }
+  }
 
-    ExecutionContext.fromExecutorService(executorService)
+  implicit lazy val tdbTransactionExecutionContext = ExecutionContext.fromExecutor(tdbTransactionExecutor)
+
+  lazy val intervalScheduler = {
+
+    def threadFactory = new ThreadFactoryBuilder().tap({ builder =>
+      builder.setDaemon(true)
+      builder.setNameFormat("interval-scheduler-%d")
+    }).build()
+
+    Executors.newSingleThreadScheduledExecutor(threadFactory).tap { es =>
+
+      sys.addShutdownHook {
+
+        logger.debug("shutting down interval scheduler")
+        es.shutdown()
+      }
+    }
   }
 }

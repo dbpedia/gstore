@@ -9,7 +9,7 @@ import scala.util.Success
 
 import java.security.cert.X509Certificate
 
-class authenticationTest extends FunSuite with Matchers with LazyLogging {
+class AuthenticationTest extends FunSuite with Matchers with LazyLogging {
 
   val pemCertString =
     """

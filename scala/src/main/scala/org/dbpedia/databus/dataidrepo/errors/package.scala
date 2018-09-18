@@ -4,11 +4,15 @@ package object errors {
 
   trait DataIdRepoError extends Exception
 
+  class ConfigurationError(msg: String) extends Exception(msg) with DataIdRepoError
+
   class UnexpectedRdfFormatError(msg: String) extends Exception(msg) with DataIdRepoError
 
   class UnexpectedDataIdFormatError(msg: String) extends UnexpectedRdfFormatError(msg)
 
   class UnexpectedRequestFormatError(msg: String) extends DataIdRepoError
+
+  def configurationError(msg: String) = new ConfigurationError(msg)
 
   def unexpectedRdfFormat(msg: String) = new UnexpectedRdfFormatError(msg)
 
