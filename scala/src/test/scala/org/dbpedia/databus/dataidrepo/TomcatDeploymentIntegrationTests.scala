@@ -1,19 +1,14 @@
 package org.dbpedia.databus.dataidrepo
 
-import org.dbpedia.databus.shared.authentification.{PKCS12File, RSAKeyPair}
+import org.dbpedia.databus.shared.DataIdUpload
 import org.dbpedia.databus.shared.helpers._
-import org.dbpedia.databus.shared.signing
 
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.http.client.methods.HttpGet
 import org.scalatra.test.scalatest.ScalatraFlatSpec
 import resource.managed
-import scalaj.http.MultiPart
 
 import scala.io.Source
-
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 class TomcatDeploymentIntegrationTests extends ScalatraFlatSpec with LazyLogging {
 
@@ -40,65 +35,23 @@ class TomcatDeploymentIntegrationTests extends ScalatraFlatSpec with LazyLogging
 
   it should "show some reaction we test incrementally for /dataid/upload" in {
 
-    import DataIdRepo.{UploadParams, UploadPartNames}
-
-    val dataIdResourceName = "mammals-1.0.0_dataid.ttl"
+    val (dataIdResourceName, testCertResourceName) = ("mammals-1.0.0_dataid.ttl", "test-cert-bundle.p12")
 
     val dataIdTargetLocation = s"http://databus.dbpedia.org/test/$dataIdResourceName"
 
-    val dataIdSize = resourceAsStream(dataIdResourceName) acquireAndGet { is =>
 
-      Stream.continually(is.read()).takeWhile(_ != -1).size
-    }
+    val resp = DataIdUpload.upload(s"$deploymentBaseIRI/dataid/upload", resourceAsStream(dataIdResourceName),
+      resourceAsStream(testCertResourceName), testCertResourceName, dataIdTargetLocation, true)
 
-    (resourceAsStream(dataIdResourceName) and resourceAsStream(dataIdResourceName)) apply {
-      case (dataIdForSend, dataIdForSign) =>
+    logger.debug("response meta: " + resp.toString)
+    logger.debug("response body: " + resp.body)
 
-        val sslContext = testhelpers.pkcsClientCertSslContext("test-cert-bundle.p12")
-
-        val pkcs12 = resoucreAsFile("test-cert-bundle.p12") apply (PKCS12File(_))
-
-        val RSAKeyPair(publicKey, privateKey) = pkcs12.rsaKeyPairs.head
-
-        def dataIdPart = MultiPart(UploadPartNames.dataId, "dataid.ttl", "text/turtle", dataIdForSend, dataIdSize,
-          bytesWritten => logger.debug(s"$bytesWritten bytes written"))
-
-        def signaturePart = MultiPart(UploadPartNames.dataIdSignature, "dataid.ttl.sig", "application/pkcs7-signature",
-          signing.signInputStream(privateKey, dataIdForSign))
-
-        val params = Map(
-          UploadParams.dataIdLocation -> dataIdTargetLocation,
-          UploadParams.allowOverwrite -> true.toString
-        )
-
-        def encodedParamsQueryString = {
-
-          def encode: String => String = URLEncoder.encode(_, StandardCharsets.UTF_8.name())
-
-          params.map({ case (k, v) => s"$k=${encode(v)}" }).mkString("&")
-        }
-
-        def paramsPart = MultiPart(UploadPartNames.uploadParams, "dataid.params", "application/x-www-form-urlencoded",
-          encodedParamsQueryString)
-
-        val sslHttp = testhelpers.scalajHttpWithClientCert("test-cert-bundle.p12")
-
-        val req = sslHttp(s"$deploymentBaseIRI/dataid/upload")
-          .postMulti(dataIdPart, signaturePart, paramsPart)
-
-        val serviceResp = req.asString
-
-        logger.debug("response meta: " + serviceResp.toString)
-        logger.debug("response body: " + serviceResp.body)
-
-        serviceResp.code should equal(200)
-        serviceResp.body should include("successfully submitted")
-    }
+    resp.code should equal(200)
+    resp.body should include("successfully submitted")
   }
 }
 
 object TomcatDeploymentIntegrationTests {
 
   lazy val deploymentBaseIRI = "https://databus.dbpedia.org/repo"
-
 }
