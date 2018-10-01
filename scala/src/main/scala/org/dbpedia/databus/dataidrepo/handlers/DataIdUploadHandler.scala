@@ -1,6 +1,5 @@
 package org.dbpedia.databus.dataidrepo.handlers
 
-import org.dbpedia.databus.dataidrepo.DataIdRepo.UploadParams
 import org.dbpedia.databus.dataidrepo.config.PersistenceStrategy
 import org.dbpedia.databus.dataidrepo.helpers._
 import org.dbpedia.databus.dataidrepo.helpers.conversions._
@@ -10,6 +9,7 @@ import org.dbpedia.databus.dataidrepo.rdf.conversions._
 import org.dbpedia.databus.dataidrepo.{config, models}
 import org.dbpedia.databus.shared.helpers.conversions.TapableW
 import org.dbpedia.databus.shared.signing
+import org.dbpedia.databus.shared.DataIdUpload.UploadParams
 
 import better.files._
 import com.google.common.hash.Hashing

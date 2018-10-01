@@ -1,6 +1,6 @@
 package org.dbpedia.databus.dataidrepo.handlers
 
-import org.dbpedia.databus.dataidrepo.DataIdRepo.UploadParams
+import org.dbpedia.databus.shared.DataIdUpload.UploadParams
 import org.dbpedia.databus.shared.authentification.{PKCS12File, RSAKeyPair}
 import org.dbpedia.databus.shared.helpers.{resoucreAsFile, resourceAsStream}
 import org.dbpedia.databus.shared.signing

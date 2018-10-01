@@ -6,6 +6,7 @@
 *.out
 
 # project specific
+dataid-file-storage/
 dataid-repo-tdb/
 
 # rails specific

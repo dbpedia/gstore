@@ -1,6 +1,7 @@
 package org.dbpedia.databus.dataidrepo
 
 import org.dbpedia.databus.dataidrepo.handlers.DataIdUploadHandler
+import org.dbpedia.databus.shared.DataIdUpload
 
 import javax.servlet.annotation.MultipartConfig
 import org.scalatra._
@@ -15,8 +16,6 @@ import scala.util.{Failure, Success}
 
 @MultipartConfig(maxFileSize=10*1024*1024)
 class DataIdRepo extends ScalatraServlet with FileUploadSupport {
-
-  import DataIdRepo._
 
   get("/") {
     views.html.hello()
@@ -50,7 +49,8 @@ class DataIdRepo extends ScalatraServlet with FileUploadSupport {
 
   post("/dataid/upload") {
 
-    import DataIdRepo.UploadPartNames._
+    import DataIdUpload.UploadPartNames._
+    import DataIdUpload.expectedPartsForUpload
 
     def notMultiPart = request.contentType.fold(true) { ct => !(ct startsWith "multipart/") }
 
@@ -84,27 +84,5 @@ class DataIdRepo extends ScalatraServlet with FileUploadSupport {
     val handler = new DataIdUploadHandler(clientCert, dataIdStream, signature, uploadParamsMap)
 
     handler.response
-  }
-}
-
-object DataIdRepo {
-
-  lazy val expectedPartsForUpload = {
-
-    import UploadPartNames._
-
-    Set(dataId, dataIdSignature, uploadParams)
-  }
-
-  object UploadPartNames {
-
-    val (dataId, dataIdSignature, uploadParams) = ("dataid", "dataid-signature", "upload-params")
-  }
-
-  object UploadParams {
-
-    val (dataIdLocation, allowOverwrite) = ("DataIdLocation", "AllowOverwrite")
-
-    val (dataIdIdentifier, dataIdVersion) = ("DataIdIdentifier", "DataIdVersion")
   }
 }
