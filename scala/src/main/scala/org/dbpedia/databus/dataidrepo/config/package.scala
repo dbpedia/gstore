@@ -62,6 +62,5 @@ package object config extends LazyLogging {
     val TDB = Value("TDB")
 
     val Filesystem = Value("Filesystem")
-
   }
 }

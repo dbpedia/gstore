@@ -18,18 +18,6 @@ tmp/*
 # java specific
 *.class
 
-# python specific
-*.pyc
-
-# xcode/iphone specific
-build/*
-*.pbxuser
-*.mode2v3
-*.mode1v3
-*.perspective
-*.perspectivev3
-*~.nib
-
 # akka specific
 logs/*
 
