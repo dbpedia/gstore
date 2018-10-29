@@ -1,5 +1,7 @@
 package org.dbpedia.databus.dataidrepo.handlers
 
+import org.dbpedia.databus.dataidrepo.config.DataIdRepoConfig
+import org.dbpedia.databus.dataidrepo.rdf.Rdf
 import org.dbpedia.databus.shared.DataIdUpload.UploadParams
 import org.dbpedia.databus.shared.authentification.{PKCS12File, RSAKeyPair}
 import org.dbpedia.databus.shared.helpers.{resoucreAsFile, resourceAsStream}
@@ -41,6 +43,10 @@ class DataIdUploadHandlerTest extends FlatSpec with Matchers with MockFactory wi
     val clientCertMock = mock[X509Mock]
 
     (clientCertMock.getPublicKey _).expects().returning(publicKey)
+
+    implicit val repoConfigMock = new DataIdRepoConfig(None)
+
+    implicit val rdfMock = new Rdf()
 
     val handler = new DataIdUploadHandler(clientCertMock, resourceAsStream(dataIdResourceName), signature, uploadParams)
 

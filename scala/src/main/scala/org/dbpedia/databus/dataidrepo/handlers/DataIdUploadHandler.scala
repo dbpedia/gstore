@@ -1,17 +1,18 @@
 package org.dbpedia.databus.dataidrepo.handlers
 
-import org.dbpedia.databus.dataidrepo.config.PersistenceStrategy
+import org.dbpedia.databus.dataidrepo.config.{DataIdRepoConfig, PersistenceStrategy}
 import org.dbpedia.databus.dataidrepo.helpers._
 import org.dbpedia.databus.dataidrepo.helpers.conversions._
+import org.dbpedia.databus.dataidrepo.models
 import org.dbpedia.databus.dataidrepo.models.DataIdMetadata
-import org.dbpedia.databus.dataidrepo.rdf._
+import org.dbpedia.databus.dataidrepo.rdf.Rdf
 import org.dbpedia.databus.dataidrepo.rdf.conversions._
-import org.dbpedia.databus.dataidrepo.{config, models}
+import org.dbpedia.databus.shared.DataIdUpload.UploadParams
 import org.dbpedia.databus.shared.helpers.conversions.TapableW
 import org.dbpedia.databus.shared.signing
-import org.dbpedia.databus.shared.DataIdUpload.UploadParams
 
 import better.files._
+import com.google.common.cache.{CacheBuilder, CacheLoader}
 import com.google.common.hash.Hashing
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.lang3.exception.ExceptionUtils
@@ -31,7 +32,8 @@ import java.nio.file.attribute.PosixFilePermission._
 import java.security.cert.X509Certificate
 
 class DataIdUploadHandler(clientCert: X509Certificate, dataId: ManagedResource[InputStream],
-  dataIdSignature: Array[Byte], uploadParams: Map[String, List[String]]) extends LazyLogging {
+  dataIdSignature: Array[Byte], uploadParams: Map[String, List[String]])
+  (implicit config: DataIdRepoConfig, rdf: Rdf) extends LazyLogging {
 
   trait Technical
 
@@ -44,6 +46,8 @@ class DataIdUploadHandler(clientCert: X509Certificate, dataId: ManagedResource[I
   def dataIdIdentifier = retrieveSingleUploadParam(UploadParams.dataIdIdentifier)
 
   def dataIdVersion = retrieveSingleUploadParam(UploadParams.dataIdVersion)
+
+  lazy val filesystemStorageDirEnsured = createDirWithPermissionsForOthers(config.persistence.fileSystemStorageLocation)
 
   def dataIdSignatureVerified: TechnicalError \/ ValidationResult = {
 
@@ -167,7 +171,7 @@ class DataIdUploadHandler(clientCert: X509Certificate, dataId: ManagedResource[I
 
   protected def saveDataId(validations: Validations): TechnicalError \/ Unit = {
 
-    def tdbSave(validations: Validations): TechnicalError \/ Model = repoTDB.writeTransaction({ implicit dataset =>
+    def tdbSave(validations: Validations): TechnicalError \/ Model = rdf.repoTDB.writeTransaction({ implicit dataset =>
 
       logger.debug("in write transaction for save")
 
@@ -191,24 +195,19 @@ class DataIdUploadHandler(clientCert: X509Certificate, dataId: ManagedResource[I
 
     def storeToFilesystem(validations: Validations): TechnicalError \/ Unit = {
 
-      import config.persistence._
-
-      val othersRWPerms = Set(OTHERS_READ, OTHERS_WRITE)
-
       dataIdWebLocation map { dataIdWebURL =>
 
-        fileSystemStorageLocation.createIfNotExists(asDirectory = true)
+        val documentName = urlEncode(dataIdWebURL.stripSuffix(".ttl"))
 
-        (othersRWPerms + OTHERS_EXECUTE) foreach (fileSystemStorageLocation.addPermission)
+        val documentDir = createDirWithPermissionsForOthers(filesystemStorageDirEnsured / documentName)
 
-        val lockFile = fileSystemStorageLocation / "dataid-repo.lock"
+        val lockFile = (filesystemStorageDirEnsured / "dataid-repo.lock").normalized
 
-        val filename = urlEncode(dataIdWebURL.stripSuffix(".ttl"))
+        val lock = DataIdUploadHandler.fileSystemStorageLockFiles.get(lockFile)
 
-        val ttlFile = (fileSystemStorageLocation / s"$filename.ttl").touch()
+        val ttlFile = (documentDir / s"$documentName.ttl").touch()
 
-        val graphFile = (fileSystemStorageLocation / s"$filename.graph").touch()
-
+        val graphFile = (documentDir / s"$documentName.graph").touch()
 
         othersRWPerms foreach { perm =>
 
@@ -217,13 +216,13 @@ class DataIdUploadHandler(clientCert: X509Certificate, dataId: ManagedResource[I
         }
 
         val writing = for {
-          lock <- lockFile.asLockFile
+          lock <- lock.enter()
           deletesOnError <- ttlFile.deleteOnError and graphFile.deleteOnError
           dataidInputStream <- dataId
           dataidOutputStream <- managed(ttlFile.newOutputStream)
         } yield {
 
-          // streaming copy dataid from request
+          // streaming copy of DataId from request
           dataidInputStream pipeTo dataidOutputStream
 
           graphFile write (dataIdWebURL + "\n")
@@ -274,10 +273,28 @@ class DataIdUploadHandler(clientCert: X509Certificate, dataId: ManagedResource[I
     }
   }
 
+  def createDirWithPermissionsForOthers(path: File) = {
+
+    path.createIfNotExists(asDirectory = true) tap { dir =>
+
+      othersRWXPerms foreach (dir.addPermission)
+    }
+  }
+
+  lazy val othersRWPerms = Set(OTHERS_READ, OTHERS_WRITE)
+
+  lazy val othersRWXPerms = othersRWPerms + OTHERS_EXECUTE
+
   case class Validations(signature: TechnicalError \/ ValidationResult,
     locationMatches: TechnicalError \/ ValidationResult, wellformed: TechnicalError \/ ValidationResult) {
 
     def list = List(signature, wellformed, locationMatches)
   }
+}
 
+object DataIdUploadHandler {
+
+  lazy val fileSystemStorageLockFiles = CacheBuilder.newBuilder().build(CacheLoader.from[File, ReentrantLockFile]({
+    new ReentrantLockFile(_)
+  }))
 }

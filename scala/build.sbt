@@ -1,14 +1,14 @@
 import better.files.File
 
-val ScalatraVersion = "2.6.3"
-
 organization := "org.dbpedia"
 
-name := "Databus DataID Repo"
+name := "databus-dataid-repo"
 
 version := "0.1.0-SNAPSHOT"
 
 scalaVersion := "2.12.6"
+
+val ScalatraVersion = "2.6.3"
 
 libraryDependencies ++= Seq(
   "org.scalatra" %% "scalatra" % ScalatraVersion,
@@ -34,6 +34,8 @@ libraryDependencies ++= Seq(
   "org.scalaj" %% "scalaj-http" % "2.4.1",
   "org.scalamock" %% "scalamock" % "4.1.0" % Test
 )
+
+isTestDeployment := true
 
 //conflictManager := ConflictManager.strict
 
@@ -63,11 +65,18 @@ updateBoth := Def.sequential(
   updateClassifiers,
 ).value
 
+val isTestDeployment = settingKey[Boolean]("flag for test deployment")
+
 val warTargetLocation = settingKey[String]("location to copy a war to for deployment")
 
 val packageAndDeployToTomcat = taskKey[Unit]("package the war and copy it to the Tomcat wabapps dir")
 
-warTargetLocation := "/var/lib/tomcat8/webapps/ROOT.war"
+warTargetLocation := {
+  
+  def warTargetFilename = if(isTestDeployment.value) "dataid-repo-test.war" else "dataid-repo.war"
+  
+  s"/var/lib/tomcat8/webapps/$warTargetFilename"
+}
 
 packageAndDeployToTomcat := {
 
@@ -75,9 +84,9 @@ packageAndDeployToTomcat := {
 
   val targetLocation = Some(File(warTargetLocation.value)).collect {
 
-    case file if file.isRegularFile || file.isSymbolicLink  => file
-
     case dir if dir.isDirectory => dir / warSourceLocation.name
+
+    case file => file
   }
 
   targetLocation foreach { target =>

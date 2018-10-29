@@ -4,6 +4,8 @@ import better.files.{File => BetterFile}
 import resource._
 import scalaz.{@@, Tag}
 
+import java.nio.file.Paths
+
 package object conversions {
 
   implicit class TaggedW[T, Tag](val lf: T @@ Tag) extends AnyVal {
@@ -13,25 +15,7 @@ package object conversions {
 
   implicit class BetterFileW(val bf: BetterFile) extends AnyVal {
 
-    def asLockFile: ManagedResource[BetterFile] = asLockFile()
-
-    def asLockFile(swallowExceptionsOnDelete: Boolean = false): ManagedResource[BetterFile] = {
-
-      implicit def lockFileResource = new Resource[BetterFile] {
-
-        override def open(r: BetterFile): Unit = {
-
-          if(!r.isRegularFile) r.touch()
-        }
-
-        override def close(r: BetterFile): Unit = {
-
-          r.delete(swallowExceptionsOnDelete)
-        }
-      }
-
-      managed(bf)
-    }
+    def normalized = BetterFile(bf.path.normalize())
 
     def deleteOnError: ManagedResource[BetterFile] = deleteOnError()
 

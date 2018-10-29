@@ -1,8 +1,11 @@
 package org.dbpedia.databus.dataidrepo
 
+import org.dbpedia.databus.dataidrepo.config.DataIdRepoConfig
 import org.dbpedia.databus.dataidrepo.handlers.DataIdUploadHandler
+import org.dbpedia.databus.dataidrepo.rdf.Rdf
 import org.dbpedia.databus.shared.DataIdUpload
 
+import javax.servlet.ServletConfig
 import javax.servlet.annotation.MultipartConfig
 import org.scalatra._
 import org.scalatra.servlet.FileUploadSupport
@@ -15,7 +18,9 @@ import scala.util.{Failure, Success}
 
 
 @MultipartConfig(maxFileSize=10*1024*1024)
-class DataIdRepo extends ScalatraServlet with FileUploadSupport {
+class DataIdRepo(implicit repoConfig: DataIdRepoConfig) extends ScalatraServlet with FileUploadSupport {
+
+  implicit lazy val rdf = new Rdf()
 
   get("/") {
     views.html.hello()

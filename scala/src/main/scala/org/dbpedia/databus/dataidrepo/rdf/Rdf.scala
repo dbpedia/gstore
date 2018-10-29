@@ -1,10 +1,12 @@
-package org.dbpedia.databus.dataidrepo
+package org.dbpedia.databus.dataidrepo.rdf
 
+import org.dbpedia.databus.dataidrepo.config.DataIdRepoConfig
 import org.dbpedia.databus.shared.helpers.conversions.TapableW
 
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.jena.query.Dataset
-import org.apache.jena.tdb2.TDB2Factory
+import org.apache.jena.tdb
+import org.apache.jena.tdb.TDBFactory
 import resource.Resource
 
 import scala.language.dynamics
@@ -14,7 +16,7 @@ import scala.util.Try
   * Created by Markus Ackermann.
   * No rights reserved.
   */
-package object rdf extends LazyLogging {
+class Rdf(implicit config: DataIdRepoConfig) extends LazyLogging {
 
   lazy val repoTDB = {
 
@@ -22,7 +24,7 @@ package object rdf extends LazyLogging {
 
     config.persistence.tdbLocation.createDirectories()
 
-    TDB2Factory.connectDataset(config.persistence.tdbLocation.pathAsString) tap { dataset =>
+    TDBFactory.createDataset(config.persistence.tdbLocation.pathAsString) tap { dataset =>
 
       sys addShutdownHook {
         Try(dataset.close).fold(
