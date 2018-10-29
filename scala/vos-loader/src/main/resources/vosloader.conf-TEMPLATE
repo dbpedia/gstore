@@ -1,0 +1,22 @@
+loading {
+
+  vosQueuesParentDir = /opt/dataid-repo/vos-loading
+
+  loadingInterval = 1 minute
+  minUnmodifiedDurationInStorage = 10 minutes
+}
+
+persistence {
+
+  fileSystemStorageLocation = /opt/dataid-repo/file-storage
+}
+
+virtuoso {
+
+  host = "localhost:1111"
+  user = dba
+  password = dba
+
+  concurrentConnectionsToProcessorsRatio = 1.0
+  maxConcurrentConnections = 8
+}

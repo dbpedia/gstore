@@ -1,0 +1,10 @@
+db:
+  image: tenforce/virtuoso:1.3.1-virtuoso7.2.4
+  environment:
+    SPARQL_UPDATE: "false"
+    DBA_PASSWORD: "a non-standard password"
+  volumes:
+  - /opt/dataid-repo/docker-vos-7.2.4:/data
+  ports:
+  - "1112:1111"
+  - "8892:8890"

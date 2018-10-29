@@ -1,0 +1,139 @@
+@prefix void:  <http://rdfs.org/ns/void#> .
+@prefix spdx:  <http://spdx.org/rdf/terms#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix dmp:   <http://dataid.dbpedia.org/ns/dmp#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix datacite: <http://purl.org/spar/datacite/> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sd:    <http://www.w3.org/ns/sparql-service-description#> .
+@prefix dataid-mt: <http://dataid.dbpedia.org/ns/mt#> .
+@prefix dataid: <http://dataid.dbpedia.org/ns/core#> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix dataid-pl: <http://dataid.dbpedia.org/ns/pl#> .
+@prefix dcat:  <http://www.w3.org/ns/dcat#> .
+@prefix dataid-ld: <http://dataid.dbpedia.org/ns/ld#> .
+@prefix prov:  <http://www.w3.org/ns/prov#> .
+@prefix foaf:  <http://xmlns.com/foaf/0.1/> .
+@prefix dc:    <http://purl.org/dc/terms/> .
+
+dataid-mt:ApplicationRDFXML
+        a                dataid-mt:MediaType ;
+        dataid:mimetype  "application/rdf+xml" .
+
+<#mammals-1.0.0_kawiki.ttl.bz2>
+        a                        dataid:SingleFile ;
+        rdfs:label               "Infobox Properties"@en ;
+        dataid:associatedAgent   <http://kurzum.net/dev-dummy.ttl#this> ;
+        dataid:compression       "bzip2" ;
+        dataid:isDistributionOf  <#mammals-1.0.0> ;
+        dataid:preview           "<http://ka.dbpedia.org/resource/პრეზიდენტი> <http://purl.org/dc/terms/subject> <http://ka.dbpedia.org/resource/კატეგორია:პრეზიდენტები> .\n<http://ka.dbpedia.org/resource/პრეზიდენტი> <http://purl.org/dc/terms/subject> <http://ka.dbpedia.org/resource/კატეგორია:წოდებები> .\n<http://ka.dbpedia.org/resource/მიჭპა> <http://purl.org/dc/terms/subject> <http://ka.dbpedia.org/resource/კატეგორია:ქართული_მითების_პერსონაჟები> .\n<http://ka.dbpedia.org/resource/ფორმალური_მეცნიერებები> <http://purl.org/dc/terms/subject> <http://ka.dbpedia.org/resource/კატეგორია:მეცნიერება> .\n<http://ka.dbpedia.org/resource/თებერვალი> <http://purl.org/dc/terms/subject> <http://ka.dbpedia.org/resource/კატეგორია:თებერვალი> .\n<http://ka.dbpedia.org/resource/26_იანვარი> <http://purl.org/dc/terms/subject> <http://ka.dbpedia.org/resource/კატეგორია:დღეები> .\n<http://ka.dbpedia.org/resource/ვასილ_აბაევი> <http://purl.org/dc/terms/subject> <http://ka.dbpedia.org/resource/კატეგორია:ოსები> .\n<http://ka.dbpedia.org/resource/ვასილ_აბაევი> <http://purl.org/dc/terms/subject> <http://ka.dbpedia.org/resource/კატეგორია:რუსი_ენათმეცნიერები> .\n<http://ka.dbpedia.org/resource/ვასილ_აბაევი> <http://purl.org/dc/terms/subject> <http://ka.dbpedia.org/resource/კატეგორია:დაბადებული_1899> .\n<http://ka.dbpedia.org/resource/ვასილ_აბაევი> <http://purl.org/dc/terms/subject> <http://ka.dbpedia.org/resource/კატეგორია:გარდაცვლილი_2001> ." ;
+        dataid:sha256sum         "d0f42d5c33d0543eff4f0a4997d7211beeb17869c05586f85821d383d08eb01a" ;
+        dataid:signature         "kzPIgmckFHfxMedCc1AEZcIiLv46PtVsHshMyIsybV3zG426+XI8sGMQFSoHXcLNveKmM62yD12XuIrqFiyJPABrlNfMHox5T1dE2Hg1KvOC3g2AAuqcdhzVpMMeCCo1OT3hEQ7YgNF4B2KX8FM7B/VagcTJQup9buh67SHw/FlqVf/ZabTyROANtqcjyfB1nIFh4hgYq3wK39IxhoyRnBy0xab4Y5uKLsBVkWbV7NRndjdeuCYo569GkgkYaCjpvGUPoqn8qHF/uL4zBz2fgT4ZvfHgk4o4Q29D7pcyMa3lTO91mYyPSMuzBpVjcjM/ti98CW02eQY58FHcPsswxA==" ;
+        dc:conformsTo            dataid: ;
+        dc:description           "Extracted Data from the Wikipedia Article-Infoboxes" ;
+        dc:hasVersion            "1.0.0" ;
+        dc:issued                "2018-08-01"^^xsd:date ;
+        dc:license               <http://purl.oclc.org/NET/rdflicense/cc-by-sa3.0> ;
+        dc:modified              "2018-08-21"^^xsd:date ;
+        dc:publisher             <http://kurzum.net/dev-dummy.ttl#this> ;
+        dc:title                 "Infobox Properties"@en ;
+        dcat:byteSize            "2622890" ;
+        dcat:dataid              ".ttl" ;
+        dcat:downloadURL         <mammals-1.0.0_kawiki.ttl.bz2> ;
+        dcat:mediaType           dataid-mt:ApplicationNTriples .
+
+<#mammals-1.0.0_file1.nt.bz2>
+        a                        dataid:SingleFile ;
+        rdfs:label               "Infobox Properties"@en ;
+        dataid:associatedAgent   <http://kurzum.net/dev-dummy.ttl#this> ;
+        dataid:compression       "bzip2" ;
+        dataid:isDistributionOf  <#mammals-1.0.0> ;
+        dataid:preview           "<http://dbpedia.org/resource/An_American_in_Paris> <http://dbpedia.org/property/work> \"An American in Paris\"@en .\n<http://dbpedia.org/resource/An_American_in_Paris> <http://dbpedia.org/property/cname> \"An American in Paris\"@en .\n<http://dbpedia.org/resource/Afroasiatic_languages> <http://dbpedia.org/property/name> \"Afroasiatic\"@en .\n<http://dbpedia.org/resource/Afroasiatic_languages> <http://dbpedia.org/property/familycolor> \"Afro-Asiatic\"@en .\n<http://dbpedia.org/resource/Afroasiatic_languages> <http://dbpedia.org/property/family> \"One of the world's primary language families\"@en .\n<http://dbpedia.org/resource/Afroasiatic_languages> <http://dbpedia.org/property/iso> \"afa\"@en .\n<http://dbpedia.org/resource/Afroasiatic_languages> <http://dbpedia.org/property/iso> \"afa\"@en .\n<http://dbpedia.org/resource/Afroasiatic_languages> <http://dbpedia.org/property/glotto> \"afro1255\"@en .\n<http://dbpedia.org/resource/Afroasiatic_languages> <http://dbpedia.org/property/glottorefname> \"Afro-Asiatic\"@en .\n<http://dbpedia.org/resource/Afroasiatic_languages> <http://dbpedia.org/property/mapcaption> \"Distribution of the Afro-Asiatic languages; pale yellow signifies areas without any languages in that family\"@en ." ;
+        dataid:sha256sum         "cbc6d98f214aa2f95e256fb024ae826f94edc713883a484843df2ff170e69c07" ;
+        dataid:signature         "bE7yAKWdApc71BSgrj6ZV1GOk6p8Pv0GnbWtSkvwlF6HZRBATOJXrpyg8P4OZeMrwv32T8UrSc6SvtMkX32PIHlU8nZrdO/YdNZdfQL7S5jjgh3TzuGBEzPmtNzdgQ4DyA58d9nsmgzI/p6t4EpY40dAUwZKEwAm8yck3hXK7ZDiojoA0el3RgeQq/MXTiamHTaKruHoguKHwCapjNIja52v02HK8mfk510B0gNkcn8tjMgzry6w6aWYQy3A7VScKltULg3EKY7YGLMdi9EJ6ALjuCVtqbn3nAknr14Dx+BcLxw3EX65+B0Zwa6IBJZP59r5KcdCs18dCoitThWZPg==" ;
+        dc:conformsTo            dataid: ;
+        dc:description           "Extracted Data from the Wikipedia Article-Infoboxes" ;
+        dc:hasVersion            "1.0.0" ;
+        dc:issued                "2018-08-01"^^xsd:date ;
+        dc:license               <http://purl.oclc.org/NET/rdflicense/cc-by-sa3.0> ;
+        dc:modified              "2018-08-10"^^xsd:date ;
+        dc:publisher             <http://kurzum.net/dev-dummy.ttl#this> ;
+        dc:title                 "Infobox Properties"@en ;
+        dcat:byteSize            "352" ;
+        dcat:dataid              ".nt" ;
+        dcat:downloadURL         <mammals-1.0.0_file1.nt.bz2> ;
+        dcat:mediaType           dataid-mt:ApplicationNTriples .
+
+<#mammals-1.0.0_file1.rdf.bz2>
+        a                        dataid:SingleFile ;
+        rdfs:label               "Infobox Properties"@en ;
+        dataid:associatedAgent   <http://kurzum.net/dev-dummy.ttl#this> ;
+        dataid:compression       "bzip2" ;
+        dataid:isDistributionOf  <#mammals-1.0.0> ;
+        dataid:preview           "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n  <rdf:Description rdf:about=\"http://dbpedia.org/resource/An_American_in_Paris\">\n    <ns0:work xmlns:ns0=\"http://dbpedia.org/property/\" xml:lang=\"en\">An American in Paris</ns0:work>\n  </rdf:Description>\n  <rdf:Description rdf:about=\"http://dbpedia.org/resource/An_American_in_Paris\">\n    <ns0:cname xmlns:ns0=\"http://dbpedia.org/property/\" xml:lang=\"en\">An American in Paris</ns0:cname>\n  </rdf:Description>\n  <rdf:Description rdf:about=\"http://dbpedia.org/resource/Afroasiatic_languages\">\n    <ns0:name xmlns:ns0=\"http://dbpedia.org/property/\" xml:lang=\"en\">Afroasiatic</ns0:name>" ;
+        dataid:sha256sum         "05594a6d0aebd1e3626f7f3a1ad6d6e82350b8cbe81e2ed75e188d12ded28aa2" ;
+        dataid:signature         "fxMNwRE5yZiasCeDswTiaXpKOEWNtuqtmItsbSkhnHZMWktfOz5GyzcctZgMMPaoqw4DbRqNhgCqih6whxE2zOetiitMfq9B+NVXFQB5omjXSfd7ILzFagLa9b2oAEbWikMXJ9jrtuqmyFdDankhzaLgT6Q4VSO5RAzXvQpNOgVAoaPK34I6CNabVzGWiTEU4NXAKd8q26qYzDwvBch8YJWG9IpLM77ErJrj6JAUqBJKvfrTVRMYMl4hY1pJbs4bFzcGeTu201Wtl1cK3jxWpv+HRfFvNHfuNdmbTFpt7bxzsms7SdhZBfopjFi/6Ic5Ilet+Xw5Px10J+DiXILe1w==" ;
+        dc:conformsTo            dataid: ;
+        dc:description           "Extracted Data from the Wikipedia Article-Infoboxes" ;
+        dc:hasVersion            "1.0.0" ;
+        dc:issued                "2018-08-01"^^xsd:date ;
+        dc:license               <http://purl.oclc.org/NET/rdflicense/cc-by-sa3.0> ;
+        dc:modified              "2018-08-10"^^xsd:date ;
+        dc:publisher             <http://kurzum.net/dev-dummy.ttl#this> ;
+        dc:title                 "Infobox Properties"@en ;
+        dcat:byteSize            "545" ;
+        dcat:dataid              ".rdf" ;
+        dcat:downloadURL         <mammals-1.0.0_file1.rdf.bz2> ;
+        dcat:mediaType           dataid-mt:ApplicationRDFXML .
+
+<#mammals-1.0.0_file2.rdf.bz2>
+        a                        dataid:SingleFile ;
+        rdfs:label               "Infobox Properties"@en ;
+        dataid:associatedAgent   <http://kurzum.net/dev-dummy.ttl#this> ;
+        dataid:compression       "bzip2" ;
+        dataid:isDistributionOf  <#mammals-1.0.0> ;
+        dataid:preview           "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n  <rdf:Description rdf:about=\"http://dbpedia.org/resource/An_American_in_Paris\">\n    <ns0:work xmlns:ns0=\"http://dbpedia.org/property/\" xml:lang=\"en\">An American in Paris</ns0:work>\n  </rdf:Description>\n  <rdf:Description rdf:about=\"http://dbpedia.org/resource/An_American_in_Paris\">\n    <ns0:cname xmlns:ns0=\"http://dbpedia.org/property/\" xml:lang=\"en\">An American in Paris</ns0:cname>\n  </rdf:Description>\n  <rdf:Description rdf:about=\"http://dbpedia.org/resource/Afroasiatic_languages\">\n    <ns0:name xmlns:ns0=\"http://dbpedia.org/property/\" xml:lang=\"en\">Afroasiatic</ns0:name>" ;
+        dataid:sha256sum         "05594a6d0aebd1e3626f7f3a1ad6d6e82350b8cbe81e2ed75e188d12ded28aa2" ;
+        dataid:signature         "fxMNwRE5yZiasCeDswTiaXpKOEWNtuqtmItsbSkhnHZMWktfOz5GyzcctZgMMPaoqw4DbRqNhgCqih6whxE2zOetiitMfq9B+NVXFQB5omjXSfd7ILzFagLa9b2oAEbWikMXJ9jrtuqmyFdDankhzaLgT6Q4VSO5RAzXvQpNOgVAoaPK34I6CNabVzGWiTEU4NXAKd8q26qYzDwvBch8YJWG9IpLM77ErJrj6JAUqBJKvfrTVRMYMl4hY1pJbs4bFzcGeTu201Wtl1cK3jxWpv+HRfFvNHfuNdmbTFpt7bxzsms7SdhZBfopjFi/6Ic5Ilet+Xw5Px10J+DiXILe1w==" ;
+        dc:conformsTo            dataid: ;
+        dc:description           "Extracted Data from the Wikipedia Article-Infoboxes" ;
+        dc:hasVersion            "1.0.0" ;
+        dc:issued                "2018-08-01"^^xsd:date ;
+        dc:license               <http://purl.oclc.org/NET/rdflicense/cc-by-sa3.0> ;
+        dc:modified              "2018-08-10"^^xsd:date ;
+        dc:publisher             <http://kurzum.net/dev-dummy.ttl#this> ;
+        dc:title                 "Infobox Properties"@en ;
+        dcat:byteSize            "545" ;
+        dcat:dataid              ".rdf" ;
+        dcat:downloadURL         <mammals-1.0.0_file2.rdf.bz2> ;
+        dcat:mediaType           dataid-mt:ApplicationRDFXML .
+
+<#mammals-1.0.0>  a        dataid:Dataset ;
+        dcat:distribution  <#mammals-1.0.0_file2.nt.bz2> , <#mammals-1.0.0_file2.rdf.bz2> , <#mammals-1.0.0_file1.nt.bz2> , <#mammals-1.0.0_kawiki.ttl.bz2> , <#mammals-1.0.0_file1.rdf.bz2> ;
+        <todonote>         "we are still refactoring code for dataid creation, much more information will be available at this resource later" .
+
+dataid-mt:ApplicationNTriples
+        a                dataid-mt:MediaType ;
+        dataid:mimetype  "application/n-triples" .
+
+<#mammals-1.0.0_file2.nt.bz2>
+        a                        dataid:SingleFile ;
+        rdfs:label               "Infobox Properties"@en ;
+        dataid:associatedAgent   <http://kurzum.net/dev-dummy.ttl#this> ;
+        dataid:compression       "bzip2" ;
+        dataid:isDistributionOf  <#mammals-1.0.0> ;
+        dataid:preview           "<http://dbpedia.org/resource/An_American_in_Paris> <http://dbpedia.org/property/work> \"An American in Paris\"@en .\n<http://dbpedia.org/resource/An_American_in_Paris> <http://dbpedia.org/property/cname> \"An American in Paris\"@en .\n<http://dbpedia.org/resource/Afroasiatic_languages> <http://dbpedia.org/property/name> \"Afroasiatic\"@en .\n<http://dbpedia.org/resource/Afroasiatic_languages> <http://dbpedia.org/property/familycolor> \"Afro-Asiatic\"@en .\n<http://dbpedia.org/resource/Afroasiatic_languages> <http://dbpedia.org/property/family> \"One of the world's primary language families\"@en .\n<http://dbpedia.org/resource/Afroasiatic_languages> <http://dbpedia.org/property/iso> \"afa\"@en .\n<http://dbpedia.org/resource/Afroasiatic_languages> <http://dbpedia.org/property/iso> \"afa\"@en .\n<http://dbpedia.org/resource/Afroasiatic_languages> <http://dbpedia.org/property/glotto> \"afro1255\"@en .\n<http://dbpedia.org/resource/Afroasiatic_languages> <http://dbpedia.org/property/glottorefname> \"Afro-Asiatic\"@en .\n<http://dbpedia.org/resource/Afroasiatic_languages> <http://dbpedia.org/property/mapcaption> \"Distribution of the Afro-Asiatic languages; pale yellow signifies areas without any languages in that family\"@en ." ;
+        dataid:sha256sum         "cbc6d98f214aa2f95e256fb024ae826f94edc713883a484843df2ff170e69c07" ;
+        dataid:signature         "bE7yAKWdApc71BSgrj6ZV1GOk6p8Pv0GnbWtSkvwlF6HZRBATOJXrpyg8P4OZeMrwv32T8UrSc6SvtMkX32PIHlU8nZrdO/YdNZdfQL7S5jjgh3TzuGBEzPmtNzdgQ4DyA58d9nsmgzI/p6t4EpY40dAUwZKEwAm8yck3hXK7ZDiojoA0el3RgeQq/MXTiamHTaKruHoguKHwCapjNIja52v02HK8mfk510B0gNkcn8tjMgzry6w6aWYQy3A7VScKltULg3EKY7YGLMdi9EJ6ALjuCVtqbn3nAknr14Dx+BcLxw3EX65+B0Zwa6IBJZP59r5KcdCs18dCoitThWZPg==" ;
+        dc:conformsTo            dataid: ;
+        dc:description           "Extracted Data from the Wikipedia Article-Infoboxes" ;
+        dc:hasVersion            "1.0.0" ;
+        dc:issued                "2018-08-01"^^xsd:date ;
+        dc:license               <http://purl.oclc.org/NET/rdflicense/cc-by-sa3.0> ;
+        dc:modified              "2018-08-10"^^xsd:date ;
+        dc:publisher             <http://kurzum.net/dev-dummy.ttl#this> ;
+        dc:title                 "Infobox Properties"@en ;
+        dcat:byteSize            "352" ;
+        dcat:dataid              ".nt" ;
+        dcat:downloadURL         <mammals-1.0.0_file2.nt.bz2> ;
+        dcat:mediaType           dataid-mt:ApplicationNTriples .
