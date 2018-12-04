@@ -53,5 +53,5 @@ class TomcatDeploymentIntegrationTests extends ScalatraFlatSpec with LazyLogging
 
 object TomcatDeploymentIntegrationTests {
 
-  lazy val deploymentBaseIRI = "https://databus.dbpedia.org/repo"
+  lazy val deploymentBaseIRI = "https://databus.dbpedia.org/testrepo"
 }

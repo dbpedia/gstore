@@ -52,6 +52,7 @@ class DataIdUploadHandler(clientCert: X509Certificate, dataId: ManagedResource[I
   def dataIdSignatureVerified: TechnicalError \/ ValidationResult = {
 
     wrapExceptionIntoInternalServerError("verifying signature") {
+
       dataId apply { dataIdStream =>
 
         signing.verifyInputStream(clientCert.getPublicKey, dataIdSignature, dataIdStream)

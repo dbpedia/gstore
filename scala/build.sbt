@@ -15,7 +15,6 @@ libraryDependencies ++= Seq(
   "org.scalatra" %% "scalatra-scalatest" % ScalatraVersion % Test,
   "ch.qos.logback" % "logback-classic" % "1.2.3" % "runtime",
   "org.eclipse.jetty" % "jetty-webapp" % "9.4.9.v20180320" % "container",
-  "com.github.jsimone" % "webapp-runner" % "8.5.32.0" % "provided",
   "javax.servlet" % "javax.servlet-api" % "3.1.0" % "provided"
 )
 
