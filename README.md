@@ -17,7 +17,10 @@ DataIDs are planned.
 
 ## Building
 
-This project uses [SBT](https://www.scala-sbt.org/documentation.html). [Install on Linux](https://www.scala-sbt.org/1.0/docs/Installing-sbt-on-Linux.html)
+[Install on Linux](https://www.scala-sbt.org/1.0/docs/Installing-sbt-on-Linux.html)
+
+This project uses [SBT](https://www.scala-sbt.org/documentation.html). 
+
 Use the following command to create a WAR archive:
 
 ```sbt package```
