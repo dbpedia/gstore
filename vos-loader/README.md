@@ -3,12 +3,26 @@
 A Scala internal daemon service that inspects a directory for files to be loaded into a Virtuoso 
 Open Source instance.
 
+TODO Question: What is a "Scala internal daemon service" ? Should this be:
+Daemon service, which inspects a directory for uploaded files on the Databus repo to be loaded into a Virtuoso 
+Open Source instance. Written in Scala and deployed via ??? (tmux or /etc/service??)
+
+## Workflow
+
+The service monitors the `persistence.fileSystemStorageLocation` directory. 
+When it finds new files there, it processes them and 
+puts them first into `loading.vosQueuesParentDir/loading` and then either in failed or loaded.
+TODO: what is the `loading.vosQueuesParentDir` file doing?
+
 ## Building
 
 This project uses [SBT](https://www.scala-sbt.org/documentation.html). Use `sbt compile` to build
 the bytecode.
 
-## Requirements
+## Setup Docker for Virtuoso
+
+TODO Question: Does it work with a normal virtuoso? Is lib/virt_jena3.jar used in the Docker only or in the Scala code?This means that it just needs a virtuoso with the jena adapter installed, right?
+I am really wondering how the files under /lib/ are used, i.e. is it an sbt default to include them as dependencies, because I could not find anything in build.sbt. 
 
 This service has been developed and tested against VOS 7.2.4, specifically, the Docker container
 `tenforce/virtuoso:1.3.1-virtuoso7.2.4`. It packages and uses the Jena connector libraries from
@@ -22,16 +36,24 @@ The quick and reliable way to provide a suitable VOS instance is to copy and adj
 with `docker-compose up -d`.
 
 
-## Configuration and Running
+## Configuration file
 
-An instance of this service requires a [HOCON](https://github.com/lightbend/config/blob/master/HOCON.md)
-file specifying where to look for files to load, where to move them when loading succeeded (or failed)
-and how to connect to the VOS instance to load the data into. The `configFile` task defined in the SBT
-build file (`build.sbt`) defined the source path for the config from three sources (decreasing priority):
+The `configFile` task defined in the SBT build file (`build.sbt`) 
+defines the source path for the config from three sources (decreasing priority):
 
-1. The value of the system environment variable `VOS_LOADER_CONFIG`
+1. The value of the system environment variable `VOS_LOADER_CONFIG=/opt/dataid-repo/vosloader.conf`
 1. The value of the JVM system property `org.dbpedia.databus.vosloader.config`
 1. The `configFileDefault` value in the SBT file
+
+
+## Running
+
+TODO big ? SH: I already checked HTOP and tmux, but could not find anything..... 
+
+## Config Options
+An instance of this service requires a [HOCON](https://github.com/lightbend/config/blob/master/HOCON.md)
+file specifying where to look for files to load, where to move them when loading succeeded (or failed)
+and how to connect to the VOS instance to load the data into.
 
 `src/main/resources/vosloader.conf-TEMPLATE` gives an example/template for such a configuration file
 to be adjusted to the actual environment.
