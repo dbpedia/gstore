@@ -12,7 +12,7 @@ Open Source instance. Written in Scala and deployed via ??? (tmux or /etc/servic
 The service monitors the `persistence.fileSystemStorageLocation` directory. 
 When it finds new files there, it processes them and 
 puts them first into `loading.vosQueuesParentDir/loading` and then either in failed or loaded.
-TODO: what is the `loading.vosQueuesParentDir` file doing?
+TODO: what is the `loading-active.flag` file doing?
 
 ## Building
 
