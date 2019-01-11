@@ -1,17 +1,15 @@
 # Digital Factory Platform (Server-Side Services) #
 
-This repositories bundles three source code trees for services for the Digital
-Factory Platform:
+Content
 
-* a Scalatra-based REST-service for uploading and managing DataIds to appear in
- the DFP repo (the `scala` subdirectory)
-* an internal daemon service that inspects a directory for files to be loaded 
- into a Virtuoso Open Source instance (the `scala/vos-load` subdirectory)
-* a deprecated early PHP project for uploading DataIds (the `upload` folder)
+* (main) a Scalatra-based REST-service for uploading and managing DataIds to appear in
+ the DFP repo 
+* `vos-loader` see `vos-loader/README.md` an internal daemon service that inspects a directory for files to be loaded 
+ into a Virtuoso Open Source instance
+* `old-upload-prototype` a deprecated early PHP project for uploading DataIds 
 
-Please refer for details to the `README.md` files in the corresponding 
-subdirectories.
-# Digital Factory Platform DataID Repo #
+
+# REST Service for DataID Upload to DFP #
 
 This Scalatra-based REST-service allows to submit DataIDs to be loaded into the central
 DFP repos. Other management and reporting features pertaining these repos and contained 
@@ -19,7 +17,7 @@ DataIDs are planned.
 
 ## Building
 
-This project uses [SBT](https://www.scala-sbt.org/documentation.html). 
+This project uses [SBT](https://www.scala-sbt.org/documentation.html). [Install on Linux](https://www.scala-sbt.org/1.0/docs/Installing-sbt-on-Linux.html)
 Use the following command to create a WAR archive:
 
 ```sbt package```
