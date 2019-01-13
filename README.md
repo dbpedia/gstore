@@ -1,6 +1,6 @@
 # Digital Factory Platform (Server-Side Services) #
 
-Contents
+Contents:
 
 * (main) a Scalatra-based REST-service for uploading and managing DataIds to appear in
  the DFP repo 
@@ -14,6 +14,53 @@ Contents
 This Scalatra-based REST-service allows to submit DataIDs to be loaded into the central
 DFP repos. Other management and reporting features pertaining these repos and contained 
 DataIDs are planned.
+
+## Deployment
+
+install tomcat
+`sudo apt-get install tomcat8`
+
+setup war deployments by copying the following into `/etc/tomcat8/Catalina/localhost/dataid-repo.xml`
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<Context path="/dataid-repo" 
+	 docBase="/var/lib/tomcat8/webapps/dataid-repo.war">
+  <Parameter name="org.dbpedia.databus.dataidrepo.config" value="/opt/dataid-repo/dataid-repo.conf"/>
+</Context>
+```
+`sudo nano /etc/tomcat8/Catalina/localhost/dataid-repo.xml`
+
+# setup paths
+```
+sudo mkdir /opt/dataid-repo/
+sudo mkdir /opt/dataid-repo/file-storage
+sudo chown tomcat8:tomcat8 /opt/dataid-repo/
+sudo chown tomcat8:tomcat8 /opt/dataid-repo/file-storage
+
+```
+
+# build
+sbt package
+
+
+
+
+
+
+## Tomcat Log
+to check whether the war file is deployed
+
+```
+DATE=`date +%Y-%m-%d`
+tail -f  /var/log/tomcat8/catalina.$DATE.log
+```
+
+to check the log messages from the service
+```
+DATE=`date +%Y-%m-%d`
+tail -f  /var/log/tomcat8/localhost.$DATE.log
+```
+
 
 ## Building
 

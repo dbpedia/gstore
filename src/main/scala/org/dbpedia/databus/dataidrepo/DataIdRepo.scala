@@ -23,6 +23,7 @@ class DataIdRepo(implicit repoConfig: DataIdRepoConfig) extends ScalatraServlet 
   implicit lazy val rdf = new Rdf()
 
   get("/") {
+    log("test")
     views.html.hello()
   }
 
