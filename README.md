@@ -43,7 +43,7 @@ Here is an example snippet for a Tomcat `<Context/>` configuration element speci
 <?xml version="1.0" encoding="UTF-8"?>
   <Context path="/dataid-repo" docBase="/var/lib/tomcat8/webapps/dataid-repo.war">
 
-  <Parameter name="org.dbpedia.databus.dataidrepo.config" value="/data/dataid-repo/dataid-repo.conf"/>
+  <Parameter name="org.dbpedia.databus.dataidrepo.config" value="/opt/dataid-repo/dataid-repo.conf"/>
 </Context>
 
 ```
