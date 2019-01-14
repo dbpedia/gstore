@@ -13,9 +13,9 @@ persistence {
 
 virtuoso {
 
-  host = "localhost:1111"
+  host = "localhost:1111" // you might need to adjust the port number here
   user = dba
-  password = dba
+  password = "enter the password here"
 
   concurrentConnectionsToProcessorsRatio = 1.0
   maxConcurrentConnections = 8

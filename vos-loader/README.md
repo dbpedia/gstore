@@ -1,40 +1,45 @@
 # Digital Factory Platform VOS Loading #
 
-A Scala internal daemon service that inspects a directory for files to be loaded into a Virtuoso 
-Open Source instance.
-
-TODO Question: What is a "Scala internal daemon service" ? Should this be:
-Daemon service, which inspects a directory for uploaded files on the Databus repo to be loaded into a Virtuoso 
-Open Source instance. Written in Scala and deployed via ??? (tmux or /etc/service??)
+Daemon service, which inspects a directory for files submitted to the Databus repo to be loaded 
+into a Virtuoso Open Source instance.
 
 ## Workflow
 
 The service monitors the `persistence.fileSystemStorageLocation` directory. 
 When it finds new files there, it processes them and 
-puts them first into `loading.vosQueuesParentDir/loading` and then either in failed or loaded.
-TODO: what is the `loading-active.flag` file doing?
-
-## Building
-
-This project uses [SBT](https://www.scala-sbt.org/documentation.html). Use `sbt compile` to build
-the bytecode.
+puts them first into `{loading.vosQueuesParentDir}/loading` and then either in `failed` or `loaded`.
 
 ## Setup Docker for Virtuoso
 
-TODO Question: Does it work with a normal virtuoso? Is lib/virt_jena3.jar used in the Docker only or in the Scala code?This means that it just needs a virtuoso with the jena adapter installed, right?
-I am really wondering how the files under /lib/ are used, i.e. is it an sbt default to include them as dependencies, because I could not find anything in build.sbt. 
-
 This service has been developed and tested against VOS 7.2.4, specifically, the Docker container
 `tenforce/virtuoso:1.3.1-virtuoso7.2.4`. It packages and uses the Jena connector libraries from
-OpenLink as packaged in that Docker image (`lib/virt_jena3.jar`). The connector might be upwards
-compatible to following minor revisions of VOS, but your mileage may vary. If the service is to 
-operate with newer VOS versions, it is recommendable to replace the connector jars in the `lib/`
-folder to the corresponding new connectors as well. 
+OpenLink as packaged in that Docker image (`virtjdbc4_2ssl.jar`, `lib/virt_jena3.jar`). The 
+connector might be upwards compatible to following minor revisions of VOS, but your mileage may 
+vary. If the service is to operate with newer VOS versions, it is recommendable to replace the 
+connector jars in the `lib/` folder to the corresponding new connectors as well. 
 
 The quick and reliable way to provide a suitable VOS instance is to copy and adjust 
 `docker-compose.yml-TEMPLATE` to a `docker-compose.yml` file and then to spin up a docker container
 with `docker-compose up -d`.
 
+#### Explanations of the VOS Virt Jena Drivers as Unmanaged Dependencies
+
+All `jar`-files in the `lib/` project-subdirectory are treated by SBT by default as 
+[unmanaged dependencies](https://www.scala-sbt.org/1.x/docs/Library-Dependencies.html#Unmanaged+dependencies).
+Thus they will be added directly (and without resolution of potential transitive dependencies) 
+to the project classpath.
+
+This service requires the `virtjdbc4_2ssl.jar` and `virt_jena3.jar` from the same VOS 
+distribution or installation available in the `lib/` directory. Within the VOS Docker 
+images from tenforce, these files are located at:
+```
+/usr/local/virtuoso-opensource/lib/jdbc-4.2/virtjdbc4_2ssl.jar
+/usr/local/virtuoso-opensource/lib/jena3/virt_jena3.jar 
+```
+
+The VOS JDBC drivers use the same ODBC interface as the ISQL command line tool `isql-v` does.
+Thus, the access to VOS for this service should work with any VOS instance built with typical
+compile flags, as long as the versions of the VOS server and the driver files match sufficiently.
 
 ## Configuration file
 
@@ -46,9 +51,18 @@ defines the source path for the config from three sources (decreasing priority):
 1. The `configFileDefault` value in the SBT file
 
 
-## Running
+## Building, Running and Stopping
 
-TODO big ? SH: I already checked HTOP and tmux, but could not find anything..... 
+This project uses [SBT](https://www.scala-sbt.org/documentation.html). Use `sbt compile` to build
+the bytecode.
+
+After ensuring that you indicated a valid configuration file (see previous section), 
+invoke the service with `sbt run`.
+
+The service creates on startup the file `{loading.vosQueuesParentDir}/loading-active.flag` 
+and monitors continuously whether it still exists. Once the service notices the absence of this 
+file, it will start a graceful shutdown. Thus, deleting this flag file is the method to preferred 
+over `kill`-signals to end the loading process.
 
 ## Config Options
 An instance of this service requires a [HOCON](https://github.com/lightbend/config/blob/master/HOCON.md)
