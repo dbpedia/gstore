@@ -17,37 +17,109 @@ DataIDs are planned.
 
 ## Deployment
 
-install tomcat
-`sudo apt-get install tomcat8`
+### Create the .war file
 
-setup war deployments by copying the following into `/etc/tomcat8/Catalina/localhost/dataid-repo.xml`
+[Install SBT on Linux](https://www.scala-sbt.org/1.0/docs/Installing-sbt-on-Linux.html)
+
+This project uses [SBT](https://www.scala-sbt.org/documentation.html). 
+
+Use the following command to create a WAR archive:
+
+```sbt package```
+
+It will be generated under `target/scala-2.12/databus-dataid-repo_2.12-$VERSION.war`.
+
+
+### Setup Tomcat and AJP
+
+#### setup writable directories for storing the dataids
 ```
+sudo mkdir /opt/dataid-repo/
+sudo mkdir /opt/dataid-repo/file-storage
+sudo chown tomcat8:tomcat8 /opt/dataid-repo/
+sudo chown tomcat8:tomcat8 /opt/dataid-repo/file-storage
+```
+
+#### copy the config file
+`cp ./src/main/resources/dataid-repo.conf /opt/dataid-repo/dataid-repo.conf`
+NOTE: needs to be readable by tomcat
+
+#### Install tomcat8 and declare context
+
+1. `sudo apt-get install tomcat8`
+2. create a file in `sudo nano /etc/tomcat8/Catalina/localhost/dataid-repo.xml` ```
 <?xml version="1.0" encoding="UTF-8"?>
 <Context path="/dataid-repo" 
 	 docBase="/var/lib/tomcat8/webapps/dataid-repo.war">
   <Parameter name="org.dbpedia.databus.dataidrepo.config" value="/opt/dataid-repo/dataid-repo.conf"/>
 </Context>
 ```
-`sudo nano /etc/tomcat8/Catalina/localhost/dataid-repo.xml`
-
-## setup paths
-```
-sudo mkdir /opt/dataid-repo/
-sudo mkdir /opt/dataid-repo/file-storage
-sudo chown tomcat8:tomcat8 /opt/dataid-repo/
-sudo chown tomcat8:tomcat8 /opt/dataid-repo/file-storage
-
-```
-
-## build
-sbt package
-
-## deploy 
-copy war file to tomcat8 deployment dir
+#### Deploy the .war file
+The `dataid-repo.xml`  specifies, that you can copy the .war file to `/var/lib/tomcat8/webapps/dataid-repo.war`
 `sudo cp -v target/scala-2.12/databus-dataid-repo_2.12-*.war /var/lib/tomcat8/webapps/dataid-repo.war`
+Tomcat will then autoload it, check at `http://localhost:8080/manager/html/`
 
+#### Enable AJP on tomcat
+https://en.wikipedia.org/wiki/Apache_JServ_Protocol
+Make sure the following line is uncommented:
+```
+    <!-- Define an AJP 1.3 Connector on port 8009 -->
 
-## Tomcat Log
+    <Connector port="8009" protocol="AJP/1.3" redirectPort="8443" />
+```
+
+### Install and configure Apache HTTP with proxy, headers, ssl, proxy_ajp
+```
+sudo apt-get install apache2
+sudo a2enmod headers ssl proxy proxy_ajp	
+```
+
+#### Configure
+To be added to sites-available/sites-enabled
+above `/dataid-repo` was given as context for the war on tomcat, apache2 needs to proy it like this:
+```
+ProxyPassMatch "^/PUBLICREPONAME/(.*)$" "ajp://localhost:8009/dataid-repo/$1"
+```
+Furthermore the following lines help to set up ssl and other things:
+```
+	Listen 443
+	<VirtualHost _default_:443>
+		ServerName localhost
+   		ErrorLog /var/log/apache2/ajp.error.log
+   		CustomLog /var/log/apache2/ajp.log combined
+		# for debugging LogLevel trace5
+		ServerAdmin webmaster@localhost
+		SSLEngine on
+		SSLVerifyClient optional_no_ca
+   		SSLVerifyDepth 1
+   		SSLOptions +StdEnvVars +ExportCertData
+
+		# request headers give better info later
+   		RequestHeader unset X-SSL-Cipher
+   		RequestHeader unset X-Client-Cert
+    
+		<LocationMatch "^/repo">
+       		RequestHeader set X-SSL-Cipher "%{SSL_CIPHER}s"
+       		RequestHeader set X-Client-Cert "%{SSL_CLIENT_CERT}s"
+   		</LocationMatch>
+
+		# NOTE repo is the public name here
+		ProxyPassMatch "^/repo/(.*)$" "ajp://localhost:8009/dataid-repo/$1"
+
+		# this is the fake cert, use the real one later
+		SSLCertificateFile	/etc/ssl/certs/ssl-cert-snakeoil.pem
+		SSLCertificateKeyFile /etc/ssl/private/ssl-cert-snakeoil.key
+```
+
+## Debug help
+
+### verifying the AJP proxy from Apache HTTPD to Tomcat:
+```
+curl -v -k --cert ~/.ssh/webid_cert/certificate.pem --cert-type PEM --key  ~/.ssh/webid_cert/private_key_webid.pem --key-type PEM   https://localhost/repo/client-cert-info
+curl -v -k --cert ~/.ssh/webid_cert/certificate.pem --cert-type PE-key  ~/.ssh/webid_cert/private_key_webid.pem --key-type PEM   https://databus.dbpedia.org/repo/client-cert-info
+```
+
+### the tomcat Log
 to check whether the war file is deployed
 
 ```
@@ -61,41 +133,13 @@ DATE=`date +%Y-%m-%d`
 tail -f  /var/log/tomcat8/localhost.$DATE.log
 ```
 
-
-## Building
-
-[Install on Linux](https://www.scala-sbt.org/1.0/docs/Installing-sbt-on-Linux.html)
-
-This project uses [SBT](https://www.scala-sbt.org/documentation.html). 
-
-Use the following command to create a WAR archive:
-
-```sbt package```
-
-It will be generated under `scala/target/scala-2.12`.
-
-## Deployment
-
-`sudo apt-get install tomcat8`
-
-The .war file must be deployed on a Tomcat8 server. Default deployment is currently done via copying 
-the war file locally to the tomcat8 docBase dir, normally /var/lib/tomcat8/webapps/dataid-repo.war
-
-In order for this to work, Tomcat8 needs to have a properly installed "context" to deploy the file. 
-Here is an example snippet for a Tomcat `<Context/>` configuration element specifying the configuration path.
- (A typical place to put this could be for example be `/etc/tomcat8/Catalina/localhost/dataid-repo.xml`
- in an Ubuntu installation.): 
-
+### Apache logs
 ```
-<?xml version="1.0" encoding="UTF-8"?>
-  <Context path="/dataid-repo" docBase="/var/lib/tomcat8/webapps/dataid-repo.war">
-
-  <Parameter name="org.dbpedia.databus.dataidrepo.config" value="/opt/dataid-repo/dataid-repo.conf"/>
-</Context>
-
+tail -f  /var/log/apache2/ajp.error.log
+tail -f  /var/log/apache2/ajp.log
 ```
 
-##= Continuous Deployment during development
+## Continuous Deployment during development
 
 The SBT task `packageAndDeployToTomcat` can be used to have a packaged WAR copied to the place specified
 as `docBase` for a Tomcat context. Just specify the target location via the `warTargetLocation` setting key.
@@ -127,9 +171,6 @@ with the key `org.dbpedia.databus.dataidrepo.config`.
   be able to crate sub-directories in it. This will usually mean that the user/group associated with
   the application container in usage will need write permissions (e.g. `tomcat8`) or `drwxr-xrwx  2 tomcat8 tomcat8  4096 Jan 11 12:38 file-storage`.
   
-TODO what is the chmod/chown command? 
-
-
 
 ## Authentication with WebID / Client Certificate
 
@@ -144,13 +185,3 @@ As currently this way to receive client certificate information is specific to A
 other application containers (e.g. Jetty) or other HTTP server solutions in front of the 
 application container (e.g. nginx) is not supported and might require non-trivial changes.
  
-```
-
-sudo a2enmod headers ssl proxy proxy_ajp	
-curl -v -k --cert ~/.ssh/webid_cert/certificate.pem --cert-type PEM --key  ~/.ssh/webid_cert/private_key_webid.pem --key-type PEM   https://localhost/repo/client-cert-info
-curl -v -k --cert ~/.ssh/webid_cert/certificate.pem --cert-type PE-key  ~/.ssh/webid_cert/private_key_webid.pem --key-type PEM   https://databus.dbpedia.org/repo/client-cert-info
-curl -v --cert-status false  https://127.0.0.1/repo/dataid/upload
-curl -v -k   https://localhost/repo/dataid/upload
-ProxyPassMatch "^/REPONAME/(.*)$" "ajp://localhost:TOMCATPORT/TOMCATCONTEXT/$1"
-```
-
