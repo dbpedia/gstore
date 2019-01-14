@@ -146,8 +146,11 @@ application container (e.g. nginx) is not supported and might require non-trivia
  
 ```
 
+sudo a2enmod headers ssl proxy proxy_ajp	
+curl -v -k --cert ~/.ssh/webid_cert/certificate.pem --cert-type PEM --key  ~/.ssh/webid_cert/private_key_webid.pem --key-type PEM   https://localhost/repo/client-cert-info
+curl -v -k --cert ~/.ssh/webid_cert/certificate.pem --cert-type PE-key  ~/.ssh/webid_cert/private_key_webid.pem --key-type PEM   https://databus.dbpedia.org/repo/client-cert-info
 curl -v --cert-status false  https://127.0.0.1/repo/dataid/upload
-
+curl -v -k   https://localhost/repo/dataid/upload
 ProxyPassMatch "^/REPONAME/(.*)$" "ajp://localhost:TOMCATPORT/TOMCATCONTEXT/$1"
 ```
 
