@@ -30,7 +30,7 @@ setup war deployments by copying the following into `/etc/tomcat8/Catalina/local
 ```
 `sudo nano /etc/tomcat8/Catalina/localhost/dataid-repo.xml`
 
-# setup paths
+## setup paths
 ```
 sudo mkdir /opt/dataid-repo/
 sudo mkdir /opt/dataid-repo/file-storage
@@ -39,12 +39,12 @@ sudo chown tomcat8:tomcat8 /opt/dataid-repo/file-storage
 
 ```
 
-# build
+## build
 sbt package
 
-
-
-
+## deploy 
+copy war file to tomcat8 deployment dir
+`sudo cp -v target/scala-2.12/databus-dataid-repo_2.12-*.war /var/lib/tomcat8/webapps/dataid-repo.war`
 
 
 ## Tomcat Log
@@ -146,6 +146,7 @@ application container (e.g. nginx) is not supported and might require non-trivia
  
 ```
 
+curl -v --cert-status false  https://127.0.0.1/repo/dataid/upload
 
 ProxyPassMatch "^/REPONAME/(.*)$" "ajp://localhost:TOMCATPORT/TOMCATCONTEXT/$1"
 ```

@@ -23,7 +23,6 @@ class DataIdRepo(implicit repoConfig: DataIdRepoConfig) extends ScalatraServlet 
   implicit lazy val rdf = new Rdf()
 
   get("/") {
-    log("test")
     views.html.hello()
   }
 
@@ -70,7 +69,7 @@ class DataIdRepo(implicit repoConfig: DataIdRepoConfig) extends ScalatraServlet 
 
      val clientCert = authentication.getSingleCertFromContainer(request) match {
 
-      case Failure(ex) => halt(BadRequest(s"Provision of a X509 client certificate expected, but so such certificate " +
+      case Failure(ex) => halt(BadRequest(s".X509 client certificate expected, but no such certificate " +
         "could be retrieved due to:\n" + ex.toString))
 
       case Success(cert) => cert
