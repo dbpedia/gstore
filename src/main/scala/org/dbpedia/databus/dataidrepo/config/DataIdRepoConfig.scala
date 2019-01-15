@@ -13,7 +13,7 @@ import net.ceedubs.ficus.readers.ValueReader
 /**
   * Created by Markus Ackermann.
   */
-class DataIdRepoConfig(val externalConfigPath: Option[String]) extends LazyLogging {
+class DataIdRepoConfig(val externalConfigPath: Option[String], val requireDBpediaAccount:Boolean) extends LazyLogging {
 
   lazy val persistence = PersistenceConfig
 

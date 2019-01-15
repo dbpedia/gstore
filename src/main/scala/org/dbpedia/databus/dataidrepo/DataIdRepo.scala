@@ -17,7 +17,7 @@ import scala.io.{Codec, Source}
 import scala.util.{Failure, Success}
 
 
-@MultipartConfig(maxFileSize=10*1024*1024)
+@MultipartConfig(maxFileSize = 10 * 1024 * 1024)
 class DataIdRepo(implicit repoConfig: DataIdRepoConfig) extends ScalatraServlet with FileUploadSupport {
 
   implicit lazy val rdf = new Rdf()
@@ -47,8 +47,8 @@ class DataIdRepo(implicit repoConfig: DataIdRepoConfig) extends ScalatraServlet 
       .map(authentication.describeX059Cert)
 
     s"""
-      |client certificate from Servlet container:
-      |$fromContainer
+       |client certificate from Servlet container:
+       |$fromContainer
     """.stripMargin
   }
 
@@ -59,22 +59,27 @@ class DataIdRepo(implicit repoConfig: DataIdRepoConfig) extends ScalatraServlet 
 
     def notMultiPart = request.contentType.fold(true) { ct => !(ct startsWith "multipart/") }
 
-    if(notMultiPart) {
-      halt(BadRequest(s"Multi-part request expected."))
+    if (notMultiPart) {
+      halt(BadRequest(s"Multi-part request expected, but received ${request.contentType}."))
     }
 
-    if(!(expectedPartsForUpload subsetOf fileParams.keySet)) {
+    if (!(expectedPartsForUpload subsetOf fileParams.keySet)) {
       halt(BadRequest(s"Missing required part(s): ${(expectedPartsForUpload -- fileParams.keySet).mkString(", ")}"))
     }
 
-     val clientCert = authentication.getSingleCertFromContainer(request) match {
+
+    val clientCert = authentication.getSingleCertFromContainer(request) match {
 
       case Failure(ex) => halt(BadRequest(s".X509 client certificate expected, but no such certificate " +
-        "could be retrieved due to:\n" + ex.toString))
+        "could be retrieved, exception was:\n" + ex.toString + "\n" + request.toString))
 
       case Success(cert) => cert
     }
 
+    if (repoConfig.requireDBpediaAccount) {
+      // validate DBpedia account
+      //clientCert.getSubjectAlternativeNames
+    }
     val dataIdStream = managed(fileParams(dataId).getInputStream)
 
     val signature = fileParams(dataIdSignature).get()

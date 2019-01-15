@@ -59,7 +59,7 @@ class DataIdUploadHandler(clientCert: X509Certificate, dataId: ManagedResource[I
       }
     } flatMap {
 
-      case false => Error(s"The submitted DataId could not be verified against the provided signature").right
+      case false => Error(s"The posted DataId could not be verified against the posted signature").right
 
       case true => Pass("DataId could be verified against provided signature").right
     }
@@ -226,6 +226,7 @@ class DataIdUploadHandler(clientCert: X509Certificate, dataId: ManagedResource[I
           // streaming copy of DataId from request
           dataidInputStream pipeTo dataidOutputStream
 
+          // todo
           graphFile write (dataIdWebURL + "\n")
         }
 

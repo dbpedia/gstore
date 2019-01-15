@@ -15,9 +15,11 @@ class ScalatraBootstrap extends LifeCycle with LazyLogging {
 
     val databusConfInitParam = context.initParameters.get(DataIdRepoConfigKey)
 
-    context.log("ScalatraBootstrap.init: " + snap(databusConfInitParam))
+    val requireDBpediaAccount  = context.initParameters.get("requireDBpediaAccount").map(_.toBoolean).getOrElse(false)
 
-    implicit val config = new DataIdRepoConfig(databusConfInitParam)
+    context.log("ScalatraBootstrap.init: " + snap(databusConfInitParam) + "require DBpedia Account "+requireDBpediaAccount)
+
+    implicit val config = new DataIdRepoConfig(databusConfInitParam, requireDBpediaAccount)
 
     context.mount(new DataIdRepo, "/*")
   }

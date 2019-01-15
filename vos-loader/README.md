@@ -22,6 +22,15 @@ The quick and reliable way to provide a suitable VOS instance is to copy and adj
 `docker-compose.yml-TEMPLATE` to a `docker-compose.yml` file and then to spin up a docker container
 with `docker-compose up -d`.
 
+`sudo apt-get install docker.io`
+`sudo usermod -aG docker shellmann`
+`newgrp docker`
+`newgrp shellmann`
+`docker exec -ti $NAME bash`
+`isql-v $PORT`
+
+
+
 #### Explanations of the VOS Virt Jena Drivers as Unmanaged Dependencies
 
 All `jar`-files in the `lib/` project-subdirectory are treated by SBT by default as 
@@ -59,6 +68,9 @@ the bytecode.
 After ensuring that you indicated a valid configuration file (see previous section), 
 invoke the service with `sbt run`.
 
+sbt run -loading.loadingInterval=10
+lightbend config 
+
 The service creates on startup the file `{loading.vosQueuesParentDir}/loading-active.flag` 
 and monitors continuously whether it still exists. Once the service notices the absence of this 
 file, it will start a graceful shutdown. Thus, deleting this flag file is the method to preferred 
@@ -94,3 +106,6 @@ to load.
 `virtuoso.{concurrentConnectionsToProcessorsRatio,maxConcurrentConnections}`: These to settings determine how
 many concurrent VOS sessions can be used to load documents. The ratio will be multiplied with the number of
 (virtual) processor cores detected by the JVM, the resulting number is then capped by `maxConcurrentConnections`
+
+
+

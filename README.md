@@ -149,6 +149,8 @@ seconds after they were saved/`rsync`ed to the projects `src` directory:
 
 TODO this command does not work....
 `sbt:databus-dataid-repo> ~packageAndDeployToTomcat`
+~ -> continousbuilding
+`sbt ~packageAndDeployToTomcat`
 
 ## Configuration
 
@@ -171,6 +173,9 @@ with the key `org.dbpedia.databus.dataidrepo.config`.
   be able to crate sub-directories in it. This will usually mean that the user/group associated with
   the application container in usage will need write permissions (e.g. `tomcat8`) or `drwxr-xrwx  2 tomcat8 tomcat8  4096 Jan 11 12:38 file-storage`.
   
+  
+### Reload config
+Touch the war file
 
 ## Authentication with WebID / Client Certificate
 
@@ -185,3 +190,12 @@ As currently this way to receive client certificate information is specific to A
 other application containers (e.g. Jetty) or other HTTP server solutions in front of the 
 application container (e.g. nginx) is not supported and might require non-trivial changes.
  
+## 
+* java.lang.StringIndexOutOfBoundsException: String index out of range: -1
+* mvn deploy -> 
+** enablePlugins(SbtTwirl)
+** enablePlugins(ScalatraPlugin) 
+* config file? 
+
+
+
