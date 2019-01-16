@@ -32,8 +32,8 @@ import java.nio.file.attribute.PosixFilePermission._
 import java.security.cert.X509Certificate
 
 class DataIdUploadHandler(clientCert: X509Certificate, dataId: ManagedResource[InputStream],
-  dataIdSignature: Array[Byte], uploadParams: Map[String, List[String]])
-  (implicit config: DataIdRepoConfig, rdf: Rdf) extends LazyLogging {
+                          dataIdSignature: Array[Byte], uploadParams: Map[String, List[String]], account:String)
+                         (implicit config: DataIdRepoConfig, rdf: Rdf) extends LazyLogging {
 
   trait Technical
 
@@ -43,7 +43,8 @@ class DataIdUploadHandler(clientCert: X509Certificate, dataId: ManagedResource[I
 
   def dataIdWebLocation = retrieveSingleUploadParam(UploadParams.dataIdLocation)
 
-  def dataIdIdentifier = retrieveSingleUploadParam(UploadParams.dataIdIdentifier)
+  //TODO also seems necessary for TDB, we use it for file storage only
+  def datasetIdentifier = retrieveSingleUploadParam(UploadParams.datasetIdentifier)
 
   def dataIdVersion = retrieveSingleUploadParam(UploadParams.dataIdVersion)
 
@@ -104,7 +105,7 @@ class DataIdUploadHandler(clientCert: X509Certificate, dataId: ManagedResource[I
             signing.hashInputStream(_, Hashing.sha256())
           }
 
-          if(webLocationHashCode == inRequestHashCode) {
+          if (webLocationHashCode == inRequestHashCode) {
             Pass(s"Submitted DataId matches with the one available at '$dataIdWebURL'").right
           } else {
             Warning(s"Content mismatch between DataId submitted and the one available at '$dataIdWebURL'.",
@@ -130,6 +131,7 @@ class DataIdUploadHandler(clientCert: X509Certificate, dataId: ManagedResource[I
           ModelFactory.createDefaultModel() tap { model =>
             RDFDataMgr.read(model, dataIdStream, Lang.TURTLE)
           }
+
         }).map(PassWithResult("Submitted DataId is well-formed RDF", _))
           .recover({
             //todo: match more specifically for the exceptions from Jena that are parse exceptions
@@ -176,8 +178,8 @@ class DataIdUploadHandler(clientCert: X509Certificate, dataId: ManagedResource[I
 
       logger.debug("in write transaction for save")
 
-
-      (dataIdIdentifier |@| dataIdVersion |@| dataIdWebLocation |@| validations.wellformed) apply {
+      //TODO datasetIdentifier unclear
+      (datasetIdentifier |@| dataIdVersion |@| dataIdWebLocation |@| validations.wellformed) apply {
 
         case (identifier, version, location, PassWithResult(_, model: Model, _)) => {
 
@@ -196,6 +198,7 @@ class DataIdUploadHandler(clientCert: X509Certificate, dataId: ManagedResource[I
 
     def storeToFilesystem(validations: Validations): TechnicalError \/ Unit = {
 
+
       dataIdWebLocation map { dataIdWebURL =>
 
         val documentName = urlEncode(dataIdWebURL.stripSuffix(".ttl"))
@@ -209,6 +212,16 @@ class DataIdUploadHandler(clientCert: X509Certificate, dataId: ManagedResource[I
         val ttlFile = (documentDir / s"$documentName.ttl").touch()
 
         val graphFile = (documentDir / s"$documentName.graph").touch()
+
+        val graphIRI = if (config.requireDBpediaAccount) {
+          if (datasetIdentifier.getOrElse(dataIdWebURL).startsWith(account)) {
+              datasetIdentifier+"\n"
+          }else{
+            halt(BadRequest(s"${datasetIdentifier} does not match account name ${account}"))
+          }
+        } else {
+          dataIdWebURL + "\n"
+        }
 
         othersRWPerms foreach { perm =>
 
@@ -226,8 +239,7 @@ class DataIdUploadHandler(clientCert: X509Certificate, dataId: ManagedResource[I
           // streaming copy of DataId from request
           dataidInputStream pipeTo dataidOutputStream
 
-          // todo
-          graphFile write (dataIdWebURL + "\n")
+          graphFile write (graphIRI)
         }
 
         writing.apply(identity)
@@ -288,10 +300,11 @@ class DataIdUploadHandler(clientCert: X509Certificate, dataId: ManagedResource[I
   lazy val othersRWXPerms = othersRWPerms + OTHERS_EXECUTE
 
   case class Validations(signature: TechnicalError \/ ValidationResult,
-    locationMatches: TechnicalError \/ ValidationResult, wellformed: TechnicalError \/ ValidationResult) {
+                         locationMatches: TechnicalError \/ ValidationResult, wellformed: TechnicalError \/ ValidationResult) {
 
     def list = List(signature, wellformed, locationMatches)
   }
+
 }
 
 object DataIdUploadHandler {

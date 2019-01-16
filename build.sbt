@@ -19,7 +19,7 @@ libraryDependencies ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  ("org.dbpedia.databus" % "databus-shared-lib" % "0.2").changing(),
+  ("org.dbpedia.databus" % "databus-shared-lib" % "0.2.6-SNAPSHOT").changing(),
   "org.eclipse.jgit" % "org.eclipse.jgit" % "5.0.1.201806211838-r",
   "org.apache.jena" % "apache-jena-libs" % "3.8.0",
   "org.scalaz" %% "scalaz-core" % "7.2.26",

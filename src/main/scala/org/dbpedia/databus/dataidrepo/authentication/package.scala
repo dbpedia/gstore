@@ -33,7 +33,7 @@ package object authentication {
     }
   }
 
-    def getAlternativeNameURIs(cert: X509Certificate) = {
+    def getAlternativeNameURIs(cert: X509Certificate): List[String] = {
 
       val altNames = Option(cert.getSubjectAlternativeNames).map(_.asScala)
 

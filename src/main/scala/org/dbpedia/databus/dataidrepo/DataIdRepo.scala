@@ -4,9 +4,12 @@ import org.dbpedia.databus.dataidrepo.config.DataIdRepoConfig
 import org.dbpedia.databus.dataidrepo.handlers.DataIdUploadHandler
 import org.dbpedia.databus.dataidrepo.rdf.Rdf
 import org.dbpedia.databus.shared.DataIdUpload
+import org.dbpedia.databus.shared.authentification.AccountHelpers
+import org.apache.jena.rdf.model.{Resource}
 
 import javax.servlet.ServletConfig
 import javax.servlet.annotation.MultipartConfig
+import org.dbpedia.databus.dataidrepo.authentication.getAlternativeNameURIs
 import org.scalatra._
 import org.scalatra.servlet.FileUploadSupport
 import org.scalatra.util.MapQueryString
@@ -76,10 +79,21 @@ class DataIdRepo(implicit repoConfig: DataIdRepoConfig) extends ScalatraServlet 
       case Success(cert) => cert
     }
 
-    if (repoConfig.requireDBpediaAccount) {
-      // validate DBpedia account
-      //clientCert.getSubjectAlternativeNames
-    }
+
+    // validate DBpedia account
+    //TODO take first element for now....
+    val altNameDesc = getAlternativeNameURIs(clientCert).head
+
+    val account: Resource = AccountHelpers.getAccountOption(altNameDesc).getOrElse(
+      if (repoConfig.requireDBpediaAccount) {
+        halt(Unauthorized(s"No DBpedia Account for ${altNameDesc} found (Origin: SAN field of .X509), register at https://github.com/dbpedia/accounts#how-to-get-an-account"))
+        null
+      } else {
+        null
+      }
+    )
+
+
     val dataIdStream = managed(fileParams(dataId).getInputStream)
 
     val signature = fileParams(dataIdSignature).get()
@@ -91,8 +105,9 @@ class DataIdRepo(implicit repoConfig: DataIdRepoConfig) extends ScalatraServlet 
       MapQueryString.parseString(paramsQueryString)
     }
 
-    val handler = new DataIdUploadHandler(clientCert, dataIdStream, signature, uploadParamsMap)
+    val handler = new DataIdUploadHandler(clientCert, dataIdStream, signature, uploadParamsMap, account.getURI)
 
     handler.response
   }
+
 }
