@@ -1,15 +1,14 @@
 package org.dbpedia.databus.dataidrepo
 
+import org.dbpedia.databus.dataidrepo.authentication.getAlternativeNameURIs
 import org.dbpedia.databus.dataidrepo.config.DataIdRepoConfig
 import org.dbpedia.databus.dataidrepo.handlers.DataIdUploadHandler
 import org.dbpedia.databus.dataidrepo.rdf.Rdf
 import org.dbpedia.databus.shared.DataIdUpload
 import org.dbpedia.databus.shared.authentification.AccountHelpers
-import org.apache.jena.rdf.model.{Resource}
 
-import javax.servlet.ServletConfig
 import javax.servlet.annotation.MultipartConfig
-import org.dbpedia.databus.dataidrepo.authentication.getAlternativeNameURIs
+import org.apache.jena.rdf.model.Resource
 import org.scalatra._
 import org.scalatra.servlet.FileUploadSupport
 import org.scalatra.util.MapQueryString
@@ -98,6 +97,7 @@ class DataIdRepo(implicit repoConfig: DataIdRepoConfig) extends ScalatraServlet 
 
     val signature = fileParams(dataIdSignature).get()
 
+    //todo: simplify this using `new String(fileParams(uploadParams).get(), StandardCharsets.UTF_8)`
     val uploadParamsMap = managed(fileParams(uploadParams).getInputStream) apply { is =>
 
       def paramsQueryString = Source.fromInputStream(is)(Codec.UTF8).mkString

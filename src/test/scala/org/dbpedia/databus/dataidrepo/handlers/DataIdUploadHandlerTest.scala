@@ -30,7 +30,7 @@ class DataIdUploadHandlerTest extends FlatSpec with Matchers with MockFactory wi
     }
 
     val uploadParams = Map(
-      UploadParams.dataIdIdentifier -> List("mammals"),
+      UploadParams.datasetIdentifier -> List("mammals"),
       UploadParams.dataIdVersion -> List("1.0"),
       UploadParams.dataIdLocation -> List(dataIdTargetLocation)
     )
@@ -44,11 +44,12 @@ class DataIdUploadHandlerTest extends FlatSpec with Matchers with MockFactory wi
 
     (clientCertMock.getPublicKey _).expects().returning(publicKey)
 
-    implicit val repoConfigMock = new DataIdRepoConfig(None)
+    implicit val repoConfigMock = new DataIdRepoConfig(None, false)
 
     implicit val rdfMock = new Rdf()
 
-    val handler = new DataIdUploadHandler(clientCertMock, resourceAsStream(dataIdResourceName), signature, uploadParams)
+    val handler = new DataIdUploadHandler(clientCertMock, resourceAsStream(dataIdResourceName), signature,
+      uploadParams, "http://dbpedia.org/accounts/test")
 
     val response = handler.response
 

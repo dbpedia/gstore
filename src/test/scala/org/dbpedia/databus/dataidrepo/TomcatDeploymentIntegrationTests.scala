@@ -41,7 +41,7 @@ class TomcatDeploymentIntegrationTests extends ScalatraFlatSpec with LazyLogging
 
 
     val resp = DataIdUpload.upload(s"$deploymentBaseIRI/dataid/upload", resourceAsStream(dataIdResourceName),
-      resourceAsStream(testCertResourceName), testCertResourceName, dataIdTargetLocation, true)
+      resourceAsStream(testCertResourceName), testCertResourceName, "", dataIdTargetLocation, true, "mammals")
 
     logger.debug("response meta: " + resp.toString)
     logger.debug("response body: " + resp.body)
