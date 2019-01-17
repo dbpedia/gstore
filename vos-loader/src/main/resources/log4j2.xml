@@ -28,7 +28,7 @@
 
     <Loggers>
 
-        <Logger name="org.apache.jena" level="debug" />
+        <Logger name="org.apache.jena" level="warn" />
 
         <Logger name="org.dbpedia.databus.vosloader" level="info" />
 

@@ -3,14 +3,13 @@ package org.dbpedia.databus.vosloader
 import better.files._
 import com.google.common.io.Resources
 import monix.execution.Scheduler
-import org.apache.commons.io.{FileUtils, IOUtils}
+import org.apache.commons.io.FileUtils
 import org.apache.logging.log4j.scala.Logging
 import resource._
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Promise}
-import scala.util.Success
-import scala.util.Random
+import scala.util.{Random, Success}
 
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets.UTF_8
@@ -22,6 +21,17 @@ object TestDocumentSubmitter extends Logging {
   def mammalsResource = Resources.getResource("mammals-1.0.0_dataid.ttl")
 
   def main(args: Array[String]): Unit = {
+
+    val usageHelp = """Exactly one argument (the path to the HOCON config file) is expected."""
+
+    val configPath = args.toList match {
+
+      case Nil => sys.error("No configuration specified.\n" + usageHelp)
+
+      case configPath :: Nil => config.configPath.set(Some(configPath))
+
+      case _ => sys.error("Too many command line arguments specified.\n" + usageHelp)
+    }
 
     def createDocDirToLoad(docName: DocumentName) = {
 

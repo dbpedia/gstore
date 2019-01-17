@@ -1,1 +1,2 @@
-libraryDependencies += "com.github.pathikrit" %% "better-files" % "3.5.0"
+addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.3.15")
+

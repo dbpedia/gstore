@@ -50,26 +50,34 @@ The VOS JDBC drivers use the same ODBC interface as the ISQL command line tool `
 Thus, the access to VOS for this service should work with any VOS instance built with typical
 compile flags, as long as the versions of the VOS server and the driver files match sufficiently.
 
-## Configuration file
-
-The `configFile` task defined in the SBT build file (`build.sbt`) 
-defines the source path for the config from three sources (decreasing priority):
-
-1. The value of the system environment variable `VOS_LOADER_CONFIG=/opt/dataid-repo/vosloader.conf`
-1. The value of the JVM system property `org.dbpedia.databus.vosloader.config`
-1. The `configFileDefault` value in the SBT file
-
-
-## Building, Running and Stopping
+## Building and Packaging
 
 This project uses [SBT](https://www.scala-sbt.org/documentation.html). Use `sbt compile` to build
 the bytecode.
 
-After ensuring that you indicated a valid configuration file (see previous section), 
-invoke the service with `sbt run`.
+[SBT Native Packager](https://www.scala-sbt.org/sbt-native-packager/index.html) can be used to create
+a `zip` or `tgz` archive-distributions of this project that can be deployed and run on environments without
+SBT: `sbt universal:packageBin` (for `zip`-archives) or `sbt universal:packageZipTarball` 
+(for `tgz-archives`). 
 
-sbt run -loading.loadingInterval=10
-lightbend config 
+
+## Running and Stopping
+
+#### Running in SBT
+
+`sbt run [path-to-config-file]`
+
+JVM-arguments for the loading process need to be adjusted in `build.sbt` (`run / javaOptions`).
+
+#### Running the distribution archives by Native Packager
+
+Unpack the archive and `cd` into the folder with its contents, then:
+```./bin/databus-dataid-vos-loader [path-to-config-file]```
+
+The start scripts hands over `-D` switches to `java` to adjust system properties, e.g.:
+```./bin/databus-dataid-vos-loader -Dlog4j.configurationFile=/tmp/log4j2.xml [path-to-config-file]```
+
+#### Stopping the Loading Process
 
 The service creates on startup the file `{loading.vosQueuesParentDir}/loading-active.flag` 
 and monitors continuously whether it still exists. Once the service notices the absence of this 

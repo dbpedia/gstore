@@ -35,27 +35,18 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.5" % Test,
 )
 
-val configFile = taskKey[Option[String]]("external configurationFile")
+enablePlugins(JavaAppPackaging)
+maintainer := "Sebastian Hellmann <hellmann@informatik.uni-leipzig.de>"
 
-val configFileDefault = Some("/opt/dataid-repo/vosloader.conf")
+Compile / mainClass := Some("org.dbpedia.databus.vosloader.Main")
+Test / mainClass := Some("org.dbpedia.databus.vosloader.TestDocumentSubmitter")
 
-configFile := {
-  
-  Seq(sys.env.get("VOS_LOADER_CONFIG"), 
-    sys.props.get("org.dbpedia.databus.vosloader.config"), 
-    configFileDefault).flatten.headOption
-}
-
-Compile / run / fork := true
-Compile / run / mainClass := Some("org.dbpedia.databus.vosloader.Main")
-Test / run / mainClass := Some("org.dbpedia.databus.vosloader.TestDocumentSubmitter")
-run / javaOptions := {
-
-  Seq("-Xmx8G") ++ configFile.value.map(path => s"-Dorg.dbpedia.databus.vosloader.config=$path")
-} 
+run / fork := true
+run / javaOptions := Seq("-Xmx8G")
 
 resolvers ++= Seq(
   Classpaths.typesafeReleases,
-  "Databus Archiva - Internal" at "http://95.216.13.238:8081/repository/internal/",
+  Resolver.sonatypeRepo("snapshots"),
+  Resolver.sonatypeRepo("releases"),
   Resolver.mavenLocal
 )

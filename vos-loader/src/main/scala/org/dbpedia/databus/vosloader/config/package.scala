@@ -2,6 +2,7 @@ package org.dbpedia.databus.vosloader
 
 import better.files.File
 import com.typesafe.config.{Config, ConfigFactory}
+import monix.execution.atomic.Atomic
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ValueReader
 import org.apache.logging.log4j.scala.Logging
@@ -16,24 +17,20 @@ package object config extends Logging {
 
   lazy val virtuoso = VirtuosoConfig
 
+  val configPath = Atomic(None: Option[String])
+
   lazy val configRoot = {
 
-    def externalConfig = sys.props.get("org.dbpedia.databus.vosloader.config").map(File(_)).map {
+    def configFile = configPath.get.map(File(_)) match {
 
-      case file if file.isRegularFile => file
+      case Some(file) if file.isRegularFile => file
 
-      case noFile => sys.error(s"Provided no (regular) file at given configuration location: '${noFile.pathAsString}'")
+      case Some(missing) => sys.error(s"No (regular) file at given configuration location: '${missing.pathAsString}'")
+
+      case None => sys.error("Path to configuration file was not set.")
     }
 
-    externalConfig.fold({
-
-      logger.info("Using default config from classpath")
-      ConfigFactory.load("vosloader.conf")
-    }) { configFile =>
-
-      logger.info(s"Using config from file ${configFile}")
-      ConfigFactory.parseFile(configFile.toJava)
-    }
+    ConfigFactory.parseFile(configFile.toJava)
   }
 
   object LoadingConfig {
