@@ -1,13 +1,13 @@
 package org.dbpedia.databus.vosloader
 
-import com.typesafe.scalalogging.LazyLogging
 import monix.execution.Scheduler
+import org.apache.logging.log4j.scala.Logging
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Promise}
 import scala.util.Success
 
-object Main extends LazyLogging {
+object Main extends Logging {
 
   lazy val loadingActiceFlagFile = (config.loading.vosQueuesParentDir / "loading-active.flag")
 

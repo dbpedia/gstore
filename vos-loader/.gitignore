@@ -1,2 +1,4 @@
+.idea/
+
 src/main/resources/vosloader.conf
 docker-compose.yml

@@ -1,25 +1,16 @@
 package org.dbpedia.databus.vosloader
 
-import com.typesafe.scalalogging.LazyLogging
-import monix.eval._
-import monix.execution.Scheduler
-import monix.execution.Scheduler.global
 import org.apache.jena.query.ReadWrite
-import org.apache.jena.graph.{NodeFactory, Triple => JenaTriple}
 import org.apache.jena.rdf.model.ModelFactory
 import org.apache.jena.riot.{Lang, RDFDataMgr}
 import org.apache.jena.vocabulary.RDF
+import org.apache.logging.log4j.scala.Logging
 import org.scalatest.{FlatSpec, Matchers}
 import virtuoso.jena.driver.VirtDataset
 
-import scala.concurrent.{Await, Promise}
-import scala.util.control.NonFatal
-import scala.concurrent.duration._
-import scala.util.{Failure, Success}
-
 import java.time.Instant
 
-class VosLoaderTest extends FlatSpec with Matchers with LazyLogging {
+class VosLoaderTest extends FlatSpec with Matchers with Logging {
 
   def createVirtDs = new VirtDataset(config.virtuoso.host, config.virtuoso.user, config.virtuoso.password)
 

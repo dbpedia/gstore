@@ -2,9 +2,9 @@ package org.dbpedia.databus.vosloader
 
 import better.files._
 import com.google.common.io.Resources
-import com.typesafe.scalalogging.LazyLogging
 import monix.execution.Scheduler
 import org.apache.commons.io.{FileUtils, IOUtils}
+import org.apache.logging.log4j.scala.Logging
 import resource._
 
 import scala.concurrent.duration._
@@ -15,7 +15,7 @@ import scala.util.Random
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets.UTF_8
 
-object TestDocumentSubmitter extends LazyLogging {
+object TestDocumentSubmitter extends Logging {
 
   lazy val testDocSubmissionActiveFlagFile = (config.loading.vosQueuesParentDir / "test-docs-active.flag")
 

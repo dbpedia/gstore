@@ -2,13 +2,13 @@ package org.dbpedia.databus.vosloader
 
 import better.files.File
 import com.typesafe.config.{Config, ConfigFactory}
-import com.typesafe.scalalogging.LazyLogging
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ValueReader
+import org.apache.logging.log4j.scala.Logging
 
 import scala.concurrent.duration.FiniteDuration
 
-package object config extends LazyLogging {
+package object config extends Logging {
 
   lazy val loading = LoadingConfig
 

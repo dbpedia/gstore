@@ -4,7 +4,6 @@ import better.files.File
 import com.google.common.base.Stopwatch
 import com.markatta.timeforscala
 import com.markatta.timeforscala._
-import com.typesafe.scalalogging.LazyLogging
 import monix.eval.Task
 import monix.execution.ExecutionModel.AlwaysAsyncExecution
 import monix.execution.Scheduler
@@ -15,21 +14,19 @@ import org.apache.jena.query.ReadWrite._
 import org.apache.jena.query.{Dataset, ReadWrite}
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.riot.{Lang, RDFDataMgr}
+import org.apache.logging.log4j.scala.Logging
 import org.scalactic.Requirements._
 import resource.{Resource, managed}
 import virtuoso.jena.driver.VirtDataset
 
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.Await
-import scala.concurrent.duration._
 import scala.math.{max, min}
-import scala.util.Random
 import scala.util.control.NonFatal
 
 import java.nio.charset.StandardCharsets
 import java.time.{Instant, Duration => JavaDuration}
 
-package object vosloader extends LazyLogging {
+package object vosloader extends Logging {
 
   type DocumentName = String
 
@@ -204,7 +201,7 @@ package object vosloader extends LazyLogging {
   }
 
 
-  implicit class DatasetW(val ds: Dataset) extends LazyLogging {
+  implicit class DatasetW(val ds: Dataset) extends Logging {
 
     def updateNamedModel(modelName: String, model: Model): Dataset = {
       Option(ds.getNamedModel(modelName)) match {
