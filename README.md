@@ -119,7 +119,8 @@ Furthermore the following lines help to set up ssl and other things:
 ### verifying the AJP proxy from Apache HTTPD to Tomcat:
 ```
 curl -v -k --cert ~/.ssh/webid_cert/certificate.pem --cert-type PEM --key  ~/.ssh/webid_cert/private_key_webid.pem --key-type PEM   https://localhost/repo/client-cert-info
-curl -v -k --cert ~/.ssh/webid_cert/certificate.pem --cert-type PE-key  ~/.ssh/webid_cert/private_key_webid.pem --key-type PEM   https://databus.dbpedia.org/repo/client-cert-info
+
+curl --cert ~/.ssh/webid_cert/certificate.pem --key ~/.ssh/webid_cert/private_key_webid.pem  https://databus.dbpedia.org/repo/client-cert-info
 ```
 
 ### the tomcat Log

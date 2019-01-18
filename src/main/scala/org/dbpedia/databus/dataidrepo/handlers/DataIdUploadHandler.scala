@@ -216,7 +216,8 @@ class DataIdUploadHandler(clientCert: X509Certificate, dataId: ManagedResource[I
         val graphIRI = datasetIdentifier.getOrElse(dataIdWebURL + "\n")
 
         if (config.requireDBpediaAccount && !graphIRI.startsWith(account)) {
-          halt(BadRequest(s"${datasetIdentifier} does not match account name ${account}"))
+          val msg: Any = s"${datasetIdentifier} does not match account name ${account}"
+          halt(400, msg)
         }
 
         othersRWPerms foreach { perm =>

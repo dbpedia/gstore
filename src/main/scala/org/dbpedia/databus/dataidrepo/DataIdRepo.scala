@@ -62,18 +62,23 @@ class DataIdRepo(implicit repoConfig: DataIdRepoConfig) extends ScalatraServlet 
     def notMultiPart = request.contentType.fold(true) { ct => !(ct startsWith "multipart/") }
 
     if (notMultiPart) {
-      halt(BadRequest(s"Multi-part request expected, but received ${request.contentType}."))
+      val msg: Any = s"Multi-part request expected, but received ${request.contentType}."
+      halt(400, msg)
     }
 
     if (!(expectedPartsForUpload subsetOf fileParams.keySet)) {
-      halt(BadRequest(s"Missing required part(s): ${(expectedPartsForUpload -- fileParams.keySet).mkString(", ")}"))
+      val msg: Any = s"Missing required part(s): ${(expectedPartsForUpload -- fileParams.keySet).mkString(", ")}"
+      halt(400, msg)
     }
 
 
     val clientCert = authentication.getSingleCertFromContainer(request) match {
 
-      case Failure(ex) => halt(BadRequest(s".X509 client certificate expected, but no such certificate " +
-        "could be retrieved, exception was:\n" + ex.toString + "\n" + request.toString))
+      case Failure(ex) => {
+        val msg: Any = s".X509 client certificate expected, but no such certificate " +
+          "could be retrieved, exception was:\n" + ex.toString + "\n" + request.toString
+        halt(400, msg)
+      }
 
       case Success(cert) => cert
     }
@@ -85,7 +90,31 @@ class DataIdRepo(implicit repoConfig: DataIdRepoConfig) extends ScalatraServlet 
 
     val account: Resource = AccountHelpers.getAccountOption(altNameDesc).getOrElse(
       if (repoConfig.requireDBpediaAccount) {
-        halt(Unauthorized(s"No DBpedia Account for ${altNameDesc} found (Origin: SAN field of .X509), register at https://github.com/dbpedia/accounts#how-to-get-an-account"))
+
+        val msg: Any = s"No DBpedia Account for ${altNameDesc} found (Origin: SAN field of .X509) " +
+          s"fix with: register at https://github.com/dbpedia/accounts#how-to-get-an-account " +
+          s"or switch to the testrepo at https://databus.dbpedia.org/repo-test"
+
+        halt(402, msg)
+        /*
+               //halt (403, <h1>test</h1> )
+               //halt(401, <h1>No DBpedia Account for ${altNameDesc} found </h1>)
+               // halt(401, <h1></h1>)
+
+                //halt(Unauthorized( body = <h1>Go away!</h1>, headers = Map.empty))
+                //halt(402, "wwwwwwww", Map("type"-> "typ", "body"-> "blabla"))
+
+
+                //body = s"No DBpedia Account for ${altNameDesc} "
+                //s"found (Origin: SAN field of .X509), register " +
+                //s"at https://github.com/dbpedia/accounts#how-to-get-an-account")
+
+             halt(status = 402,
+             headers = Map("X-Your-Mother-Was-A" -> "hamster",
+                           "X-And-Your-Father-Smelt-Of" -> "Elderberries"),
+             body = test
+             )
+        */
         null
       } else {
         null
