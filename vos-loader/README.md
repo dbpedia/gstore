@@ -9,8 +9,11 @@ The service monitors the `persistence.fileSystemStorageLocation` directory.
 When it finds new files there, it processes them and 
 puts them first into `{loading.vosQueuesParentDir}/loading` and then either in `failed` or `loaded`.
 
-## Setup Docker for Virtuoso
+## Setup 
+Copy `src/main/resources/vosloader.conf-TEMPLATE` to a dir, e.g. /opt/dataid-repo/vosloader.conf
+Configure it and create the folder `{loading.vosQueuesParentDir}` with `chmod 777`
 
+### Setup Docker for Virtuoso
 This service has been developed and tested against VOS 7.2.4, specifically, the Docker container
 `tenforce/virtuoso:1.3.1-virtuoso7.2.4`. It packages and uses the Jena connector libraries from
 OpenLink as packaged in that Docker image (`virtjdbc4_2ssl.jar`, `lib/virt_jena3.jar`). The 
@@ -22,33 +25,29 @@ The quick and reliable way to provide a suitable VOS instance is to copy and adj
 `docker-compose.yml-TEMPLATE` to a `docker-compose.yml` file and then to spin up a docker container
 with `docker-compose up -d`.
 
-`sudo apt-get install docker.io`
-`sudo usermod -aG docker shellmann`
-`newgrp docker`
-`newgrp shellmann`
-`docker exec -ti $NAME bash`
-`isql-v $PORT`
-
-
-
-#### Explanations of the VOS Virt Jena Drivers as Unmanaged Dependencies
-
-All `jar`-files in the `lib/` project-subdirectory are treated by SBT by default as 
-[unmanaged dependencies](https://www.scala-sbt.org/1.x/docs/Library-Dependencies.html#Unmanaged+dependencies).
-Thus they will be added directly (and without resolution of potential transitive dependencies) 
-to the project classpath.
-
-This service requires the `virtjdbc4_2ssl.jar` and `virt_jena3.jar` from the same VOS 
-distribution or installation available in the `lib/` directory. Within the VOS Docker 
-images from tenforce, these files are located at:
 ```
-/usr/local/virtuoso-opensource/lib/jdbc-4.2/virtjdbc4_2ssl.jar
-/usr/local/virtuoso-opensource/lib/jena3/virt_jena3.jar 
+# TODO edit docker-compose.yml and change ports and passwords
+cp docker-compose.yml-TEMPLATE docker-compose.yml
+
+# docker installation
+YOURUSER=what
+sudo apt-get install docker.io
+sudo usermod -aG docker $YOURUSER 
+newgrp docker
+newgrp $YOURUSER
+docker ps
+# docker exec -ti $NAME bash
+
+# starting 
+docker-compose up -d
+
+# in case you need it, access database with cli (change port and password to docker conf)
+sudo apt-get install virtuoso-server
+isql-vt 1111 dba dba 
+
 ```
 
-The VOS JDBC drivers use the same ODBC interface as the ISQL command line tool `isql-v` does.
-Thus, the access to VOS for this service should work with any VOS instance built with typical
-compile flags, as long as the versions of the VOS server and the driver files match sufficiently.
+
 
 ## Building and Packaging
 
@@ -63,13 +62,16 @@ SBT: `sbt universal:packageBin` (for `zip`-archives) or `sbt universal:packageZi
 
 ## Running and Stopping
 
-#### Running in SBT
+### Running in SBT
 
-`sbt run [path-to-config-file]`
+```
+#sbt run [path-to-config-file]
+sbt run /opt/dataid-repo/vosloader.conf
+```
 
 JVM-arguments for the loading process need to be adjusted in `build.sbt` (`run / javaOptions`).
 
-#### Running the distribution archives by Native Packager
+### Running the distribution archives by Native Packager
 
 Unpack the archive and `cd` into the folder with its contents, then:
 ```./bin/databus-dataid-vos-loader [path-to-config-file]```
@@ -77,7 +79,7 @@ Unpack the archive and `cd` into the folder with its contents, then:
 The start scripts hands over `-D` switches to `java` to adjust system properties, e.g.:
 ```./bin/databus-dataid-vos-loader -Dlog4j.configurationFile=/tmp/log4j2.xml [path-to-config-file]```
 
-#### Stopping the Loading Process
+### Stopping the Loading Process
 
 The service creates on startup the file `{loading.vosQueuesParentDir}/loading-active.flag` 
 and monitors continuously whether it still exists. Once the service notices the absence of this 
@@ -116,4 +118,22 @@ many concurrent VOS sessions can be used to load documents. The ratio will be mu
 (virtual) processor cores detected by the JVM, the resulting number is then capped by `maxConcurrentConnections`
 
 
+#### Explanations of the VOS Virt Jena Drivers as Unmanaged Dependencies
+
+All `jar`-files in the `lib/` project-subdirectory are treated by SBT by default as 
+[unmanaged dependencies](https://www.scala-sbt.org/1.x/docs/Library-Dependencies.html#Unmanaged+dependencies).
+Thus they will be added directly (and without resolution of potential transitive dependencies) 
+to the project classpath.
+
+This service requires the `virtjdbc4_2ssl.jar` and `virt_jena3.jar` from the same VOS 
+distribution or installation available in the `lib/` directory. Within the VOS Docker 
+images from tenforce, these files are located at:
+```
+/usr/local/virtuoso-opensource/lib/jdbc-4.2/virtjdbc4_2ssl.jar
+/usr/local/virtuoso-opensource/lib/jena3/virt_jena3.jar 
+```
+
+The VOS JDBC drivers use the same ODBC interface as the ISQL command line tool `isql-v` does.
+Thus, the access to VOS for this service should work with any VOS instance built with typical
+compile flags, as long as the versions of the VOS server and the driver files match sufficiently.
 

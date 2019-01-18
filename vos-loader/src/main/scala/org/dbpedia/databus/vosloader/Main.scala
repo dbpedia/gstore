@@ -9,7 +9,7 @@ import scala.util.Success
 
 object Main extends Logging {
 
-  lazy val loadingActiceFlagFile = (config.loading.vosQueuesParentDir / "loading-active.flag")
+  lazy val loadingActiveFlagFile = (config.loading.vosQueuesParentDir / "loading-active.flag")
 
   def main(args: Array[String]): Unit = {
 
@@ -28,7 +28,7 @@ object Main extends Logging {
     // moved back to the submission dir (if no new directory with the same arrived there in the meantime) or
     // be deleted otherwise
 
-    loadingActiceFlagFile.createIfNotExists()
+    loadingActiveFlagFile.createIfNotExists()
 
     // condition to end the main loading process, gets completed once deletion of the flag file is found
     val stopLoadingPromise = Promise[Unit]()
@@ -42,7 +42,7 @@ object Main extends Logging {
 
     val checkForStopLoop = Scheduler.global.scheduleWithFixedDelay(0 millis, 500 millis) {
 
-      if(!(stopLoadingPromise.isCompleted) && (loadingActiceFlagFile notExists)) {
+      if(!(stopLoadingPromise.isCompleted) && (loadingActiveFlagFile notExists)) {
         logger.info("Flag file to continue loading not found anymore - ending loading process...")
         loadingLoop.cancel()
         stopLoadingPromise.complete(Success(()))
