@@ -47,13 +47,16 @@ NOTE: needs to be readable by tomcat
 #### Install tomcat8 and declare context
 
 1. `sudo apt-get install tomcat8`
-2. create a file in `sudo nano /etc/tomcat8/Catalina/localhost/dataid-repo.xml` ```
+2. create a file in `sudo nano /etc/tomcat8/Catalina/localhost/dataid-repo.xml` 
+
+```
 <?xml version="1.0" encoding="UTF-8"?>
 <Context path="/dataid-repo" 
 	 docBase="/var/lib/tomcat8/webapps/dataid-repo.war">
   <Parameter name="org.dbpedia.databus.dataidrepo.config" value="/opt/dataid-repo/dataid-repo.conf"/>
 </Context>
 ```
+
 #### Deploy the .war file
 The `dataid-repo.xml`  specifies, that you can copy the .war file to `/var/lib/tomcat8/webapps/dataid-repo.war`
 `sudo cp -v target/scala-2.12/databus-dataid-repo_2.12-*.war /var/lib/tomcat8/webapps/dataid-repo.war`
