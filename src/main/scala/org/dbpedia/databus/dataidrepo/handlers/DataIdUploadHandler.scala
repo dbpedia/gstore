@@ -32,7 +32,7 @@ import java.nio.file.attribute.PosixFilePermission._
 import java.security.cert.X509Certificate
 
 class DataIdUploadHandler(clientCert: X509Certificate, dataId: ManagedResource[InputStream],
-                          dataIdSignature: Array[Byte], uploadParams: Map[String, List[String]], account:String)
+                          dataIdSignature: Array[Byte], uploadParams: Map[String, List[String]], account: String)
                          (implicit config: DataIdRepoConfig, rdf: Rdf) extends LazyLogging {
 
   trait Technical
@@ -213,14 +213,10 @@ class DataIdUploadHandler(clientCert: X509Certificate, dataId: ManagedResource[I
 
         val graphFile = (documentDir / s"$documentName.graph").touch()
 
-        val graphIRI = if (config.requireDBpediaAccount) {
-          if (datasetIdentifier.getOrElse(dataIdWebURL).startsWith(account)) {
-              datasetIdentifier+"\n"
-          }else{
-            halt(BadRequest(s"${datasetIdentifier} does not match account name ${account}"))
-          }
-        } else {
-          dataIdWebURL + "\n"
+        val graphIRI = datasetIdentifier.getOrElse(dataIdWebURL + "\n")
+
+        if (config.requireDBpediaAccount && !graphIRI.startsWith(account)) {
+          halt(BadRequest(s"${datasetIdentifier} does not match account name ${account}"))
         }
 
         othersRWPerms foreach { perm =>
