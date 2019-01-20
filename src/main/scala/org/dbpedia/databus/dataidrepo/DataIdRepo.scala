@@ -91,7 +91,7 @@ class DataIdRepo(implicit repoConfig: DataIdRepoConfig) extends ScalatraServlet 
     val account: Resource = AccountHelpers.getAccountOption(altNameDesc).getOrElse(
       if (repoConfig.requireDBpediaAccount) {
 
-        val msg: Any = s"No DBpedia Account for ${altNameDesc} found (Origin: SAN field of .X509)\n " +
+        val msg: Any = s"No DBpedia Account for ${altNameDesc} found (Origin: SAN field of .X509)\n" +
           s"fix with: register at https://github.com/dbpedia/accounts#how-to-get-an-account " +
           s"or switch to the testrepo at https://databus.dbpedia.org/repo-test\n"
 

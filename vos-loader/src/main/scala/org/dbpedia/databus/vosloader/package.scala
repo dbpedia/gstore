@@ -90,14 +90,14 @@ package object vosloader extends Logging {
         case Some((modelName, model)) =>
           //after letting the VOS driver load the model, it is moved to the loaded directory in a seperate scheduler
           loadDocument(modelName, model).map({ _ =>
-            logger.info(s"loading for $modelName succeeded")
+            logger.info(s"SUCCESS, loaded $modelName")
             moveDocumentToLoaded(docDirSubmittedOrLoading)
           })
 
         case None => Task.eval(())
       }).onErrorRecover({
         case NonFatal(error) =>
-          logger.error(s"loading for a document failed: $error")
+          logger.error(s"FAILURE ${docDirSubmittedOrLoading.name}: $error")
 
           moveDocumentToFailed(docDirSubmittedOrLoading, error)
       }).doOnFinish({ _ =>
