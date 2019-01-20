@@ -62,13 +62,13 @@ class DataIdRepo(implicit repoConfig: DataIdRepoConfig) extends ScalatraServlet 
     def notMultiPart = request.contentType.fold(true) { ct => !(ct startsWith "multipart/") }
 
     if (notMultiPart) {
-      val msg: Any = s"Multi-part request expected, but received ${request.contentType}."
-      halt(400, msg)
+      val msg: Any = s"Multi-part request expected, but received ${request.contentType}.\n"
+      halt(BadRequest(msg))
     }
 
     if (!(expectedPartsForUpload subsetOf fileParams.keySet)) {
-      val msg: Any = s"Missing required part(s): ${(expectedPartsForUpload -- fileParams.keySet).mkString(", ")}"
-      halt(400, msg)
+      val msg: Any = s"Missing required part(s): ${(expectedPartsForUpload -- fileParams.keySet).mkString(", ")}\n"
+      halt(BadRequest(msg))
     }
 
 
@@ -76,8 +76,8 @@ class DataIdRepo(implicit repoConfig: DataIdRepoConfig) extends ScalatraServlet 
 
       case Failure(ex) => {
         val msg: Any = s".X509 client certificate expected, but no such certificate " +
-          "could be retrieved, exception was:\n" + ex.toString + "\n" + request.toString
-        halt(400, msg)
+          "could be retrieved, exception was:\n" + ex.toString + "\n" + request.toString + "\n"
+        halt(BadRequest(msg))
       }
 
       case Success(cert) => cert
@@ -93,28 +93,11 @@ class DataIdRepo(implicit repoConfig: DataIdRepoConfig) extends ScalatraServlet 
 
         val msg: Any = s"No DBpedia Account for ${altNameDesc} found (Origin: SAN field of .X509)\n " +
           s"fix with: register at https://github.com/dbpedia/accounts#how-to-get-an-account " +
-          s"or switch to the testrepo at https://databus.dbpedia.org/repo-test"
+          s"or switch to the testrepo at https://databus.dbpedia.org/repo-test\n"
 
-        halt(401, msg)
-        /*
-               //halt (403, <h1>test</h1> )
-               //halt(401, <h1>No DBpedia Account for ${altNameDesc} found </h1>)
-               // halt(401, <h1></h1>)
+        //NOTE this was a 401 at first, but 401 is not correct, also 400 does not return a body
+        halt(Forbidden(msg))
 
-                //halt(Unauthorized( body = <h1>Go away!</h1>, headers = Map.empty))
-                //halt(402, "wwwwwwww", Map("type"-> "typ", "body"-> "blabla"))
-
-
-                //body = s"No DBpedia Account for ${altNameDesc} "
-                //s"found (Origin: SAN field of .X509), register " +
-                //s"at https://github.com/dbpedia/accounts#how-to-get-an-account")
-
-             halt(status = 402,
-             headers = Map("X-Your-Mother-Was-A" -> "hamster",
-                           "X-And-Your-Father-Smelt-Of" -> "Elderberries"),
-             body = test
-             )
-        */
         null
       } else {
         null
