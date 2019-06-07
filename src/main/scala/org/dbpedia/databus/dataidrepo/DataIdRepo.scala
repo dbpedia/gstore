@@ -131,6 +131,6 @@ class DataIdRepo(implicit repoConfig: DataIdRepoConfig) extends ScalatraServlet 
 
     handler.response
   }
-}
+
 
 }
