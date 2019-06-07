@@ -86,7 +86,17 @@ class DataIdRepo(implicit repoConfig: DataIdRepoConfig) extends ScalatraServlet 
 
     // validate DBpedia account
     //TODO take first element for now....
-    val altNameDesc = getAlternativeNameURIs(clientCert).head
+    val altNameDesc = try {
+      getAlternativeNameURIs(clientCert).head
+    } catch {
+      case nse: NoSuchElementException => {
+        val msg: Any = s"Method cert.getSubjectAlternativeNames.head (SAN) produced a NoSuchElementException\n" +
+          s"The .X509 is probably missing the Webid URL in the SAN field\n" +
+          s"fix with: regenerate the cert and put the full WebID (including #this) in the SubjectAlternativeName field\n"
+        halt(BadRequest(msg))
+      }
+    }
+
 
     val account: Resource = AccountHelpers.getAccountOption(altNameDesc).getOrElse(
       if (repoConfig.requireDBpediaAccount) {
@@ -121,5 +131,6 @@ class DataIdRepo(implicit repoConfig: DataIdRepoConfig) extends ScalatraServlet 
 
     handler.response
   }
+}
 
 }
