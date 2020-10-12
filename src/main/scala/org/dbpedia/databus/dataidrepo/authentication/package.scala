@@ -93,7 +93,6 @@ package object authentication {
 
 
       Try(certOption.get).recoverWith {
-
         case nse: NoSuchElementException => Failure(new RuntimeException("container provided no client cert"))
       } flatten
     }

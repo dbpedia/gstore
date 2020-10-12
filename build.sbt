@@ -4,7 +4,7 @@ organization := "org.dbpedia"
 
 name := "databus-dataid-repo"
 
-version := "0.1.0-SNAPSHOT"
+version := "0.2.0-SNAPSHOT"
 
 scalaVersion := "2.12.6"
 
@@ -36,8 +36,6 @@ libraryDependencies ++= Seq(
 
 isTestDeployment := true
 
-//conflictManager := ConflictManager.strict
-
 enablePlugins(SbtTwirl)
 enablePlugins(ScalatraPlugin)
 
@@ -50,7 +48,8 @@ containerPort in Jetty := 8088
 
 resolvers ++= Seq(
   Classpaths.typesafeReleases,
-  "Databus Archiva - Internal" at "http://95.216.13.238:8081/repository/internal/",
+  "Databus Archiva - Internal" at "http://databus.dbpedia.org:8081/repository/internal/",
+  "Databus Archive - Snapshots" at "http://databus.dbpedia.org:8081/repository/snapshots",
   Resolver.mavenLocal
 )
 
