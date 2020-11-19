@@ -1,4 +1,6 @@
+import Keys._
 import better.files.File
+import org.dbpedia.sbt.Codegen
 
 organization := "org.dbpedia"
 
@@ -12,6 +14,9 @@ val ScalatraVersion = "2.6.3"
 
 libraryDependencies ++= Seq(
   "org.scalatra" %% "scalatra" % ScalatraVersion,
+  "org.scalatra" %% "scalatra-swagger"  % ScalatraVersion,
+  "org.scalatra" %% "scalatra-json" % ScalatraVersion,
+  "org.json4s" %% "json4s-jackson" % "3.6.10",
   "org.scalatra" %% "scalatra-scalatest" % ScalatraVersion % Test,
   "ch.qos.logback" % "logback-classic" % "1.2.3" % "runtime",
   "org.eclipse.jetty" % "jetty-webapp" % "9.4.9.v20180320" % "container",
@@ -92,3 +97,7 @@ packageAndDeployToTomcat := {
     warSourceLocation.copyTo(target, overwrite = true)
   }
 }
+
+Compile / sourceGenerators += Def.task {
+  Codegen.generate((Compile / sourceManaged).value)
+}.taskValue

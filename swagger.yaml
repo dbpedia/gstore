@@ -1,0 +1,156 @@
+swagger: "2.0"
+info:
+  description: "This is the DbPedia databus web-api draft."
+  version: "1.0.0"
+  title: "Databus API"
+basePath: "/databus"
+schemes:
+  - "https"
+  - "http"
+paths:
+  /dataid/:
+    post:
+      summary: "Create dataid ttl"
+      description: ""
+      operationId: "dataIdCreate"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "Dataid file fields"
+          required: true
+          schema:
+            $ref: "#/definitions/DataidFields"
+      responses:
+        "200":
+          description: "successful operation, here we can just use Base64 encoded body"
+          schema:
+            $ref: "#/definitions/BinaryBody"
+  /dataid/subgraph/:
+    post:
+      summary: "Returns a subgraph of dataid for signing"
+      description: ""
+      operationId: "dataidSubgraph"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "Returns dataid file body subgraph. Here we can just use Base64 encoded body"
+          required: true
+          schema:
+            $ref: "#/definitions/BinaryBody"
+      responses:
+        "200":
+          description: "successful operation, here we can just use Base64 encoded body"
+          schema:
+            $ref: "#/definitions/BinaryBody"
+  /dataid/subgraph/hash/:
+    post:
+      summary: "Calculates hash of the subgraph of the dataid file for signing"
+      description: "Just for convenience"
+      operationId: "dataidSubgraphHash"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "Dataid subgraph data"
+          required: true
+          schema:
+            $ref: "#/definitions/BinaryBody"
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/DataIdSignatureMeta"
+  /dataid/upload:
+    post:
+      summary: "Upload dataid ttl"
+      description: ""
+      operationId: "dataidUpload"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "X-Client-Cert"
+          in: "header"
+          required: false
+          type: "string"
+          description: "Client certificate, which was used to sign the dataid file. Needed in case we dont use SSL connection with client auth."
+        - in: "body"
+          name: "body"
+          description: "Dataid file with the signature and upload params"
+          required: true
+          schema:
+            $ref: "#/definitions/DataidFileUpload"
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+definitions:
+  DataidFields:
+    type: "object"
+    properties:
+      license:
+        type: "string"
+        description: "type of license"
+      documentation:
+        type: "string"
+        description: "Collection documentation"
+      publisher:
+        type: "string"
+      downloadUrl:
+        type: "string"
+      sha256sum:
+        type: "string"
+      sizeBytes:
+        type: "integer"
+        format: "int64"
+  BinaryBody:
+    type: "object"
+    description: "this may be extended/changed"
+    properties:
+      dataBase64:
+        type: "string"
+  DataIdSignatureMeta:
+    type: "object"
+    description: "may be needed to add some more details"
+    properties:
+      hash:
+        type: "string"
+  DataidFileUpload:
+    type: "object"
+    properties:
+      file:
+        $ref: "#/definitions/BinaryBody"
+      subgraph:
+        description: "This will allow to easily change the subgraph, and also to validate the subgraph against the dataid"
+        $ref: "#/definitions/BinaryBody"
+      subgraphSignature:
+        $ref: "#/definitions/BinaryBody"
+      allowOverwrite:
+        type: "string"
+      datasetIdentifier:
+        type: "string"
+      dataIdVersion:
+        type: "string"
+  ApiResponse:
+    type: "object"
+    properties:
+      code:
+        type: "integer"
+        format: "int32"
+      type:
+        type: "string"
+      message:
+        type: "string"

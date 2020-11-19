@@ -41,13 +41,8 @@ class DataIdRepo(implicit repoConfig: DataIdRepoConfig) extends ScalatraServlet 
   }
 
   get("/client-cert-info") {
-
     lazy val fromContainer = authentication.getSingleCertFromContainer(request)
       .map(authentication.describeX059Cert)
-
-    lazy val fromHeader = authentication.getSingleCertFromHeader(request)
-      .map(authentication.describeX059Cert)
-
     s"""
        |client certificate from Servlet container:
        |$fromContainer
@@ -74,11 +69,10 @@ class DataIdRepo(implicit repoConfig: DataIdRepoConfig) extends ScalatraServlet 
 
     val clientCert = authentication.getSingleCertFromContainer(request) match {
 
-      case Failure(ex) => {
+      case Failure(ex) =>
         val msg: Any = s".X509 client certificate expected, but no such certificate " +
           "could be retrieved, exception was:\n" + ex.toString + "\n" + request.toString + "\n"
         halt(BadRequest(msg))
-      }
 
       case Success(cert) => cert
     }
