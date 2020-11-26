@@ -99,5 +99,5 @@ packageAndDeployToTomcat := {
 }
 
 Compile / sourceGenerators += Def.task {
-  Codegen.generate((Compile / sourceManaged).value)
+  Codegen.generate(baseDirectory.value, (Compile / sourceManaged).value)
 }.taskValue
