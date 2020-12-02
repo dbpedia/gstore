@@ -3,10 +3,13 @@ import org.dbpedia.databus.dataidrepo._
 import com.typesafe.scalalogging.LazyLogging
 import org.scalatra._
 import javax.servlet.ServletContext
+import javax.servlet.http.HttpServletRequest
 import org.dbpedia.databus.swagger.DatabusSwagger
-import org.dbpedia.databus.swagger.api.{DatabusApi, DefaultApi}
-import org.dbpedia.databus.swagger.model.{BinaryBody, DataidFields, DataidFileUpload}
+import org.dbpedia.databus.swagger.api.DatabusApi
+import org.dbpedia.databus.swagger.model.{ApiResponse, BinaryBody, DataIdSignatureMeta, DataidFields, DataidFileUpload}
 import org.scalactic.Snapshots._
+
+import scala.util.Try
 
 
 class ScalatraBootstrap extends LifeCycle with LazyLogging {
@@ -39,11 +42,13 @@ class ScalatraBootstrap extends LifeCycle with LazyLogging {
 }
 
 class Api extends DatabusApi {
-  override def dataIdCreate(body: DataidFields)(implicit context: DefaultApi): Unit = ???
+  override def dataIdCreate(body: DataidFields)(request: HttpServletRequest): Try[BinaryBody] = ???
 
-  override def dataidSubgraph(body: BinaryBody)(implicit context: DefaultApi): Unit = ???
+  override def dataidSubgraph(body: BinaryBody)(request: HttpServletRequest): Try[BinaryBody] = ???
 
-  override def dataidSubgraphHash(body: BinaryBody)(implicit context: DefaultApi): Unit = ???
+  override def dataidSubgraphHash(body: BinaryBody)(request: HttpServletRequest): Try[DataIdSignatureMeta] = ???
 
-  override def dataidUpload(body: DataidFileUpload, xClientCert: String)(implicit context: DefaultApi): Unit = ???
+  override def dataidUpload(body: DataidFileUpload, xClientCert: String)(request: HttpServletRequest): Try[ApiResponse] = Try {
+    ApiResponse(Some(200), Some("dada!"), Some("data!"))
+  }
 }

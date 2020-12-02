@@ -8,6 +8,7 @@ package {{package}}
 import java.io.File
 
 import org.scalatra.ScalatraServlet
+import org.scalatra._
 import org.scalatra.swagger._
 import org.json4s._
 import org.json4s.JsonDSL._
@@ -15,13 +16,14 @@ import org.scalatra.json.{ JValueResult, JacksonJsonSupport }
 import org.scalatra.servlet.{ FileUploadSupport, MultipartConfig, SizeConstraintExceededException }
 
 import scala.collection.JavaConverters._
+import scala.util.{Try, Failure, Success}
+import javax.servlet.http.HttpServletRequest
 
 class {{classname}}(implicit val swagger: Swagger, apiImpl: DatabusApi) extends ScalatraServlet
   with FileUploadSupport
   with JacksonJsonSupport
   with SwaggerSupport {
   protected implicit val jsonFormats: Formats = DefaultFormats
-  implicit val context = this
 
   protected val applicationDescription: String = "{{classname}}"
   before() {
@@ -41,11 +43,15 @@ class {{classname}}(implicit val swagger: Swagger, apiImpl: DatabusApi) extends 
     {{#allParams}}
     {{#isFile}}val {{paramName}} = fileParams("{{paramName}}"){{/isFile}}
     {{^isFile}}{{#isPathParam}}
-      val {{paramName}} = params.getOrElse("{{paramName}}", halt(400)){{/isPathParam}}
+    val {{paramName}} = params.getOrElse("{{paramName}}", halt(400)){{/isPathParam}}
     {{>queryParamOperation}}{{>headerParamOperation}}{{>formParamMustache}}{{>bodyParamOperation}}
     {{/isFile}}
   {{/allParams}}
-    apiImpl.{{nickname}}({{#allParams}}{{paramName}}{{#hasMore}}, {{/hasMore}}{{/allParams}})
+    val resp = apiImpl.{{nickname}}({{#allParams}}{{paramName}}{{#hasMore}}, {{/hasMore}}{{/allParams}})(request)
+    resp match {
+        case Success(r) => Ok(r)
+        case Failure(e) => InternalServerError(e)
+    }
   }
 
 {{/operation}}
@@ -57,7 +63,7 @@ trait DatabusApi {
 {{#operations}}
 {{#operation}}
 {{newline}}
-  def {{nickname}}({{#allParams}}{{paramName}}: {{dataType}}{{#hasMore}}, {{/hasMore}}{{/allParams}})(implicit context: {{classname}}): Unit
+  def {{nickname}}({{#allParams}}{{paramName}}: {{dataType}}{{#hasMore}}, {{/hasMore}}{{/allParams}})(request: HttpServletRequest): Try[{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}Unit{{/returnType}}]
 {{/operation}}
 {{/operations}}
 
