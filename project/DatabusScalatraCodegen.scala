@@ -16,6 +16,7 @@ import org.apache.commons.lang3.StringUtils
 import scala.util.Try
 
 class DatabusScalatraCodegen extends ScalatraServerCodegen {
+  this.apiDocTemplateFiles.clear()
   this.apiTemplateFiles.put("databus_api.mustache", ".scala")
 }
 

@@ -8,70 +8,7 @@ schemes:
   - "https"
   - "http"
 paths:
-  /dataid/:
-    post:
-      summary: "Create dataid ttl"
-      description: ""
-      operationId: "dataIdCreate"
-      consumes:
-        - "application/json"
-      produces:
-        - "application/json"
-      parameters:
-        - in: "body"
-          name: "body"
-          description: "Dataid file fields"
-          required: true
-          schema:
-            $ref: "#/definitions/DataidFields"
-      responses:
-        "200":
-          description: "successful operation, here we can just use Base64 encoded body"
-          schema:
-            $ref: "#/definitions/BinaryBody"
-  /dataid/subgraph/:
-    post:
-      summary: "Returns a subgraph of dataid for signing"
-      description: ""
-      operationId: "dataidSubgraph"
-      consumes:
-        - "application/json"
-      produces:
-        - "application/json"
-      parameters:
-        - in: "body"
-          name: "body"
-          description: "Returns dataid file body subgraph. Here we can just use Base64 encoded body"
-          required: true
-          schema:
-            $ref: "#/definitions/BinaryBody"
-      responses:
-        "200":
-          description: "successful operation, here we can just use Base64 encoded body"
-          schema:
-            $ref: "#/definitions/BinaryBody"
-  /dataid/subgraph/hash/:
-    post:
-      summary: "Calculates hash of the subgraph of the dataid file for signing"
-      description: "Just for convenience"
-      operationId: "dataidSubgraphHash"
-      consumes:
-        - "application/json"
-      produces:
-        - "application/json"
-      parameters:
-        - in: "body"
-          name: "body"
-          description: "Dataid subgraph data"
-          required: true
-          schema:
-            $ref: "#/definitions/BinaryBody"
-      responses:
-        "200":
-          description: "successful operation"
-          schema:
-            $ref: "#/definitions/DataIdSignatureMeta"
-  /dataid/upload:
+  /api/dataid:
     post:
       summary: "Upload dataid ttl"
       description: ""
@@ -97,31 +34,197 @@ paths:
           description: "successful operation"
           schema:
             $ref: "#/definitions/ApiResponse"
+  /api/group/{groupId}:
+    put:
+      summary: "Create group"
+      description: ""
+      operationId: "createGroup"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: path
+          name: groupId
+          schema:
+            type: string
+          required: true
+          description: Group name
+        - in: "body"
+          name: "body"
+          description: "Turtle or JSONLD with group meta."
+          required: true
+          schema:
+            $ref: "#/definitions/BinaryBody"
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+    delete:
+      summary: "Delete group"
+      description: ""
+      operationId: "deleteGroup"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: path
+          name: groupId
+          schema:
+            type: string
+          required: true
+          description: Group name
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+    get:
+      summary: "Get group meta"
+      description: ""
+      operationId: "getGroup"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: path
+          name: groupId
+          schema:
+            type: string
+          required: true
+          description: Group name
+      responses:
+        "200":
+          description: "A turtle file"
+          content:
+            text/turtle:
+              schema:
+                type: string
+                format: binary
+  /api/version/{versionId}:
+    put:
+      summary: "Create version"
+      description: ""
+      operationId: "createVersion"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: path
+          name: versionId
+          schema:
+            type: string
+          required: true
+          description: Version name
+        - in: "body"
+          name: "body"
+          description: "Turtle or JSONLD with version meta."
+          required: true
+          schema:
+            $ref: "#/definitions/BinaryBody"
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+    delete:
+      summary: "Delete version"
+      description: ""
+      operationId: "deleteVersion"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: path
+          name: versionId
+          schema:
+            type: string
+          required: true
+          description: Version name
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+    get:
+      summary: "Get version meta"
+      description: ""
+      operationId: "getVersion"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: path
+          name: versionId
+          schema:
+            type: string
+          required: true
+          description: Version name
+      responses:
+        "200":
+          description: "A turtle file"
+          content:
+            text/turtle:
+              schema:
+                type: string
+                format: binary
+  /api/dataid/subgraph/:
+    post:
+      summary: "Returns a subgraph of dataid for signing"
+      description: ""
+      operationId: "dataidSubgraph"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "Returns dataid file body subgraph. Here we can just use Base64 encoded body"
+          required: true
+          schema:
+            $ref: "#/definitions/BinaryBody"
+      responses:
+        "200":
+          description: "successful operation, here we can just use Base64 encoded body"
+          schema:
+            $ref: "#/definitions/BinaryBody"
+  /api/dataid/subgraph/hash/:
+    post:
+      summary: "Calculates hash of the subgraph of the dataid file for signing"
+      description: "Just for convenience"
+      operationId: "dataidSubgraphHash"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "Dataid subgraph data"
+          required: true
+          schema:
+            $ref: "#/definitions/BinaryBody"
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/DataIdSignatureMeta"
 definitions:
-  DataidFields:
-    type: "object"
-    properties:
-      license:
-        type: "string"
-        description: "type of license"
-      documentation:
-        type: "string"
-        description: "Collection documentation"
-      publisher:
-        type: "string"
-      downloadUrl:
-        type: "string"
-      sha256sum:
-        type: "string"
-      sizeBytes:
-        type: "integer"
-        format: "int64"
   BinaryBody:
     type: "object"
     description: "this may be extended/changed"
     properties:
       dataBase64:
         type: "string"
+    required:
+      - dataBase64
   DataIdSignatureMeta:
     type: "object"
     description: "may be needed to add some more details"
@@ -132,6 +235,7 @@ definitions:
     type: "object"
     properties:
       file:
+        description: "Can be sent in different formats: JSONLD, Turtle"
         $ref: "#/definitions/BinaryBody"
       subgraph:
         description: "This will allow to easily change the subgraph, and also to validate the subgraph against the dataid"
@@ -144,6 +248,8 @@ definitions:
         type: "string"
       dataIdVersion:
         type: "string"
+    required:
+      - file
   ApiResponse:
     type: "object"
     properties:
