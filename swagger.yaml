@@ -8,7 +8,7 @@ schemes:
   - "https"
   - "http"
 paths:
-  /api/dataid:
+  /dataid:
     post:
       summary: "Upload dataid ttl"
       description: ""
@@ -34,7 +34,7 @@ paths:
           description: "successful operation"
           schema:
             $ref: "#/definitions/ApiResponse"
-  /api/group/{groupId}:
+  /{username}/{groupId}:
     put:
       summary: "Create group"
       description: ""
@@ -46,10 +46,13 @@ paths:
       parameters:
         - in: path
           name: groupId
-          schema:
-            type: string
+          type: string
           required: true
           description: Group name
+        - in: path
+          name: username
+          type: string
+          required: true
         - in: "body"
           name: "body"
           description: "Turtle or JSONLD with group meta."
@@ -72,10 +75,13 @@ paths:
       parameters:
         - in: path
           name: groupId
-          schema:
-            type: string
+          type: string
           required: true
           description: Group name
+        - in: path
+          name: username
+          type: string
+          required: true
       responses:
         "200":
           description: "successful operation"
@@ -92,10 +98,13 @@ paths:
       parameters:
         - in: path
           name: groupId
-          schema:
-            type: string
+          type: string
           required: true
           description: Group name
+        - in: path
+          name: username
+          type: string
+          required: true
       responses:
         "200":
           description: "A turtle file"
@@ -104,7 +113,7 @@ paths:
               schema:
                 type: string
                 format: binary
-  /api/version/{versionId}:
+  /version/{versionId}:
     put:
       summary: "Create version"
       description: ""
@@ -116,8 +125,7 @@ paths:
       parameters:
         - in: path
           name: versionId
-          schema:
-            type: string
+          type: string
           required: true
           description: Version name
         - in: "body"
@@ -142,8 +150,7 @@ paths:
       parameters:
         - in: path
           name: versionId
-          schema:
-            type: string
+          type: string
           required: true
           description: Version name
       responses:
@@ -162,8 +169,7 @@ paths:
       parameters:
         - in: path
           name: versionId
-          schema:
-            type: string
+          type: string
           required: true
           description: Version name
       responses:
