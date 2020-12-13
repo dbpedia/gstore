@@ -32,28 +32,34 @@ class ApiImpl(config: Config) extends DatabusApi {
     ApiResponse(Some(200), Some(new String(data)), Some("data!"))
   }
 
-  override def createGroup(groupId: String, username: String, body: BinaryBody)(request: HttpServletRequest): Try[ApiResponse] = {
-    if (!checkAuth(username, request)) {
-      Failure(new RuntimeException("authorization failed"))
-    } else {
-      if (!client.projectExists(username)) {
-        client.createProject(username)
-      }
-      client.commitFileContent(username, s"$groupId/group.jsonld", Base64.decode(body.dataBase64))
-        .map(s => ApiResponse(Some(200), None, Some(s)))
-    }
-  }
+  override def createGroup(groupId: String, username: String, body: BinaryBody)(request: HttpServletRequest): Try[ApiResponse] =
+    saveFile(username, s"$groupId/group.jsonld", body.dataBase64)(request)
 
-  override def createVersion(versionId: String, body: BinaryBody)(request: HttpServletRequest): Try[ApiResponse] = ???
-
-  override def deleteGroup(groupId: String, username: String)(request: HttpServletRequest): Try[ApiResponse] = ???
-
-  override def deleteVersion(versionId: String)(request: HttpServletRequest): Try[ApiResponse] = ???
+  override def deleteGroup(groupId: String, username: String)(request: HttpServletRequest): Try[ApiResponse] =
+    deleteFile(username, s"$groupId/group.jsonld")(request)
 
   override def getGroup(groupId: String, username: String)(request: HttpServletRequest): Try[Unit] = ???
 
-  override def getVersion(versionId: String)(request: HttpServletRequest): Try[Unit] = ???
+  override def createVersion(versionId: String,
+                             groupId: String,
+                             username: String,
+                             artifactId: String,
+                             body: BinaryBody)
+                            (request: HttpServletRequest): Try[ApiResponse] =
+    saveFile(username, s"$groupId/$artifactId/$versionId/dataid.jsonld", body.dataBase64)(request)
 
+  override def deleteVersion(versionId: String,
+                             groupId: String,
+                             username: String,
+                             artifactId: String)
+                            (request: HttpServletRequest): Try[ApiResponse] =
+    deleteFile(username, s"$groupId/$artifactId/$versionId/dataid.jsonld")(request)
+
+  override def getVersion(versionId: String,
+                          groupId: String,
+                          username: String,
+                          artifactId: String)
+                         (request: HttpServletRequest): Try[Unit] = ???
 
   private def checkAuth(username: String, request: HttpServletRequest): Boolean = {
     val header = request.getHeader("Authorization")
@@ -71,6 +77,25 @@ class ApiImpl(config: Config) extends DatabusApi {
         n.nonEmpty
     }
   }
+
+  private def saveFile(username: String, path: String, dataBase64: String)(request: HttpServletRequest): Try[ApiResponse] =
+    if (!checkAuth(username, request)) {
+      Failure(new RuntimeException("authorization failed"))
+    } else {
+      if (!client.projectExists(username)) {
+        client.createProject(username)
+      }
+      client.commitFileContent(username, path, Base64.decode(dataBase64))
+        .map(s => ApiResponse(Some(200), None, Some(s)))
+    }
+
+  private def deleteFile(username: String, path: String)(request: HttpServletRequest): Try[ApiResponse] =
+    if (!checkAuth(username, request)) {
+      Failure(new RuntimeException("authorization failed"))
+    } else {
+      client.commitFileDelete(username, path)
+        .map(s => ApiResponse(Some(200), None, Some(s)))
+    }
 
 
 }

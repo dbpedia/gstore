@@ -113,7 +113,7 @@ paths:
               schema:
                 type: string
                 format: binary
-  /version/{versionId}:
+  /{username}/{groupId}/{artifactId}/{versionId}:
     put:
       summary: "Create version"
       description: ""
@@ -125,6 +125,21 @@ paths:
       parameters:
         - in: path
           name: versionId
+          type: string
+          required: true
+          description: Version name
+        - in: path
+          name: groupId
+          type: string
+          required: true
+          description: Version name
+        - in: path
+          name: username
+          type: string
+          required: true
+          description: Version name
+        - in: path
+          name: artifactId
           type: string
           required: true
           description: Version name
@@ -153,6 +168,21 @@ paths:
           type: string
           required: true
           description: Version name
+        - in: path
+          name: groupId
+          type: string
+          required: true
+          description: Version name
+        - in: path
+          name: username
+          type: string
+          required: true
+          description: Version name
+        - in: path
+          name: artifactId
+          type: string
+          required: true
+          description: Version name
       responses:
         "200":
           description: "successful operation"
@@ -169,6 +199,21 @@ paths:
       parameters:
         - in: path
           name: versionId
+          type: string
+          required: true
+          description: Version name
+        - in: path
+          name: groupId
+          type: string
+          required: true
+          description: Version name
+        - in: path
+          name: username
+          type: string
+          required: true
+          description: Version name
+        - in: path
+          name: artifactId
           type: string
           required: true
           description: Version name
