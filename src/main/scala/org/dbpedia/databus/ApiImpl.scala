@@ -18,6 +18,8 @@ import scala.util.{Failure, Try}
 
 
 class ApiImpl(config: Config) extends DatabusApi {
+
+  import ApiImpl._
   import config._
 
   private lazy val backend = HttpURLConnectionBackend()
@@ -28,17 +30,17 @@ class ApiImpl(config: Config) extends DatabusApi {
   override def dataidSubgraphHash(body: BinaryBody)(request: HttpServletRequest): Try[DataIdSignatureMeta] = ???
 
   override def dataidUpload(body: DataidFileUpload, xClientCert: String)(request: HttpServletRequest): Try[ApiResponse] = Try {
-    val data = RdfConversions.processFile(body.file.dataBase64)
-    ApiResponse(Some(200), Some(new String(data)), Some("data!"))
+    ApiResponse(Some(200), Some(new String("test, noop method")), Some("data!"))
   }
 
   override def createGroup(groupId: String, username: String, body: BinaryBody)(request: HttpServletRequest): Try[ApiResponse] =
-    saveFile(username, s"$groupId/group.jsonld", body.dataBase64)(request)
+    saveFile(username, s"$groupId/$DefaultGroupFn", body.dataBase64)(request)
 
   override def deleteGroup(groupId: String, username: String)(request: HttpServletRequest): Try[ApiResponse] =
-    deleteFile(username, s"$groupId/group.jsonld")(request)
+    deleteFile(username, s"$groupId/$DefaultGroupFn")(request)
 
-  override def getGroup(groupId: String, username: String)(request: HttpServletRequest): Try[Unit] = ???
+  override def getGroup(groupId: String, username: String)(request: HttpServletRequest): Try[String] =
+    readFile(username, s"$groupId/$DefaultGroupFn")(request)
 
   override def createVersion(versionId: String,
                              groupId: String,
@@ -46,20 +48,21 @@ class ApiImpl(config: Config) extends DatabusApi {
                              artifactId: String,
                              body: BinaryBody)
                             (request: HttpServletRequest): Try[ApiResponse] =
-    saveFile(username, s"$groupId/$artifactId/$versionId/dataid.jsonld", body.dataBase64)(request)
+    saveFile(username, s"$groupId/$artifactId/$versionId/$DefaultVersionFn", body.dataBase64)(request)
 
   override def deleteVersion(versionId: String,
                              groupId: String,
                              username: String,
                              artifactId: String)
                             (request: HttpServletRequest): Try[ApiResponse] =
-    deleteFile(username, s"$groupId/$artifactId/$versionId/dataid.jsonld")(request)
+    deleteFile(username, s"$groupId/$artifactId/$versionId/$DefaultVersionFn")(request)
 
   override def getVersion(versionId: String,
                           groupId: String,
                           username: String,
                           artifactId: String)
-                         (request: HttpServletRequest): Try[Unit] = ???
+                         (request: HttpServletRequest): Try[String] =
+    readFile(username, s"$groupId/$artifactId/$versionId/$DefaultVersionFn")(request)
 
   private def checkAuth(username: String, request: HttpServletRequest): Boolean = {
     val header = request.getHeader("Authorization")
@@ -77,6 +80,20 @@ class ApiImpl(config: Config) extends DatabusApi {
         n.nonEmpty
     }
   }
+
+  private def readFile(username: String, path: String)(request: HttpServletRequest): Try[String] =
+    if (!checkAuth(username, request)) {
+      Failure(new RuntimeException("authorization failed"))
+    } else {
+      client.readFile(username, path)
+        .map(
+          RdfConversions.processFile(
+            path,
+            _,
+            Option(request.getHeader("Accept")).map(RdfConversions.mapContentType)))
+        .map(new String(_))
+    }
+
 
   private def saveFile(username: String, path: String, dataBase64: String)(request: HttpServletRequest): Try[ApiResponse] =
     if (!checkAuth(username, request)) {
@@ -103,6 +120,9 @@ class ApiImpl(config: Config) extends DatabusApi {
 
 object ApiImpl {
 
+  val DefaultGroupFn = "group.jsonld"
+  val DefaultVersionFn = "dataid.jsonld"
+
   case class Config(
                      accessToken: String,
                      gitScheme: String,
@@ -116,17 +136,41 @@ object ApiImpl {
 
 object RdfConversions {
 
-  def processFile(fileBase64: String): Array[Byte] = {
+  def processFile(path: String, fileData: Array[Byte], outpuLang: Option[Lang] = None): Array[Byte] = {
     val model = ModelFactory.createDefaultModel()
-    val dataStream = new ByteArrayInputStream(Base64.decode(fileBase64))
-    Try(RDFDataMgr.read(model, dataStream, Lang.JSONLD))
-      .getOrElse(RDFDataMgr.read(model, dataStream, Lang.TURTLE))
-
+    val dataStream = new ByteArrayInputStream(fileData)
+    val lang = mapContentType(mapFilenameToContentType(path))
+    RDFDataMgr.read(model, dataStream, lang)
     val str = new ByteArrayOutputStream()
-    RDFDataMgr.write(str, model, Lang.TURTLE)
+    RDFDataMgr.write(str, model, outpuLang.getOrElse(Lang.TURTLE))
     str.toByteArray
   }
 
+  def mapFilenameToContentType(fn: String): String =
+    fn.split('.').last match {
+      case "ttl" => "text/turtle"
+      case "rdf" => "application/rdf+xml"
+      case "nt" => "application/n-triples"
+      case "jsonld" => "application/ld+json"
+      case "trig" => "text/trig"
+      case "nq" => "application/n-quads"
+      case "trix" => "application/trix+xml"
+      case "trdf" => "application/rdf+thrift"
+      case _ => "text/turtle"
+    }
+
+  def mapContentType(cn: String): Lang =
+    cn match {
+      case "text/turtle" => Lang.TURTLE
+      case "application/rdf+xml" => Lang.RDFXML
+      case "application/n-triples" => Lang.NTRIPLES
+      case "application/ld+json" => Lang.JSONLD
+      case "text/trig" => Lang.TRIG
+      case "application/n-quads" => Lang.NQUADS
+      case "application/trix+xml" => Lang.TRIX
+      case "application/rdf+thrift" => Lang.RDFTHRIFT
+      case _ => Lang.TURTLE
+    }
 
 }
 

@@ -20,6 +20,8 @@ trait GitClient {
 
   def commitFileDelete(projectName: String, name: String): Try[String]
 
+  def readFile(projectName: String, name: String): Try[Array[Byte]]
+
 }
 
 
@@ -58,9 +60,14 @@ class RemoteGitlabHttpClient(accessToken: String, scheme: String, hostname: Stri
       .fold[Try[String]](Failure[String](new RuntimeException("no project found")))(Try[String](_))
       .flatMap(commitSingleAction(_, DeleteFile(name)))
 
-  override def projectExists(name: String): Boolean = {
-    projectIdByName(name).nonEmpty
-  }
+  override def projectExists(name: String): Boolean =
+    projectIdByName(name)
+      .nonEmpty
+
+  override def readFile(projectName: String, name: String): Try[Array[Byte]] =
+    projectIdByName(projectName)
+      .fold[Try[String]](Failure[String](new RuntimeException("no project found")))(Try[String](_))
+      .flatMap(readSingleFile(_, name))
 
   private def projectIdByName(name: String): Option[String] = {
     val req = withAuth(
@@ -119,6 +126,29 @@ class RemoteGitlabHttpClient(accessToken: String, scheme: String, hostname: Stri
   private def withAuth[A1, A2](req: Request[A1, A2]): Request[A1, A2] = {
     req.header("Authorization", s"Bearer $accessToken")
   }
+
+  private def readSingleFile(projectId: String, fn: String): Try[Array[Byte]] = Try {
+    val req =  withAuth(
+      basicRequest.get(baseUri
+        .addPath("projects")
+        .addPath(projectId)
+        .addPath("repository")
+        .addPath("files")
+        .addPath(fn)
+        .addParam("ref", "master"))
+    )
+    val resp = req.send(backend)
+    resp.body match {
+      case Left(e) => throw new RuntimeException(e)
+      case Right(value) =>
+        val flds = for {
+          JObject(ch) <- parse(value)
+          JField("content", JString(content)) <- ch
+        } yield content
+        Base64.decode(flds.head)
+    }
+  }
+
 
 }
 

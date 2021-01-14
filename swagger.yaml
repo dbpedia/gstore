@@ -91,10 +91,9 @@ paths:
       summary: "Get group meta"
       description: ""
       operationId: "getGroup"
-      consumes:
-        - "application/json"
       produces:
-        - "application/json"
+        - "application/ld+json"
+        - "text/turtle"
       parameters:
         - in: path
           name: groupId
@@ -107,12 +106,17 @@ paths:
           required: true
       responses:
         "200":
-          description: "A turtle file"
-          content:
-            text/turtle:
-              schema:
-                type: string
-                format: binary
+          description: "A group description file"
+          schema:
+            type: string
+            format: binary
+#          content:
+#            application/ld+json:
+#              schema:
+#                type: string
+#            text/turtle:
+#              schema:
+#                type: string
   /{username}/{groupId}/{artifactId}/{versionId}:
     put:
       summary: "Create version"
@@ -192,10 +196,9 @@ paths:
       summary: "Get version meta"
       description: ""
       operationId: "getVersion"
-      consumes:
-        - "application/json"
       produces:
-        - "application/json"
+        - "application/ld+json"
+        - "text/turtle"
       parameters:
         - in: path
           name: versionId
@@ -219,12 +222,17 @@ paths:
           description: Version name
       responses:
         "200":
-          description: "A turtle file"
-          content:
-            text/turtle:
-              schema:
-                type: string
-                format: binary
+          description: "A dataid file"
+          schema:
+            type: string
+            format: binary
+#          content:
+#            application/ld+json:
+#              schema:
+#                type: string
+#            text/turtle:
+#              schema:
+#                type: string
   /api/dataid/subgraph/:
     post:
       summary: "Returns a subgraph of dataid for signing"
