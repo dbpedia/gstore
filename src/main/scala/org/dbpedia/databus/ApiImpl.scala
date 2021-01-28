@@ -1,20 +1,23 @@
 package org.dbpedia.databus
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+import java.util.function.Consumer
 
 import javax.servlet.http.HttpServletRequest
 import org.apache.jena.rdf.model.ModelFactory
 import org.apache.jena.riot.{Lang, RDFDataMgr}
+import org.apache.jena.shacl.validation.ReportEntry
+import org.apache.jena.shacl.{ShaclValidator, Shapes}
 import org.dbpedia.databus.ApiImpl.Config
 import org.dbpedia.databus.swagger.api.DatabusApi
 import org.dbpedia.databus.swagger.model.{ApiResponse, BinaryBody, DataIdSignatureMeta, DataidFileUpload}
 import scalaj.http.Base64
 import sttp.client3._
-import sttp.model.Uri
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
+import sttp.model.Uri
 
-import scala.util.{Failure, Try}
+import scala.util.{Failure, Success, Try}
 
 
 class ApiImpl(config: Config) extends DatabusApi {
@@ -33,8 +36,11 @@ class ApiImpl(config: Config) extends DatabusApi {
     ApiResponse(Some(200), Some(new String("test, noop method")), Some("data!"))
   }
 
-  override def createGroup(groupId: String, username: String, body: BinaryBody)(request: HttpServletRequest): Try[ApiResponse] =
-    saveFile(username, s"$groupId/$DefaultGroupFn", body.dataBase64)(request)
+  override def createGroup(groupId: String, username: String, body: BinaryBody)(request: HttpServletRequest): Try[ApiResponse] = {
+    val data = Base64.decode(body.dataBase64)
+    RdfConversions.validateWithShacl(data, shaclUri)
+      .flatMap(_ => saveFile(username, s"$groupId/$DefaultGroupFn", data)(request))
+  }
 
   override def deleteGroup(groupId: String, username: String)(request: HttpServletRequest): Try[ApiResponse] =
     deleteFile(username, s"$groupId/$DefaultGroupFn")(request)
@@ -47,8 +53,11 @@ class ApiImpl(config: Config) extends DatabusApi {
                              username: String,
                              artifactId: String,
                              body: BinaryBody)
-                            (request: HttpServletRequest): Try[ApiResponse] =
-    saveFile(username, s"$groupId/$artifactId/$versionId/$DefaultVersionFn", body.dataBase64)(request)
+                            (request: HttpServletRequest): Try[ApiResponse] = {
+    val data = Base64.decode(body.dataBase64)
+    RdfConversions.validateWithShacl(data, shaclUri)
+      .flatMap(_ => saveFile(username, s"$groupId/$artifactId/$versionId/$DefaultVersionFn", data)(request))
+  }
 
   override def deleteVersion(versionId: String,
                              groupId: String,
@@ -95,14 +104,14 @@ class ApiImpl(config: Config) extends DatabusApi {
     }
 
 
-  private def saveFile(username: String, path: String, dataBase64: String)(request: HttpServletRequest): Try[ApiResponse] =
+  private def saveFile(username: String, path: String, data: Array[Byte])(request: HttpServletRequest): Try[ApiResponse] =
     if (!checkAuth(username, request)) {
       Failure(new RuntimeException("authorization failed"))
     } else {
       if (!client.projectExists(username)) {
         client.createProject(username)
       }
-      client.commitFileContent(username, path, Base64.decode(dataBase64))
+      client.commitFileContent(username, path, data)
         .map(s => ApiResponse(Some(200), None, Some(s)))
     }
 
@@ -128,13 +137,33 @@ object ApiImpl {
                      gitScheme: String,
                      gitHostname: String,
                      gitPort: Option[Int],
-                     tokenCheckUri: String
+                     tokenCheckUri: String,
+                     shaclUri: String
                    )
 
 }
 
 
 object RdfConversions {
+
+  def validateWithShacl(file: Array[Byte], shaclUri: String): Try[Unit] = {
+    val graph = RDFDataMgr.loadGraph(shaclUri)
+    val model = ModelFactory.createDefaultModel()
+    val dataStream = new ByteArrayInputStream(file)
+    RDFDataMgr.read(model, dataStream, Lang.JSONLD)
+    val shape = Shapes.parse(graph)
+    val report = ShaclValidator.get().validate(shape, model.getGraph)
+    if(report.conforms()){
+      Success(Unit)
+    }else{
+      val msg = new StringBuilder
+      report.getEntries.forEach(new Consumer[ReportEntry] {
+        override def accept(t: ReportEntry): Unit =
+          msg.append(t.message())
+      })
+      Failure(new RuntimeException(msg.toString()))
+    }
+  }
 
   def processFile(path: String, fileData: Array[Byte], outpuLang: Option[Lang] = None): Array[Byte] = {
     val model = ModelFactory.createDefaultModel()

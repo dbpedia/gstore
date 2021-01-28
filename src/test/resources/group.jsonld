@@ -1,0 +1,8 @@
+{
+	"@context" : "https://raw.githubusercontent.com/dbpedia/databus-git-mockup/main/dev/context.jsonld",
+	"@id": "http://databus.dbpedia.org/kuckuck/nest",
+	"@type": "dataid:Group",
+	"title": "label",
+	"abstract": "comment Lorem ipsum dolor sit",
+	"description": "description"
+}

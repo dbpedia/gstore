@@ -1,0 +1,35 @@
+{
+	"@context": "https://raw.githubusercontent.com/dbpedia/databus-git-mockup/main/dev/context.jsonld",
+	"@type": "dataid:Dataset",
+	"@id": "https://databus.dbpedia.org/system/git/kuckuck/nest/eier/2020.10.10/dataid.ttl#Dataset",
+
+	"title":               "Short and expressive title of the dataset" ,
+    "abstract":            "One line and one sentence max explanation of the dataset." ,
+	"description":         "Long and verbose documentation text using markdown syntax is going here" ,
+	"issued":              "2020-12-06T00:00:00Z" ,
+	"license":             "http://purl.oclc.org/NET/rdflicense/cc-0" ,
+	"publisher":           "https://webid.dbpedia.org/webid.ttl#this" ,
+
+	"version":             "https://databus.dbpedia.org/kuckuck/nest/eier/2020.10.10" ,
+
+	"distribution":
+	[
+		{
+			"@id": "https://databus.dbpedia.org/system/git/kuckuck/nest/eier/2020.10.10/dataid.ttl#eier_lang=de_tag=some.ttl.gz",
+			"@type": "dataid:Part",
+
+			"formatExtension": "ttl",
+			"compression": "gz",
+			"sha256sum": "1be509fb64371dcf5fc7df334964753da4f2d33ba2d86b8e10150dbf64beef27",
+			"signature": "dg6U+QmLt/WJvcb2yQApkAD5vanzNE1fBxvCwB87+G/XgsOpeDm3jDAEnCA43uWyw3A+sVKXfOvYFGfh7LPrJRIcZTlaqpXZ9UU1TmunCFrtvh+TZ+T0eMwOxzWfQ7eLAdZJlV5IDMNZZwNi9u6ukiF8ciSJjpRSHWDYD11NT79Q9sKMmVFosfoo8GEa9aM43BzqNDew/aoRMW6xlvAGKO4rbmbbONroeYLSeTApakF5SwgEQ8pcjvAZf7UoNNTlOFjklUiJIoVlhaUiuatptxa/aGK499Ja/sQqordPgJfOIa+pRhAXIBYZvXRGPxpi8lwHCU8oXSzSArArWIPyMg==",
+
+			"modified": "2020-12-05T23:01:38Z",
+
+			"downloadURL": "https://data.dnb.de/opendata/authorities-geografikum_lds.ttl.gz",
+			"byteSize": 34154314,
+
+			"dcv:tag": "some",
+			"dcv:lang": "de"
+		}
+	]
+}

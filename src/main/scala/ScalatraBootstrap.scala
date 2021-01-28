@@ -18,6 +18,8 @@ class ScalatraBootstrap extends LifeCycle with LazyLogging {
     val port = getParam("gitPort").map(_.toInt)
     val token = getParam("gitApiToken").get
     val authCheckUrl = getParam("authCheckUrl").get
+    val shaclUri = getParam("shaclUri").get
+
     context.log(s"Git host: $host")
 
     val cfg = ApiImpl.Config(
@@ -25,7 +27,8 @@ class ScalatraBootstrap extends LifeCycle with LazyLogging {
       schema,
       host,
       port,
-      authCheckUrl
+      authCheckUrl,
+      shaclUri
     )
 
     context.mount(new DefaultApi()(sw, new ApiImpl(cfg)), "/*")

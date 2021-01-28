@@ -12,6 +12,7 @@ version := "0.2.0-SNAPSHOT"
 scalaVersion := "2.12.6"
 
 val ScalatraVersion = "2.6.3"
+val jenaVersion = "3.17.0"
 
 libraryDependencies ++= Seq(
   "org.scalatra" %% "scalatra" % ScalatraVersion,
@@ -28,7 +29,8 @@ libraryDependencies ++= Seq(
 libraryDependencies ++= Seq(
   ("org.dbpedia.databus" % "databus-shared-lib" % "0.2.6-SNAPSHOT").changing(),
   "org.eclipse.jgit" % "org.eclipse.jgit" % "5.0.1.201806211838-r",
-  "org.apache.jena" % "apache-jena-libs" % "3.8.0",
+  "org.apache.jena" % "apache-jena-libs" % jenaVersion,
+  "org.apache.jena" % "jena-shacl" % jenaVersion,
   "org.scalaz" %% "scalaz-core" % "7.2.26",
   "io.monix" %% "monix" % "2.3.3",
   "com.google.guava" % "guava" % "26.0-jre",
