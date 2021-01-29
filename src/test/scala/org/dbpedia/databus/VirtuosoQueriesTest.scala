@@ -18,25 +18,17 @@ class VirtuosoQueriesTest extends FlatSpec with Matchers {
     val dataStream = new ByteArrayInputStream(bytes)
     RDFDataMgr.read(model, dataStream, Lang.JSONLD)
 
-
-
     val bld = RdfConversions.makeInsertSparqlQuery(model.getGraph, "http://randomGraphId")
 
     bld.toString()
   }
 
   "Generator" should "generate graph uri" in {
-    val r1 = RdfConversions.generateVersionGraphId(Uri.parse("https://localhost:8087/databus/kytest/mygroupid/artifact/version?sddsc=sdcscd").right.get)
-    val r2 = RdfConversions.generateVersionGraphId(Uri.parse("https://localhost:8087/databus/kytest/mygroupid/artifact/version/?sddsc=sdcscd").right.get)
+    val r1 = RdfConversions.generateVersionGraphId("kytest","mygroupid","artifact", "version")
+    r1 should equal("https://databus.dbpedia.org/kytest/mygroupid/artifact/version/dataid.ttl#Dataset")
 
-    r1 should equal(r2)
-    r1 should equal("https://databus.dbpedia.org/databus/kytest/mygroupid/artifact/version/dataid.ttl#Dataset")
-
-    val r3 = RdfConversions.generateGroupGraphId(Uri.parse("https://localhost:8087/databus/kytest/mygroupid/?sddsc=sdcscd").right.get)
-    val r4 = RdfConversions.generateGroupGraphId(Uri.parse("https://localhost:8087/databus/kytest/mygroupid?sddsc=sdcscd").right.get)
-
-    r3 should equal(r4)
-    r4 should equal("https://databus.dbpedia.org/databus/kytest/mygroupid/documentation.ttl")
+    val r3 = RdfConversions.generateGroupGraphId("kytest","mygroupid")
+    r3 should equal("https://databus.dbpedia.org/kytest/mygroupid/documentation.ttl")
   }
 
   "It" should "save to virtuoso" in {

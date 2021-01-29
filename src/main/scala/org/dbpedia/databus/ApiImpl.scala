@@ -48,7 +48,7 @@ class ApiImpl(config: Config) extends DatabusApi {
           backend,
           data,
           pa,
-          generateGroupGraphId(Uri.parse(request.getRequestURI).right.get),
+          generateGroupGraphId(username, groupId),
           virtuosoUri,
           virtuosoUser,
           virtuosoPass)) {
@@ -80,7 +80,7 @@ class ApiImpl(config: Config) extends DatabusApi {
           backend,
           data,
           pa,
-          generateVersionGraphId(Uri.parse(request.getRequestURL.toString).right.get),
+          generateVersionGraphId(username, groupId, artifactId, versionId),
           virtuosoUri,
           virtuosoUser,
           virtuosoPass)) {
@@ -282,27 +282,12 @@ object RdfConversions {
 
   import org.apache.jena.graph.Triple
 
-  def generateVersionGraphId(uri: Uri): String = {
-    val ts = uri.withParams(Map.empty[String, String]).toJavaUri.getPath
-    val append = if (ts.endsWith("/")) {
-      ""
-    } else {
-      "/"
-    }
+  def generateVersionGraphId(user: String, group: String, artifact: String, version: String): String =
     // todo detect original uri from the request
-    "https://databus.dbpedia.org" + ts + append + "dataid.ttl#Dataset"
-  }
+    s"https://databus.dbpedia.org/$user/$group/$artifact/$version/dataid.ttl#Dataset"
 
-  def generateGroupGraphId(uri: Uri): String = {
-    val ts = uri.withParams(Map.empty[String, String]).toJavaUri.getPath
-    val append = if (ts.endsWith("/")) {
-      ""
-    } else {
-      "/"
-    }
-    // todo detect original uri from the request
-    "https://databus.dbpedia.org" + ts + append + "documentation.ttl"
-  }
+  def generateGroupGraphId(user: String, group: String): String =
+    s"https://databus.dbpedia.org/$user/$group/documentation.ttl"
 
   def dropGraphSparqlQuery(graphId: String) =
     s"DROP GRAPH <$graphId>"
