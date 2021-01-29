@@ -4,6 +4,7 @@ import javax.servlet.ServletContext
 import org.dbpedia.databus.ApiImpl
 import org.dbpedia.databus.swagger.DatabusSwagger
 import org.dbpedia.databus.swagger.api.DefaultApi
+import sttp.model.Uri
 
 class ScalatraBootstrap extends LifeCycle with LazyLogging {
 
@@ -19,6 +20,9 @@ class ScalatraBootstrap extends LifeCycle with LazyLogging {
     val token = getParam("gitApiToken").get
     val authCheckUrl = getParam("authCheckUrl").get
     val shaclUri = getParam("shaclUri").get
+    val virtUri = getParam("virtuosoUri").get
+    val virtUser = getParam("virtuosoUser").get
+    val virtPass = getParam("virtuosoPass").get
 
     context.log(s"Git host: $host")
 
@@ -28,7 +32,10 @@ class ScalatraBootstrap extends LifeCycle with LazyLogging {
       host,
       port,
       authCheckUrl,
-      shaclUri
+      shaclUri,
+      Uri.parse(virtUri).right.get,
+      virtUser,
+      virtPass
     )
 
     context.mount(new DefaultApi()(sw, new ApiImpl(cfg)), "/*")

@@ -31,6 +31,7 @@ libraryDependencies ++= Seq(
   "org.eclipse.jgit" % "org.eclipse.jgit" % "5.0.1.201806211838-r",
   "org.apache.jena" % "apache-jena-libs" % jenaVersion,
   "org.apache.jena" % "jena-shacl" % jenaVersion,
+//  "tr.com.srdc" % "virt-jena" % "2.6.2",
   "org.scalaz" %% "scalaz-core" % "7.2.26",
   "io.monix" %% "monix" % "2.3.3",
   "com.google.guava" % "guava" % "26.0-jre",
