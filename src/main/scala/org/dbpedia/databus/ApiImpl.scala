@@ -289,7 +289,7 @@ object RdfConversions {
     s"https://databus.dbpedia.org/$user/$group/documentation.ttl"
 
   def dropGraphSparqlQuery(graphId: String) =
-    s"DROP GRAPH <$graphId>"
+    s"CLEAR GRAPH <$graphId>"
 
   def makeInsertSparqlQuery(graph: Graph, graphId: String): String = {
     val bld = StringBuilder.newBuilder
