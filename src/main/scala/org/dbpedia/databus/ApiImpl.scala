@@ -178,8 +178,7 @@ object ApiImpl {
   private[databus] def virtuosoRequest(request: String, virtuosoUri: Uri, un: String, pass: String) =
     basicRequest
       .post(virtuosoUri)
-      .header("Content-Type", "application/sparql-query")
-      .body(request)
+      .body("query" -> request)
       .auth.digest(un, pass)
 
   private[databus] def saveToVirtuoso(backend: SttpBackend[Identity, Any],
