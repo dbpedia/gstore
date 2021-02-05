@@ -33,7 +33,7 @@ paths:
           description: "successful operation"
           schema:
             $ref: "#/definitions/ApiResponse"
-  /{username}/{groupId}:
+  /{username}/{group}:
     put:
       summary: "Create group"
       description: ""
@@ -44,7 +44,7 @@ paths:
         - "application/json"
       parameters:
         - in: path
-          name: groupId
+          name: group
           type: string
           required: true
           description: Group name
@@ -73,7 +73,7 @@ paths:
         - "application/json"
       parameters:
         - in: path
-          name: groupId
+          name: group
           type: string
           required: true
           description: Group name
@@ -95,7 +95,7 @@ paths:
         - "text/turtle"
       parameters:
         - in: path
-          name: groupId
+          name: group
           type: string
           required: true
           description: Group name
@@ -116,7 +116,7 @@ paths:
 #            text/turtle:
 #              schema:
 #                type: string
-  /{username}/{groupId}/{artifactId}/{versionId}:
+  /{username}/{group}/{artifact}/{version}:
     put:
       summary: "Create version"
       description: ""
@@ -127,12 +127,12 @@ paths:
         - "application/json"
       parameters:
         - in: path
-          name: versionId
+          name: version
           type: string
           required: true
           description: Version name
         - in: path
-          name: groupId
+          name: group
           type: string
           required: true
           description: Version name
@@ -142,7 +142,7 @@ paths:
           required: true
           description: Version name
         - in: path
-          name: artifactId
+          name: artifact
           type: string
           required: true
           description: Version name
@@ -167,12 +167,12 @@ paths:
         - "application/json"
       parameters:
         - in: path
-          name: versionId
+          name: version
           type: string
           required: true
           description: Version name
         - in: path
-          name: groupId
+          name: group
           type: string
           required: true
           description: Version name
@@ -182,7 +182,7 @@ paths:
           required: true
           description: Version name
         - in: path
-          name: artifactId
+          name: artifact
           type: string
           required: true
           description: Version name
@@ -200,12 +200,12 @@ paths:
         - "text/turtle"
       parameters:
         - in: path
-          name: versionId
+          name: version
           type: string
           required: true
           description: Version name
         - in: path
-          name: groupId
+          name: group
           type: string
           required: true
           description: Version name
@@ -215,7 +215,7 @@ paths:
           required: true
           description: Version name
         - in: path
-          name: artifactId
+          name: artifact
           type: string
           required: true
           description: Version name
