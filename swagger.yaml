@@ -7,39 +7,13 @@ basePath: "/databus"
 schemes:
   - "https"
 paths:
-  /dataid:
-    post:
-      summary: "Upload dataid ttl"
-      description: ""
-      operationId: "dataidUpload"
-      consumes:
-        - "application/json"
-      produces:
-        - "application/json"
-      parameters:
-        - name: "X-Client-Cert"
-          in: "header"
-          required: false
-          type: "string"
-          description: "Client certificate, which was used to sign the dataid file. Needed in case we dont use SSL connection with client auth."
-        - in: "body"
-          name: "body"
-          description: "Dataid file with the signature and upload params"
-          required: true
-          schema:
-            $ref: "#/definitions/DataidFileUpload"
-      responses:
-        "200":
-          description: "successful operation"
-          schema:
-            $ref: "#/definitions/ApiResponse"
-  /{username}/{group}:
+  /{username}/{groupId}:
     put:
       summary: "Create group"
       description: ""
       operationId: "createGroup"
       consumes:
-        - "application/json"
+        - "application/ld+json"
       produces:
         - "application/json"
       parameters:
@@ -57,7 +31,8 @@ paths:
           description: "Turtle or JSONLD with group meta."
           required: true
           schema:
-            $ref: "#/definitions/BinaryBody"
+            type: string
+            format: binary
       responses:
         "200":
           description: "successful operation"
@@ -109,20 +84,13 @@ paths:
           schema:
             type: string
             format: binary
-#          content:
-#            application/ld+json:
-#              schema:
-#                type: string
-#            text/turtle:
-#              schema:
-#                type: string
   /{username}/{group}/{artifact}/{version}:
     put:
       summary: "Create version"
       description: ""
       operationId: "createVersion"
       consumes:
-        - "application/json"
+        - "application/ld+json"
       produces:
         - "application/json"
       parameters:
@@ -151,7 +119,8 @@ paths:
           description: "Turtle or JSONLD with version meta."
           required: true
           schema:
-            $ref: "#/definitions/BinaryBody"
+            type: string
+            format: binary
       responses:
         "200":
           description: "successful operation"
@@ -225,13 +194,6 @@ paths:
           schema:
             type: string
             format: binary
-#          content:
-#            application/ld+json:
-#              schema:
-#                type: string
-#            text/turtle:
-#              schema:
-#                type: string
   /api/dataid/subgraph/:
     post:
       summary: "Returns a subgraph of dataid for signing"
@@ -247,12 +209,13 @@ paths:
           description: "Returns dataid file body subgraph. Here we can just use Base64 encoded body"
           required: true
           schema:
-            $ref: "#/definitions/BinaryBody"
+            type: string
+            format: binary
       responses:
         "200":
           description: "successful operation, here we can just use Base64 encoded body"
           schema:
-            $ref: "#/definitions/BinaryBody"
+            type: string
   /api/dataid/subgraph/hash/:
     post:
       summary: "Calculates hash of the subgraph of the dataid file for signing"
@@ -268,46 +231,20 @@ paths:
           description: "Dataid subgraph data"
           required: true
           schema:
-            $ref: "#/definitions/BinaryBody"
+            type: string
+            format: binary
       responses:
         "200":
           description: "successful operation"
           schema:
             $ref: "#/definitions/DataIdSignatureMeta"
 definitions:
-  BinaryBody:
-    type: "object"
-    description: "this may be extended/changed"
-    properties:
-      dataBase64:
-        type: "string"
-    required:
-      - dataBase64
   DataIdSignatureMeta:
     type: "object"
     description: "may be needed to add some more details"
     properties:
       hash:
         type: "string"
-  DataidFileUpload:
-    type: "object"
-    properties:
-      file:
-        description: "Can be sent in different formats: JSONLD, Turtle"
-        $ref: "#/definitions/BinaryBody"
-      subgraph:
-        description: "This will allow to easily change the subgraph, and also to validate the subgraph against the dataid"
-        $ref: "#/definitions/BinaryBody"
-      subgraphSignature:
-        $ref: "#/definitions/BinaryBody"
-      allowOverwrite:
-        type: "string"
-      datasetIdentifier:
-        type: "string"
-      dataIdVersion:
-        type: "string"
-    required:
-      - file
   ApiResponse:
     type: "object"
     properties:

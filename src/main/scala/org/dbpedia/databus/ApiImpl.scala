@@ -5,15 +5,14 @@ import java.util.function.Consumer
 
 import javax.servlet.http.HttpServletRequest
 import org.apache.jena.graph.Graph
-import org.apache.jena.rdf.model.ModelFactory
+import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.riot.{Lang, RDFDataMgr}
 import org.apache.jena.shacl.validation.ReportEntry
 import org.apache.jena.shacl.{ShaclValidator, Shapes}
 import org.dbpedia.databus.ApiImpl.Config
 import org.dbpedia.databus.RdfConversions.{generateGroupGraphId, generateVersionGraphId, mapContentType, mapFilenameToContentType}
 import org.dbpedia.databus.swagger.api.DatabusApi
-import org.dbpedia.databus.swagger.model.{ApiResponse, BinaryBody, DataIdSignatureMeta, DataidFileUpload}
-import scalaj.http.Base64
+import org.dbpedia.databus.swagger.model.{ApiResponse, DataIdSignatureMeta}
 import sttp.client3._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
@@ -30,16 +29,18 @@ class ApiImpl(config: Config) extends DatabusApi {
   private lazy val backend = new DigestAuthenticationBackend(HttpURLConnectionBackend())
   private val client = new RemoteGitlabHttpClient(accessToken, gitScheme, gitHostname, gitPort)
 
-  override def dataidSubgraph(body: BinaryBody)(request: HttpServletRequest): Try[BinaryBody] = ???
-
-  override def dataidSubgraphHash(body: BinaryBody)(request: HttpServletRequest): Try[DataIdSignatureMeta] = ???
-
-  override def dataidUpload(body: DataidFileUpload, xClientCert: String)(request: HttpServletRequest): Try[ApiResponse] = Try {
-    ApiResponse(Some(200), Some(new String("test, noop method")), Some("data!"))
+  override def dataidSubgraph(body: String)(request: HttpServletRequest): Try[String] = {
+    val data = body.getBytes
+    RdfConversions.validateWithShacl(data, shaclUri)
+      .map(model => {
+        model
+      }).map(_ => "")
   }
 
-  override def createGroup(groupId: String, username: String, body: BinaryBody)(request: HttpServletRequest): Try[ApiResponse] = {
-    val data = Base64.decode(body.dataBase64)
+  override def dataidSubgraphHash(body: String)(request: HttpServletRequest): Try[DataIdSignatureMeta] = ???
+
+  override def createGroup(groupId: String, username: String, body: String)(request: HttpServletRequest): Try[ApiResponse] = {
+    val data = body.getBytes
     val pa = s"$groupId/$DefaultGroupFn"
     RdfConversions.validateWithShacl(data, shaclUri)
       .flatMap(_ => saveFile(username, pa, data)(request))
@@ -69,9 +70,9 @@ class ApiImpl(config: Config) extends DatabusApi {
                              groupId: String,
                              username: String,
                              artifactId: String,
-                             body: BinaryBody)
+                             body: String)
                             (request: HttpServletRequest): Try[ApiResponse] = {
-    val data = Base64.decode(body.dataBase64)
+    val data = body.getBytes
     val pa = s"$groupId/$artifactId/$versionId/$DefaultVersionFn"
     RdfConversions.validateWithShacl(data, shaclUri)
       .flatMap(_ => saveFile(username, pa, data)(request))
@@ -134,7 +135,6 @@ class ApiImpl(config: Config) extends DatabusApi {
             Option(request.getHeader("Accept")).map(RdfConversions.mapContentType)))
         .map(new String(_))
     }
-
 
   private def saveFile(username: String, path: String, data: Array[Byte])(request: HttpServletRequest): Try[ApiResponse] =
     if (!checkAuth(username, request)) {
@@ -224,7 +224,7 @@ object ApiImpl {
 
 object RdfConversions {
 
-  def validateWithShacl(file: Array[Byte], shaclUri: String): Try[Unit] = {
+  def validateWithShacl(file: Array[Byte], shaclUri: String): Try[Model] = {
     val graph = RDFDataMgr.loadGraph(shaclUri)
     val model = ModelFactory.createDefaultModel()
     val dataStream = new ByteArrayInputStream(file)
@@ -232,7 +232,7 @@ object RdfConversions {
     val shape = Shapes.parse(graph)
     val report = ShaclValidator.get().validate(shape, model.getGraph)
     if (report.conforms()) {
-      Success(Unit)
+      Success(model)
     } else {
       val msg = new StringBuilder
       report.getEntries.forEach(new Consumer[ReportEntry] {
