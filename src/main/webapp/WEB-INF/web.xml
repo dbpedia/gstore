@@ -40,5 +40,24 @@
         <param-name>authCheckUrl</param-name>
         <param-value>https://databus.dbpedia.org/auth/realms/databus/protocol/openid-connect/userinfo</param-value>
     </context-param>
-
+    <context-param>
+        <param-name>shaclUri</param-name>
+        <param-value>https://raw.githubusercontent.com/dbpedia/databus-git-mockup/main/dev/dataid-shacl.ttl</param-value>
+    </context-param>
+    <context-param>
+        <param-name>virtuosoUri</param-name>
+        <param-value>https://dbpedia-generic.tib.eu/sparql-auth</param-value>
+    </context-param>
+    <context-param>
+        <param-name>virtuosoUser</param-name>
+        <param-value>tester</param-value>
+    </context-param>
+    <context-param>
+        <param-name>virtuosoPass</param-name>
+        <param-value>test</param-value>
+    </context-param>
+    <context-param>
+        <param-name>databusKeyFile</param-name>
+        <param-value>test</param-value>
+    </context-param>
 </web-app>

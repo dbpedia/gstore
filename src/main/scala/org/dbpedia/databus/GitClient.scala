@@ -22,6 +22,10 @@ trait GitClient {
 
   def readFile(projectName: String, name: String): Try[Array[Byte]]
 
+  def commitSeveralFiles(projectName: String, filenameAndData: Map[String, Array[Byte]]): Try[String]
+
+  def deleteSeveralFiles(projectName: String, names: Seq[String]): Try[String]
+
 }
 
 
@@ -48,17 +52,10 @@ class RemoteGitlabHttpClient(accessToken: String, scheme: String, hostname: Stri
   }
 
   override def commitFileContent(projectName: String, name: String, data: Array[Byte]): Try[String] =
-    projectIdByName(projectName)
-      .fold[Try[String]](Failure[String](new RuntimeException("no project found")))(Try[String](_))
-      .flatMap(id =>
-        commitSingleAction(id, CreateFile(name, data))
-          .orElse(commitSingleAction(id, UpdateFile(name, data)))
-      )
+    commitSeveralFiles(projectName, Map(name -> data))
 
   override def commitFileDelete(projectName: String, name: String): Try[String] =
-    projectIdByName(projectName)
-      .fold[Try[String]](Failure[String](new RuntimeException("no project found")))(Try[String](_))
-      .flatMap(commitSingleAction(_, DeleteFile(name)))
+    deleteSeveralFiles(projectName, Seq(name))
 
   override def projectExists(name: String): Boolean =
     projectIdByName(name)
@@ -68,6 +65,19 @@ class RemoteGitlabHttpClient(accessToken: String, scheme: String, hostname: Stri
     projectIdByName(projectName)
       .fold[Try[String]](Failure[String](new RuntimeException("no project found")))(Try[String](_))
       .flatMap(readSingleFile(_, name))
+
+  override def commitSeveralFiles(projectName: String, filenameAndData: Map[String, Array[Byte]]): Try[String] =
+    projectIdByName(projectName)
+      .fold[Try[String]](Failure[String](new RuntimeException("no project found")))(Try[String](_))
+      .flatMap(id =>
+        commitSeveralActions(id, filenameAndData.map(p => CreateFile(p._1, p._2)).toSeq)
+          .orElse(commitSeveralActions(id, filenameAndData.map(p => UpdateFile(p._1, p._2)).toSeq))
+      )
+
+  override def deleteSeveralFiles(projectName: String, names: Seq[String]): Try[String] =
+    projectIdByName(projectName)
+      .fold[Try[String]](Failure[String](new RuntimeException("no project found")))(Try[String](_))
+      .flatMap(id => commitSeveralActions(id, names.map(p => DeleteFile(p))))
 
   private def projectIdByName(name: String): Option[String] = {
     val req = withAuth(
@@ -96,12 +106,11 @@ class RemoteGitlabHttpClient(accessToken: String, scheme: String, hostname: Stri
     }
   }
 
-  private def commitSingleAction(projectId: String, action: FileAction): Try[String] = Try {
+  private def commitSeveralActions(projectId: String, actions: Seq[FileAction]): Try[String] = Try {
     val bodyJson = ("branch" -> "master") ~
       ("commit_message" -> "new file") ~
-      ("actions" -> List(
-        action.toGitlabApiJson
-      ))
+      ("actions" -> actions.map(_.toGitlabApiJson))
+
     val req = withAuth(
       basicRequest.post(baseUri
         .addPath("projects")
@@ -148,7 +157,6 @@ class RemoteGitlabHttpClient(accessToken: String, scheme: String, hostname: Stri
         Base64.decode(flds.head)
     }
   }
-
 
 }
 

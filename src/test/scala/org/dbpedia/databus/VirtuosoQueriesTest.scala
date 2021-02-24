@@ -20,6 +20,20 @@ class VirtuosoQueriesTest extends FlatSpec with Matchers {
 
     val bld = RdfConversions.makeInsertSparqlQuery(model.getGraph, "http://randomGraphId")
 
+    println(bld.toString)
+    bld.toString()
+  }
+
+  "Generator" should "save uri with #this" in {
+    val file = "this-test.jsonld"
+    val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
+    val model = ModelFactory.createDefaultModel()
+    val dataStream = new ByteArrayInputStream(bytes)
+    RDFDataMgr.read(model, dataStream, Lang.JSONLD)
+
+    val bld = RdfConversions.makeInsertSparqlQuery(model.getGraph, "http://randomGraphId")
+
+    println(bld.toString)
     bld.toString()
   }
 

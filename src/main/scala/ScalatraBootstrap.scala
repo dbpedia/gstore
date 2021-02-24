@@ -1,7 +1,9 @@
+import java.nio.file.{Files, Paths}
+
 import com.typesafe.scalalogging.LazyLogging
 import org.scalatra._
 import javax.servlet.ServletContext
-import org.dbpedia.databus.ApiImpl
+import org.dbpedia.databus.{ApiImpl, Crypto}
 import org.dbpedia.databus.swagger.DatabusSwagger
 import org.dbpedia.databus.swagger.api.DefaultApi
 import sttp.model.Uri
@@ -23,8 +25,14 @@ class ScalatraBootstrap extends LifeCycle with LazyLogging {
     val virtUri = getParam("virtuosoUri").get
     val virtUser = getParam("virtuosoUser").get
     val virtPass = getParam("virtuosoPass").get
+    val databusKeyFile = getParam("databusKeyFile").get
 
     context.log(s"Git host: $host")
+
+    val key = Crypto.bytesToPrivateKey(
+      Files.readAllBytes(Paths.get(databusKeyFile)),
+      "RSA"
+    )
 
     val cfg = ApiImpl.Config(
       token,
@@ -35,7 +43,8 @@ class ScalatraBootstrap extends LifeCycle with LazyLogging {
       shaclUri,
       Uri.parse(virtUri).right.get,
       virtUser,
-      virtPass
+      virtPass,
+      key
     )
 
     context.mount(new DefaultApi()(sw, new ApiImpl(cfg)), "/*")

@@ -1,0 +1,101 @@
+        [
+  {
+  "@context": "https://raw.githubusercontent.com/dbpedia/databus-git-mockup/main/dev/context.jsonld",
+    "@type": "dataid:Dataset",
+    "@id": "https://databus.dbpedia.org/jan/general/oreo/2021-02-23-05/dataid.ttl#Dataset",
+    "version": "https://databus.dbpedia.org/jan/general/oreo/2021-02-23-05",
+    "artifact": "https://databus.dbpedia.org/jan/general/oreo",
+    "group": "https://databus.dbpedia.org/jan/general",
+    "publisher": "https://databus.dbpedia.org/jan#this",
+    "maintainer": "https://databus.dbpedia.org/jan#this",
+    "hasVersion": "2021-02-23-05",
+    "issued": "2021-02-23T20:33:47.683Z",
+    "label": {
+      "@value": "oreo",
+      "@language": "en"
+    },
+    "title": {
+      "@value": "oreo",
+      "@language": "en"
+    },
+    "comment": {
+      "@value": "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.",
+      "@language": "en"
+    },
+    "abstract": {
+      "@value": "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.",
+      "@language": "en"
+    },
+    "description": {
+      "@value": "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.",
+      "@language": "en"
+    },
+    "license": {
+      "@id": "http://creativecommons.org/licenses/by/4.0/"
+    },
+    "distribution": [
+      {
+        "@id": "https://openenergy-platform.org/ontology/oeo/releases/oeo-physical.omn",
+        "@type": "dataid:SingleFile",
+        "format": "omn",
+        "compression": "none",
+        "downloadURL": "https://openenergy-platform.org/ontology/oeo/releases/oeo-physical.omn",
+        "byteSize": "183671",
+        "sha256sum": "ff34f3119137e3618dc43e4ceeb560132db42aedc974fef2e2f16f49c0334e48",
+        "hasVersion": "2021-02-23-05",
+        "dataid-cv:taggg": "test2",
+        "dataid-cv:dfsfdg": ""
+      },
+      {
+        "@id": "https://openenergy-platform.org/ontology/oeo/releases/oeo-physical.owl",
+        "@type": "dataid:SingleFile",
+        "format": "owl",
+        "compression": "none",
+        "downloadURL": "https://openenergy-platform.org/ontology/oeo/releases/oeo-physical.owl",
+        "byteSize": "320342",
+        "sha256sum": "aeb862e9c7de65b053aaaa9bfea0e18320c8bb0670dbe839a72ac31f4fe6accb",
+        "hasVersion": "2021-02-23-05",
+        "dataid-cv:taggg": "test2",
+        "dataid-cv:dfsfdg": ""
+      },
+      {
+        "@id": "https://openenergy-platform.org/ontology/oeo/releases/oeo-social.owl",
+        "@type": "dataid:SingleFile",
+        "format": "owl",
+        "compression": "none",
+        "downloadURL": "https://openenergy-platform.org/ontology/oeo/releases/oeo-social.owl",
+        "byteSize": "93223",
+        "sha256sum": "6c60aa84fd92208c352650d7706d126982bc39e9983928d71bc7cf52b019bdc2",
+        "hasVersion": "2021-02-23-05",
+        "dataid-cv:taggg": "test3",
+        "dataid-cv:dfsfdg": ""
+      },
+      {
+        "@id": "https://openenergy-platform.org/ontology/oeo/releases/oeo-social.omn",
+        "@type": "dataid:SingleFile",
+        "format": "omn",
+        "compression": "none",
+        "downloadURL": "https://openenergy-platform.org/ontology/oeo/releases/oeo-social.omn",
+        "byteSize": "67363",
+        "sha256sum": "7f363ade6453e85af20c31585e1e2af49499c709ad3f693d57e0ca02e764d0ee",
+        "hasVersion": "2021-02-23-05",
+        "dataid-cv:taggg": "test3",
+        "dataid-cv:dfsfdg": ""
+      }
+    ]
+  },
+  {
+    "@type": "rdf:Property",
+    "@id": "dataid-cv:taggg",
+    "rdfs:subPropertyOf": {
+      "@id": "dataid:contentVariant"
+    }
+  },
+  {
+    "@type": "rdf:Property",
+    "@id": "dataid-cv:dfsfdg",
+    "rdfs:subPropertyOf": {
+      "@id": "dataid:contentVariant"
+    }
+  }
+]

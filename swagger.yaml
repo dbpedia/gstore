@@ -194,7 +194,110 @@ paths:
           schema:
             type: string
             format: binary
-  /api/dataid/subgraph/:
+  /{username}/{group}/{artifact}/{version}/signature:
+    put:
+      summary: "Save dataid signature"
+      description: ""
+      operationId: "saveSignature"
+      produces:
+        - "application/json"
+      parameters:
+        - in: path
+          name: version
+          type: string
+          required: true
+          description: Version name
+        - in: path
+          name: group
+          type: string
+          required: true
+          description: Version name
+        - in: path
+          name: username
+          type: string
+          required: true
+          description: Version name
+        - in: path
+          name: artifact
+          type: string
+          required: true
+          description: Version name
+        - in: "body"
+          name: "body"
+          description: "binary signature"
+          required: true
+          schema:
+            type: string
+            format: binary
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+    delete:
+      summary: "Delete dataid signature"
+      description: ""
+      operationId: "deleteSignature"
+      produces:
+        - "application/json"
+      parameters:
+        - in: path
+          name: version
+          type: string
+          required: true
+          description: Version name
+        - in: path
+          name: group
+          type: string
+          required: true
+          description: Version name
+        - in: path
+          name: username
+          type: string
+          required: true
+          description: Version name
+        - in: path
+          name: artifact
+          type: string
+          required: true
+          description: Version name
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+    get:
+      summary: "Get dataid signature"
+      description: ""
+      operationId: "getSignature"
+      parameters:
+        - in: path
+          name: version
+          type: string
+          required: true
+          description: Version name
+        - in: path
+          name: group
+          type: string
+          required: true
+          description: Version name
+        - in: path
+          name: username
+          type: string
+          required: true
+          description: Version name
+        - in: path
+          name: artifact
+          type: string
+          required: true
+          description: Version name
+      responses:
+        "200":
+          description: "signature"
+          schema:
+            type: string
+            format: binary
+  /api/dataid/tractate/:
     post:
       summary: "Returns a subgraph of dataid for signing"
       description: ""
@@ -202,11 +305,11 @@ paths:
       consumes:
         - "application/json"
       produces:
-        - "application/json"
+        - "text/plain"
       parameters:
         - in: "body"
           name: "body"
-          description: "Returns dataid file body subgraph. Here we can just use Base64 encoded body"
+          description: "Returns dataid file tractate"
           required: true
           schema:
             type: string
@@ -216,28 +319,6 @@ paths:
           description: "successful operation, here we can just use Base64 encoded body"
           schema:
             type: string
-  /api/dataid/subgraph/hash/:
-    post:
-      summary: "Calculates hash of the subgraph of the dataid file for signing"
-      description: "Just for convenience"
-      operationId: "dataidSubgraphHash"
-      consumes:
-        - "application/json"
-      produces:
-        - "application/json"
-      parameters:
-        - in: "body"
-          name: "body"
-          description: "Dataid subgraph data"
-          required: true
-          schema:
-            type: string
-            format: binary
-      responses:
-        "200":
-          description: "successful operation"
-          schema:
-            $ref: "#/definitions/DataIdSignatureMeta"
 definitions:
   DataIdSignatureMeta:
     type: "object"

@@ -1,6 +1,7 @@
 package org.dbpedia.databus
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+import java.security.PrivateKey
 import java.util.function.Consumer
 
 import javax.servlet.http.HttpServletRequest
@@ -12,7 +13,7 @@ import org.apache.jena.shacl.{ShaclValidator, Shapes}
 import org.dbpedia.databus.ApiImpl.Config
 import org.dbpedia.databus.RdfConversions.{generateGroupGraphId, generateVersionGraphId, mapContentType, mapFilenameToContentType}
 import org.dbpedia.databus.swagger.api.DatabusApi
-import org.dbpedia.databus.swagger.model.{ApiResponse, DataIdSignatureMeta}
+import org.dbpedia.databus.swagger.model.ApiResponse
 import sttp.client3._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
@@ -32,12 +33,9 @@ class ApiImpl(config: Config) extends DatabusApi {
   override def dataidSubgraph(body: String)(request: HttpServletRequest): Try[String] = {
     val data = body.getBytes
     RdfConversions.validateWithShacl(data, shaclUri)
-      .map(model => {
-        model
-      }).map(_ => "")
+      .flatMap(m => Tractate.extract(m.getGraph, TractateV1.Version))
+      .map(_.stringForSigning)
   }
-
-  override def dataidSubgraphHash(body: String)(request: HttpServletRequest): Try[DataIdSignatureMeta] = ???
 
   override def createGroup(groupId: String, username: String, body: String)(request: HttpServletRequest): Try[ApiResponse] = {
     val data = body.getBytes
@@ -73,9 +71,17 @@ class ApiImpl(config: Config) extends DatabusApi {
                              body: String)
                             (request: HttpServletRequest): Try[ApiResponse] = {
     val data = body.getBytes
-    val pa = s"$groupId/$artifactId/$versionId/$DefaultVersionFn"
+    val folder = s"$groupId/$artifactId/$versionId/"
+    val pa = s"$folder$DefaultVersionFn"
     RdfConversions.validateWithShacl(data, shaclUri)
-      .flatMap(_ => saveFile(username, pa, data)(request))
+      .flatMap(m => Tractate.extract(m.getGraph, TractateV1.Version))
+      .flatMap(tractate => {
+        val tractateSignature = Tractate.sign(tractate, databusPrivateKey)
+        saveFiles(username, Map(
+          pa -> data,
+          s"$folder$DatabusSignatureFilename" -> tractateSignature.getBytes()
+        ))(request)
+      })
       .flatMap(a => {
         if (saveToVirtuoso(
           backend,
@@ -96,8 +102,11 @@ class ApiImpl(config: Config) extends DatabusApi {
                              groupId: String,
                              username: String,
                              artifactId: String)
-                            (request: HttpServletRequest): Try[ApiResponse] =
-    deleteFile(username, s"$groupId/$artifactId/$versionId/$DefaultVersionFn")(request)
+                            (request: HttpServletRequest): Try[ApiResponse] = {
+    val folder = s"$groupId/$artifactId/$versionId/"
+    val pa = s"$folder$DefaultVersionFn"
+    deleteFiles(username, Seq(pa, s"$folder$DatabusSignatureFilename"))(request)
+  }
 
   override def getVersion(versionId: String,
                           groupId: String,
@@ -105,6 +114,13 @@ class ApiImpl(config: Config) extends DatabusApi {
                           artifactId: String)
                          (request: HttpServletRequest): Try[String] =
     readFile(username, s"$groupId/$artifactId/$versionId/$DefaultVersionFn")(request)
+
+  override def deleteSignature(version: String, group: String, username: String, artifact: String)(request: HttpServletRequest): Try[ApiResponse] = ???
+
+  override def getSignature(version: String, group: String, username: String, artifact: String)(request: HttpServletRequest): Try[String] = ???
+
+  override def saveSignature(version: String, group: String, username: String, artifact: String, body: String)(request: HttpServletRequest): Try[ApiResponse] = ???
+
 
   private def checkAuth(username: String, request: HttpServletRequest): Boolean = {
     val header = request.getHeader("Authorization")
@@ -137,21 +153,27 @@ class ApiImpl(config: Config) extends DatabusApi {
     }
 
   private def saveFile(username: String, path: String, data: Array[Byte])(request: HttpServletRequest): Try[ApiResponse] =
+    saveFiles(username, Map(path -> data))(request)
+
+  private def saveFiles(username: String, fullFilenamesAndData: Map[String, Array[Byte]])(request: HttpServletRequest): Try[ApiResponse] =
     if (!checkAuth(username, request)) {
       Failure(new RuntimeException("authorization failed"))
     } else {
       if (!client.projectExists(username)) {
         client.createProject(username)
       }
-      client.commitFileContent(username, path, data)
+      client.commitSeveralFiles(username, fullFilenamesAndData)
         .map(s => ApiResponse(Some(200), None, Some(s)))
     }
 
   private def deleteFile(username: String, path: String)(request: HttpServletRequest): Try[ApiResponse] =
+    deleteFiles(username, Seq(path))(request)
+
+  private def deleteFiles(username: String, paths: Seq[String])(request: HttpServletRequest): Try[ApiResponse] =
     if (!checkAuth(username, request)) {
       Failure(new RuntimeException("authorization failed"))
     } else {
-      client.commitFileDelete(username, path)
+      client.deleteSeveralFiles(username, paths)
         .map(s => ApiResponse(Some(200), None, Some(s)))
     }
 
@@ -162,6 +184,7 @@ object ApiImpl {
 
   val DefaultGroupFn = "group.jsonld"
   val DefaultVersionFn = "dataid.jsonld"
+  val DatabusSignatureFilename = "databus_signature"
 
   case class Config(
                      accessToken: String,
@@ -172,7 +195,8 @@ object ApiImpl {
                      shaclUri: String,
                      virtuosoUri: Uri,
                      virtuosoUser: String,
-                     virtuosoPass: String
+                     virtuosoPass: String,
+                     databusPrivateKey: PrivateKey
                    )
 
   private[databus] def virtuosoRequest(request: String, virtuosoUri: Uri, un: String, pass: String) =
@@ -282,7 +306,7 @@ object RdfConversions {
   import org.apache.jena.graph.Triple
 
   def generateVersionGraphId(user: String, group: String, artifact: String, version: String): String =
-    // todo detect original uri from the request
+  // todo detect original uri from the request
     s"https://databus.dbpedia.org/$user/$group/$artifact/$version/dataid.ttl#Dataset"
 
   def generateGroupGraphId(user: String, group: String): String =
