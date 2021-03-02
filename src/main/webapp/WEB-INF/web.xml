@@ -57,7 +57,19 @@
         <param-value>test</param-value>
     </context-param>
     <context-param>
-        <param-name>databusKeyFile</param-name>
-        <param-value>test</param-value>
+        <param-name>databusKeystoreFile</param-name>
+        <param-value>/Users/kirill/IdeaProjects/databus.dbpedia.org/keystore.jks</param-value>
+    </context-param>
+    <context-param>
+        <param-name>databusKeystorePass</param-name>
+        <param-value>111111</param-value>
+    </context-param>
+    <context-param>
+        <param-name>databusKeyPass</param-name>
+        <param-value>111111</param-value>
+    </context-param>
+    <context-param>
+        <param-name>databusKeyAlias</param-name>
+        <param-value>mykey</param-value>
     </context-param>
 </web-app>
