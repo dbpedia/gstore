@@ -25,14 +25,14 @@ class ScalatraBootstrap extends LifeCycle with LazyLogging {
     val virtUri = getParam("virtuosoUri").get
     val virtUser = getParam("virtuosoUser").get
     val virtPass = getParam("virtuosoPass").get
-    val databusKeyFile = getParam("databusKeyFile").get
+    val databusKeyFile = getParam("databusKeystoreFile").get
+    val databusKeystorePass = getParam("databusKeystorePass").get
+    val databusKeyPass = getParam("databusKeyPass").get
+    val databusKeyAlias = getParam("databusKeyAlias").get
 
     context.log(s"Git host: $host")
 
-    val key = Crypto.bytesToPrivateKey(
-      Files.readAllBytes(Paths.get(databusKeyFile)),
-      "RSA"
-    )
+    val key = Crypto.getKeyPairFromKeystore(databusKeyFile, databusKeyAlias, databusKeystorePass, databusKeyPass)
 
     val cfg = ApiImpl.Config(
       token,
@@ -44,7 +44,7 @@ class ScalatraBootstrap extends LifeCycle with LazyLogging {
       Uri.parse(virtUri).right.get,
       virtUser,
       virtPass,
-      key
+      key._2
     )
 
     context.mount(new DefaultApi()(sw, new ApiImpl(cfg)), "/*")

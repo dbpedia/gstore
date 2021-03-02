@@ -44,13 +44,15 @@ class {{classname}}(implicit val swagger: Swagger, apiImpl: DatabusApi) extends 
     {{#isFile}}val {{paramName}} = fileParams("{{paramName}}"){{/isFile}}
     {{^isFile}}{{#isPathParam}}
     val {{paramName}} = params.getOrElse("{{paramName}}", halt(400)){{/isPathParam}}
-    {{>queryParamOperation}}{{>headerParamOperation}}{{>formParamMustache}}{{>bodyParamOperation}}
+    {{>queryParamOperation}}{{>headerParamOperation}}{{>formParamMustache}}{{>databusBodyParamOperation}}
     {{/isFile}}
   {{/allParams}}
     val resp = apiImpl.{{nickname}}({{#allParams}}{{paramName}}{{#hasMore}}, {{/hasMore}}{{/allParams}})(request)
     resp match {
         case Success(r) => Ok(r)
-        case Failure(e) => InternalServerError(e)
+        case Failure(e) =>
+            log("Error processing request", e)
+            InternalServerError(e)
     }
   }
 

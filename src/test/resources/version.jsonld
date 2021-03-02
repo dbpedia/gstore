@@ -32,7 +32,7 @@
 			"dcv:lang": "de"
 		},
 				{
-        			"@id": "https://databus.dbpedia.org/system/git/kuckuck/nest/eier/2020.10.10/dataid.ttl#eier_lang=de_tag=some.ttl.gz",
+        			"@id": "https://databus.dbpedia.org/system/git/kuckuck/nest/eier/2020.10.10/dataid.ttl#eier_lang=de_tag=some2.ttl.gz",
         			"@type": "dataid:Part",
 
         			"formatExtension": "ttl",
