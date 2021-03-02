@@ -73,6 +73,13 @@ object Tractate {
       case TractateV1.Version => TractateV1.fromGraph(graph)
     }
 
+  def fromString(s: String): Try[Tractate] =
+    Try(s.split("\n")(0))
+      .flatMap {
+        case TractateV1.Version => Success(TractateV1(s))
+        case _ => Failure(new RuntimeException("Error parsing Tractate"))
+      }
+
   import java.security.PrivateKey
 
   def sign(tractate: Tractate, key: PrivateKey): String =

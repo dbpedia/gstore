@@ -79,7 +79,8 @@ class ApiImpl(config: Config) extends DatabusApi {
         val tractateSignature = Tractate.sign(tractate, databusPrivateKey)
         saveFiles(username, Map(
           pa -> data,
-          s"$folder$DatabusSignatureFilename" -> tractateSignature.getBytes()
+          s"$folder$DatabusTractateFilename" -> tractate.stringForSigning.getBytes,
+          s"$folder$DatabusSignatureFilename" -> tractateSignature.getBytes
         ))(request)
       })
       .flatMap(a => {
@@ -105,7 +106,7 @@ class ApiImpl(config: Config) extends DatabusApi {
                             (request: HttpServletRequest): Try[ApiResponse] = {
     val folder = s"$groupId/$artifactId/$versionId/"
     val pa = s"$folder$DefaultVersionFn"
-    deleteFiles(username, Seq(pa, s"$folder$DatabusSignatureFilename"))(request)
+    deleteFiles(username, Seq(pa, s"$folder$DatabusSignatureFilename", s"$folder$DatabusTractateFilename"))(request)
   }
 
   override def getVersion(versionId: String,
@@ -185,6 +186,7 @@ object ApiImpl {
   val DefaultGroupFn = "group.jsonld"
   val DefaultVersionFn = "dataid.jsonld"
   val DatabusSignatureFilename = "databus_signature"
+  val DatabusTractateFilename = "databus_tractate"
 
   case class Config(
                      accessToken: String,
