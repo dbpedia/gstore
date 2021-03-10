@@ -1,5 +1,3 @@
-import java.nio.file.{Files, Paths}
-
 import com.typesafe.scalalogging.LazyLogging
 import org.scalatra._
 import javax.servlet.ServletContext

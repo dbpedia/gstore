@@ -1,12 +1,13 @@
 package org.dbpedia.databus
 
+import java.util.Base64
+
 import org.dbpedia.databus.RemoteGitlabHttpClient.{CreateFile, DeleteFile, FileAction, UpdateFile}
 import sttp.client3._
 import sttp.model.Uri
 import org.json4s._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
-import scalaj.http.Base64
 
 import scala.util.{Failure, Try}
 
@@ -154,7 +155,7 @@ class RemoteGitlabHttpClient(accessToken: String, scheme: String, hostname: Stri
           JObject(ch) <- parse(value)
           JField("content", JString(content)) <- ch
         } yield content
-        Base64.decode(flds.head)
+        Base64.getDecoder.decode(flds.head)
     }
   }
 
@@ -177,7 +178,7 @@ object RemoteGitlabHttpClient {
       ("action" -> "create") ~
         ("file_path" -> path) ~
         ("encoding" -> "base64") ~
-        ("content" -> String.copyValueOf(Base64.encode(content)))
+        ("content" -> new String(Base64.getEncoder.encode(content)))
   }
 
   case class UpdateFile(path: String, content: Array[Byte]) extends FileAction {
@@ -185,7 +186,7 @@ object RemoteGitlabHttpClient {
       ("action" -> "update") ~
         ("file_path" -> path) ~
         ("encoding" -> "base64") ~
-        ("content" -> String.copyValueOf(Base64.encode(content)))
+        ("content" -> new String(Base64.getEncoder.encode(content)))
   }
 
 

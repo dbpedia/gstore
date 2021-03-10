@@ -5,7 +5,7 @@ import java.security.PrivateKey
 import java.util.function.Consumer
 
 import javax.servlet.http.HttpServletRequest
-import org.apache.jena.graph.Graph
+import org.apache.jena.graph.{Graph, Node}
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.riot.{Lang, RDFDataMgr}
 import org.apache.jena.shacl.validation.ReportEntry
@@ -74,6 +74,9 @@ class ApiImpl(config: Config) extends DatabusApi {
     val folder = s"$groupId/$artifactId/$versionId/"
     val pa = s"$folder$DefaultVersionFn"
     RdfConversions.validateWithShacl(data, shaclUri)
+      .flatMap(m =>
+        RdfConversions.validateVersion(m, username, groupId, artifactId, versionId)
+          .map(_ => m))
       .flatMap(m => Tractate.extract(m.getGraph, TractateV1.Version))
       .flatMap(tractate => {
         val tractateSignature = Tractate.sign(tractate, databusPrivateKey)
@@ -249,6 +252,42 @@ object ApiImpl {
 
 
 object RdfConversions {
+
+  import collection.JavaConverters._
+
+  def validateVersion(model: Model,
+                      username: String,
+                      groupId: String,
+                      artifactId: String,
+                      versionId: String): Try[Unit] =
+    model.getGraph.find().toList.asScala
+      .find(_.getPredicate.getURI == "http://dataid.dbpedia.org/ns/core#version")
+      .map(_.getMatchObject.getURI)
+      .map(v => RdfConversions.validateVersion(v, username, groupId, artifactId, versionId)) match {
+      case Some(v) => v
+      case None => Failure(new RuntimeException("Invalid version"))
+    }
+
+
+  def validateVersion(versionToCheck: String,
+                      username: String,
+                      groupId: String,
+                      artifactId: String,
+                      versionId: String): Try[Unit] = {
+    val left = Uri.parse(versionToCheck)
+    val right = Uri.parse(s"https://databus.dbpedia.org/$username/$groupId/$artifactId/$versionId")
+    left.flatMap(l =>
+      right
+        .map(l == _)
+        .map(r => if (r) {
+          Success({})
+        } else {
+          Failure(new RuntimeException("Invalid version"))
+        })) match {
+      case Left(s) => Failure(new RuntimeException("Invalid version: " + s))
+      case Right(value) => value
+    }
+  }
 
   def validateWithShacl(file: Array[Byte], shaclUri: String): Try[Model] = {
     val graph = RDFDataMgr.loadGraph(shaclUri)
