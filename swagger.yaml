@@ -7,7 +7,7 @@ basePath: "/databus"
 schemes:
   - "https"
 paths:
-  /{username}/{groupId}:
+  /{username}/{group}:
     put:
       summary: "Create group"
       description: ""
