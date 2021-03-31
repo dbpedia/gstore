@@ -18,6 +18,7 @@ import scala.util.Try
 class DatabusScalatraCodegen extends ScalatraServerCodegen {
   this.apiDocTemplateFiles.clear()
   this.apiTemplateFiles.put("databusBodyParamOperation.mustache", ".scala")
+  this.apiTemplateFiles.put("databusFormParam.mustache", ".scala")
   this.apiTemplateFiles.put("databus_api.mustache", ".scala")
   this.embeddedTemplateDir = "scalatra"
 }

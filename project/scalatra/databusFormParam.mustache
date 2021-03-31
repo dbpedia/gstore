@@ -1,0 +1,8 @@
+{{#isFormParam}}
+    {{#required}}
+        val {{paramName}} = new String(fileMultiParams("{{paramName}}").head.get())
+    {{/required}}
+    {{^required}}
+        val {{paramName}} = fileMultiParams("{{paramName}}").headOption.map(_.get()).map(a => new String(a))
+    {{/required}}
+{{/isFormParam}}

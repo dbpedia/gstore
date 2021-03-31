@@ -5,11 +5,12 @@ import java.security.PrivateKey
 import java.util.function.Consumer
 
 import javax.servlet.http.HttpServletRequest
-import org.apache.jena.graph.{Graph, Node}
+import org.apache.jena.graph.Graph
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.riot.{Lang, RDFDataMgr}
 import org.apache.jena.shacl.validation.ReportEntry
 import org.apache.jena.shacl.{ShaclValidator, Shapes}
+import org.apache.jena.sparql.graph.GraphFactory
 import org.dbpedia.databus.ApiImpl.Config
 import org.dbpedia.databus.RdfConversions.{generateGroupGraphId, generateVersionGraphId, mapContentType, mapFilenameToContentType}
 import org.dbpedia.databus.swagger.api.DatabusApi
@@ -125,6 +126,11 @@ class ApiImpl(config: Config) extends DatabusApi {
 
   override def saveSignature(version: String, group: String, username: String, artifact: String, body: String)(request: HttpServletRequest): Try[ApiResponse] = ???
 
+  override def shaclValidate(dataid: String, shacl: String)(request: HttpServletRequest): Try[ApiResponse] =
+    RdfConversions.validateWithShacl(
+      dataid.getBytes,
+      shacl.getBytes()
+    ).map(_ => ApiResponse(Some(200), None, None))
 
   private def checkAuth(username: String, request: HttpServletRequest): Boolean = {
     val header = request.getHeader("Authorization")
@@ -286,6 +292,27 @@ object RdfConversions {
         })) match {
       case Left(s) => Failure(new RuntimeException("Invalid version: " + s))
       case Right(value) => value
+    }
+  }
+
+  def validateWithShacl(file: Array[Byte], shaclData: Array[Byte]): Try[Model] = {
+    val shaclGra = GraphFactory.createDefaultGraph()
+    val shaDataStream = new ByteArrayInputStream(shaclData)
+    RDFDataMgr.read(shaclGra, shaDataStream, Lang.TTL)
+    val model = ModelFactory.createDefaultModel()
+    val dataStream = new ByteArrayInputStream(file)
+    RDFDataMgr.read(model, dataStream, Lang.JSONLD)
+    val shape = Shapes.parse(shaclGra)
+    val report = ShaclValidator.get().validate(shape, model.getGraph)
+    if (report.conforms()) {
+      Success(model)
+    } else {
+      val msg = new StringBuilder
+      report.getEntries.forEach(new Consumer[ReportEntry] {
+        override def accept(t: ReportEntry): Unit =
+          msg.append(t.message())
+      })
+      Failure(new RuntimeException(msg.toString()))
     }
   }
 

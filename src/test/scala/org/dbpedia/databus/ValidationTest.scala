@@ -64,4 +64,14 @@ class ValidationTest extends FlatSpec with Matchers {
     re shouldBe a[Failure[Unit]]
   }
 
+  "Shacl validation" should "work with both files" in {
+    val shaclFn = "test.shacl"
+    val shacl = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(shaclFn).getFile))
+    val file = "version.jsonld"
+    val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
+    val re = RdfConversions.validateWithShacl(bytes, shacl)
+      .flatMap(m => RdfConversions.validateVersion(m, "kucuck", "nest", "eier", "2020.10.10"))
+    re shouldBe a[Failure[Unit]]
+  }
+
 }

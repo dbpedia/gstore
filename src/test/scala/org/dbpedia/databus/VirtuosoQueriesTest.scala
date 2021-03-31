@@ -6,7 +6,7 @@ import java.nio.file.{Files, Paths}
 import org.apache.jena.rdf.model.ModelFactory
 import org.apache.jena.riot.{Lang, RDFDataMgr}
 import org.scalatest.{FlatSpec, Matchers}
-import sttp.client3.{DigestAuthenticationBackend, HttpURLConnectionBackend, SttpBackend}
+import sttp.client3.{DigestAuthenticationBackend, HttpURLConnectionBackend}
 import sttp.model.Uri
 
 class VirtuosoQueriesTest extends FlatSpec with Matchers {
@@ -45,12 +45,18 @@ class VirtuosoQueriesTest extends FlatSpec with Matchers {
     r3 should equal("https://databus.dbpedia.org/kytest/mygroupid/documentation.ttl")
   }
 
-  "It" should "save to virtuoso" in {
+  ignore should "save to virtuoso" in {
     val backend = new DigestAuthenticationBackend(HttpURLConnectionBackend())
     val file = "version.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
 
-    val re = ApiImpl.saveToVirtuoso(backend, bytes, "/sdc.jsonld", "http://fromthecode", Uri.parse("https://dbpedia-generic.tib.eu/sparql-auth/").right.get, "tester", "test")
+    val re = ApiImpl.saveToVirtuoso(backend,
+      bytes,
+      "/sdc.jsonld",
+      "http://fromthecode",
+      Uri.parse("https://dbpedia-generic.tib.eu/sparql-auth/").right.get,
+      "tester",
+      "test")
 
     re should equal(true)
   }
