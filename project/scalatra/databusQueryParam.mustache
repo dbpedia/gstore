@@ -1,0 +1,8 @@
+{{#isQueryParam}}
+    {{#required}}
+        val {{paramName}} = params.getAs[{{dataType}}]("{{paramName}}").getOrElse(halt(400))
+    {{/required}}
+    {{^required}}
+        val {{paramName}} = params.getAs[{{dataType}}]("{{paramName}}")
+    {{/required}}
+{{/isQueryParam}}

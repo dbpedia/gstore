@@ -1,11 +1,11 @@
 package org.dbpedia.sbt
 
-import java.io.{File, FileInputStream, InputStreamReader, Reader}
+import java.io.File
 import java.nio.file.Paths
 import java.util
 
 import io.swagger.codegen.auth.AuthParser
-import io.swagger.codegen.{ClientOptInput, ClientOpts, DefaultGenerator}
+import io.swagger.codegen.{ClientOptInput, ClientOpts}
 import io.swagger.codegen.config.CodegenConfigurator
 import io.swagger.codegen.languages.ScalatraServerCodegen
 import io.swagger.models.Swagger
@@ -13,21 +13,24 @@ import io.swagger.models.auth.AuthorizationValue
 import io.swagger.parser.SwaggerParser
 import org.apache.commons.lang3.StringUtils
 
-import scala.util.Try
-
-class DatabusScalatraCodegen extends ScalatraServerCodegen {
+class DatabusScalatraCodegen(baseDir: File) extends ScalatraServerCodegen {
   this.apiDocTemplateFiles.clear()
-  this.apiTemplateFiles.put("databusBodyParamOperation.mustache", ".scala")
-  this.apiTemplateFiles.put("databusFormParam.mustache", ".scala")
+  this.apiTemplateFiles.clear()
   this.apiTemplateFiles.put("databus_api.mustache", ".scala")
-  this.embeddedTemplateDir = "scalatra"
+  setTemplateDir(
+    baseDir.toPath
+      .resolve("project")
+      .resolve("scalatra")
+      .toAbsolutePath.toString
+  )
+  setCommonTemplateDir(templateDir())
 }
 
-class DatabusConfigurator extends CodegenConfigurator {
+class DatabusConfigurator(baseDir: File) extends CodegenConfigurator {
 
   override def toClientOptInput: ClientOptInput = {
     this.setSystemProperties()
-    val config = new DatabusScalatraCodegen
+    val config = new DatabusScalatraCodegen(baseDir)
     config.setInputSpec(getInputSpec)
     config.setOutputDir(getOutputDir)
     config.setSkipOverwrite(isSkipOverwrite)
@@ -80,27 +83,6 @@ class DatabusConfigurator extends CodegenConfigurator {
 
   def checkAndSetAdditionalProperty(property: String, propertyKey: String): Unit = {
     this.checkAndSetAdditionalProperty(property, property, propertyKey)
-  }
-
-}
-
-class DatabusGenerator(baseDir: File) extends DefaultGenerator {
-
-  override def getTemplateReader(name: String): Reader = {
-    Try(super.getTemplateReader(name))
-      .getOrElse({
-        val fl = baseDir.toPath.resolve("project").resolve(name).toFile
-        var re: Reader = null
-        try {
-          re = new InputStreamReader(new FileInputStream(fl), "UTF-8")
-          re
-        } catch {
-          case e =>
-            re.close()
-            LOGGER.error(e.getMessage)
-            throw e
-        }
-      })
   }
 
 }

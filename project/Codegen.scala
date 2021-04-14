@@ -3,7 +3,7 @@ package org.dbpedia.sbt
 import java.io.File
 
 import collection.JavaConverters._
-import io.swagger.codegen.CodegenConstants
+import io.swagger.codegen.{CodegenConstants, DefaultGenerator}
 
 object Codegen {
 
@@ -12,15 +12,15 @@ object Codegen {
   def generate(baseDir: File, outBase: File): Seq[File] = {
     System.setProperty(CodegenConstants.APIS, "")
     System.setProperty(CodegenConstants.MODELS, "")
-    val gen = new DatabusGenerator(baseDir)
-    gen.opts(configurator(outBase).toClientOptInput)
+    val gen = new DefaultGenerator()
+    gen.opts(configurator(baseDir, outBase).toClientOptInput)
       .generate()
       .asScala
   }
 
-  def configurator(outBase: File) = {
+  def configurator(baseDir: File, outBase: File) = {
     val generatorClassName = classOf[DatabusScalatraCodegen].getCanonicalName
-    val configurator = new DatabusConfigurator()
+    val configurator = new DatabusConfigurator(baseDir)
     val inputSpec = "swagger.yaml"
     configurator.setLang(generatorClassName)
     configurator.setInputSpec(inputSpec)

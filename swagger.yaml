@@ -18,7 +18,7 @@ paths:
         - "application/json"
       parameters:
         - in: formData
-          name: dataid
+          name: graph
           type: string
           required: true
           format: binary
@@ -34,28 +34,27 @@ paths:
           description: "successful operation"
           schema:
             $ref: "#/definitions/ApiResponse"
-  /{username}/{group}:
-    put:
-      summary: "Create group"
+  /file/save:
+    post:
+      summary: "Save file"
       description: ""
-      operationId: "createGroup"
+      operationId: "saveFile"
       consumes:
         - "application/ld+json"
       produces:
         - "application/json"
       parameters:
-        - in: path
-          name: group
-          type: string
-          required: true
-          description: Group name
-        - in: path
+        - in: query
           name: username
           type: string
           required: true
-        - in: "body"
-          name: "body"
-          description: "Turtle or JSONLD with group meta."
+        - in: query
+          name: path
+          type: string
+          required: true
+        - in: body
+          name: body
+          description: "Turtle or JSONLD."
           required: true
           schema:
             type: string
@@ -65,22 +64,22 @@ paths:
           description: "successful operation"
           schema:
             $ref: "#/definitions/ApiResponse"
-    delete:
-      summary: "Delete group"
+  /file/delete:
+    post:
+      summary: "Delete file"
       description: ""
-      operationId: "deleteGroup"
+      operationId: "deleteFile"
       consumes:
         - "application/json"
       produces:
         - "application/json"
       parameters:
-        - in: path
-          name: group
+        - in: query
+          name: username
           type: string
           required: true
-          description: Group name
-        - in: path
-          name: username
+        - in: query
+          name: path
           type: string
           required: true
       responses:
@@ -88,243 +87,30 @@ paths:
           description: "successful operation"
           schema:
             $ref: "#/definitions/ApiResponse"
+  /file/read:
     get:
-      summary: "Get group meta"
+      summary: "Get file"
       description: ""
-      operationId: "getGroup"
+      operationId: "getFile"
       produces:
         - "application/ld+json"
         - "text/turtle"
       parameters:
-        - in: path
-          name: group
+        - in: query
+          name: username
           type: string
           required: true
-          description: Group name
-        - in: path
-          name: username
+        - in: query
+          name: path
           type: string
           required: true
       responses:
         "200":
-          description: "A group description file"
+          description: "A file"
           schema:
             type: string
             format: binary
-  /{username}/{group}/{artifact}/{version}:
-    put:
-      summary: "Create version"
-      description: ""
-      operationId: "createVersion"
-      consumes:
-        - "application/ld+json"
-      produces:
-        - "application/json"
-      parameters:
-        - in: path
-          name: version
-          type: string
-          required: true
-          description: Version name
-        - in: path
-          name: group
-          type: string
-          required: true
-          description: Version name
-        - in: path
-          name: username
-          type: string
-          required: true
-          description: Version name
-        - in: path
-          name: artifact
-          type: string
-          required: true
-          description: Version name
-        - in: "body"
-          name: "body"
-          description: "Turtle or JSONLD with version meta."
-          required: true
-          schema:
-            type: string
-            format: binary
-      responses:
-        "200":
-          description: "successful operation"
-          schema:
-            $ref: "#/definitions/ApiResponse"
-    delete:
-      summary: "Delete version"
-      description: ""
-      operationId: "deleteVersion"
-      consumes:
-        - "application/json"
-      produces:
-        - "application/json"
-      parameters:
-        - in: path
-          name: version
-          type: string
-          required: true
-          description: Version name
-        - in: path
-          name: group
-          type: string
-          required: true
-          description: Version name
-        - in: path
-          name: username
-          type: string
-          required: true
-          description: Version name
-        - in: path
-          name: artifact
-          type: string
-          required: true
-          description: Version name
-      responses:
-        "200":
-          description: "successful operation"
-          schema:
-            $ref: "#/definitions/ApiResponse"
-    get:
-      summary: "Get version meta"
-      description: ""
-      operationId: "getVersion"
-      produces:
-        - "application/ld+json"
-        - "text/turtle"
-      parameters:
-        - in: path
-          name: version
-          type: string
-          required: true
-          description: Version name
-        - in: path
-          name: group
-          type: string
-          required: true
-          description: Version name
-        - in: path
-          name: username
-          type: string
-          required: true
-          description: Version name
-        - in: path
-          name: artifact
-          type: string
-          required: true
-          description: Version name
-      responses:
-        "200":
-          description: "A dataid file"
-          schema:
-            type: string
-            format: binary
-  /{username}/{group}/{artifact}/{version}/signature:
-    put:
-      summary: "Save dataid signature"
-      description: ""
-      operationId: "saveSignature"
-      produces:
-        - "application/json"
-      parameters:
-        - in: path
-          name: version
-          type: string
-          required: true
-          description: Version name
-        - in: path
-          name: group
-          type: string
-          required: true
-          description: Version name
-        - in: path
-          name: username
-          type: string
-          required: true
-          description: Version name
-        - in: path
-          name: artifact
-          type: string
-          required: true
-          description: Version name
-        - in: "body"
-          name: "body"
-          description: "binary signature"
-          required: true
-          schema:
-            type: string
-            format: binary
-      responses:
-        "200":
-          description: "successful operation"
-          schema:
-            $ref: "#/definitions/ApiResponse"
-    delete:
-      summary: "Delete dataid signature"
-      description: ""
-      operationId: "deleteSignature"
-      produces:
-        - "application/json"
-      parameters:
-        - in: path
-          name: version
-          type: string
-          required: true
-          description: Version name
-        - in: path
-          name: group
-          type: string
-          required: true
-          description: Version name
-        - in: path
-          name: username
-          type: string
-          required: true
-          description: Version name
-        - in: path
-          name: artifact
-          type: string
-          required: true
-          description: Version name
-      responses:
-        "200":
-          description: "successful operation"
-          schema:
-            $ref: "#/definitions/ApiResponse"
-    get:
-      summary: "Get dataid signature"
-      description: ""
-      operationId: "getSignature"
-      parameters:
-        - in: path
-          name: version
-          type: string
-          required: true
-          description: Version name
-        - in: path
-          name: group
-          type: string
-          required: true
-          description: Version name
-        - in: path
-          name: username
-          type: string
-          required: true
-          description: Version name
-        - in: path
-          name: artifact
-          type: string
-          required: true
-          description: Version name
-      responses:
-        "200":
-          description: "signature"
-          schema:
-            type: string
-            format: binary
-  /api/dataid/tractate/:
+  /api/dataid/tractate:
     post:
       summary: "Returns a subgraph of dataid for signing"
       description: ""
@@ -347,12 +133,6 @@ paths:
           schema:
             type: string
 definitions:
-  DataIdSignatureMeta:
-    type: "object"
-    description: "may be needed to add some more details"
-    properties:
-      hash:
-        type: "string"
   ApiResponse:
     type: "object"
     properties:

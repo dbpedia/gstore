@@ -1,6 +1,7 @@
 package org.dbpedia.databus
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+import java.nio.file.Paths
 import java.security.PrivateKey
 import java.util.function.Consumer
 
@@ -12,12 +13,10 @@ import org.apache.jena.shacl.validation.ReportEntry
 import org.apache.jena.shacl.{ShaclValidator, Shapes}
 import org.apache.jena.sparql.graph.GraphFactory
 import org.dbpedia.databus.ApiImpl.Config
-import org.dbpedia.databus.RdfConversions.{generateGroupGraphId, generateVersionGraphId, mapContentType, mapFilenameToContentType}
+import org.dbpedia.databus.RdfConversions.{generateGraphId, mapContentType, mapFilenameToContentType}
 import org.dbpedia.databus.swagger.api.DatabusApi
 import org.dbpedia.databus.swagger.model.ApiResponse
 import sttp.client3._
-import org.json4s._
-import org.json4s.jackson.JsonMethods._
 import sttp.model.Uri
 
 import scala.util.{Failure, Success, Try}
@@ -38,17 +37,27 @@ class ApiImpl(config: Config) extends DatabusApi {
       .map(_.stringForSigning)
   }
 
-  override def createGroup(groupId: String, username: String, body: String)(request: HttpServletRequest): Try[ApiResponse] = {
+  override def deleteFile(username: String, path: String)(request: HttpServletRequest): Try[ApiResponse] =
+    deleteFileFromGit(username, path)(request)
+
+  override def getFile(username: String, path: String)(request: HttpServletRequest): Try[String] =
+    readFile(username, path)(request)
+
+  override def saveFile(username: String,
+                        path: String,
+                        body: String)
+                       (request: HttpServletRequest): Try[ApiResponse] = {
     val data = body.getBytes
-    val pa = s"$groupId/$DefaultGroupFn"
-    RdfConversions.validateWithShacl(data, shaclUri)
-      .flatMap(_ => saveFile(username, pa, data)(request))
+    val pa = gitlabPath(path)
+    saveFiles(username, Map(
+      pa -> data
+    ))(request)
       .flatMap(a => {
         if (saveToVirtuoso(
           backend,
           data,
-          pa,
-          generateGroupGraphId(username, groupId),
+          path,
+          generateGraphId(username, pa),
           virtuosoUri,
           virtuosoUser,
           virtuosoPass)) {
@@ -58,73 +67,6 @@ class ApiImpl(config: Config) extends DatabusApi {
         }
       })
   }
-
-  override def deleteGroup(groupId: String, username: String)(request: HttpServletRequest): Try[ApiResponse] =
-    deleteFile(username, s"$groupId/$DefaultGroupFn")(request)
-
-  override def getGroup(groupId: String, username: String)(request: HttpServletRequest): Try[String] =
-    readFile(username, s"$groupId/$DefaultGroupFn")(request)
-
-  override def createVersion(versionId: String,
-                             groupId: String,
-                             username: String,
-                             artifactId: String,
-                             body: String)
-                            (request: HttpServletRequest): Try[ApiResponse] = {
-    val data = body.getBytes
-    val folder = s"$groupId/$artifactId/$versionId/"
-    val pa = s"$folder$DefaultVersionFn"
-    RdfConversions.validateWithShacl(data, shaclUri)
-      .flatMap(m =>
-        RdfConversions.validateVersion(m, username, groupId, artifactId, versionId)
-          .map(_ => m))
-      .flatMap(m => Tractate.extract(m.getGraph, TractateV1.Version))
-      .flatMap(tractate => {
-        val tractateSignature = Tractate.sign(tractate, databusPrivateKey)
-        saveFiles(username, Map(
-          pa -> data,
-          s"$folder$DatabusTractateFilename" -> tractate.stringForSigning.getBytes,
-          s"$folder$DatabusSignatureFilename" -> tractateSignature.getBytes
-        ))(request)
-      })
-      .flatMap(a => {
-        if (saveToVirtuoso(
-          backend,
-          data,
-          pa,
-          generateVersionGraphId(username, groupId, artifactId, versionId),
-          virtuosoUri,
-          virtuosoUser,
-          virtuosoPass)) {
-          Success(a)
-        } else {
-          Failure(new RuntimeException("Saving to virtuoso did not work."))
-        }
-      })
-  }
-
-  override def deleteVersion(versionId: String,
-                             groupId: String,
-                             username: String,
-                             artifactId: String)
-                            (request: HttpServletRequest): Try[ApiResponse] = {
-    val folder = s"$groupId/$artifactId/$versionId/"
-    val pa = s"$folder$DefaultVersionFn"
-    deleteFiles(username, Seq(pa, s"$folder$DatabusSignatureFilename", s"$folder$DatabusTractateFilename"))(request)
-  }
-
-  override def getVersion(versionId: String,
-                          groupId: String,
-                          username: String,
-                          artifactId: String)
-                         (request: HttpServletRequest): Try[String] =
-    readFile(username, s"$groupId/$artifactId/$versionId/$DefaultVersionFn")(request)
-
-  override def deleteSignature(version: String, group: String, username: String, artifact: String)(request: HttpServletRequest): Try[ApiResponse] = ???
-
-  override def getSignature(version: String, group: String, username: String, artifact: String)(request: HttpServletRequest): Try[String] = ???
-
-  override def saveSignature(version: String, group: String, username: String, artifact: String, body: String)(request: HttpServletRequest): Try[ApiResponse] = ???
 
   override def shaclValidate(dataid: String, shacl: String)(request: HttpServletRequest): Try[ApiResponse] =
     RdfConversions.validateWithShacl(
@@ -132,60 +74,45 @@ class ApiImpl(config: Config) extends DatabusApi {
       shacl.getBytes()
     ).map(_ => ApiResponse(Some(200), None, None))
 
-  private def checkAuth(username: String, request: HttpServletRequest): Boolean = {
-    val header = request.getHeader("Authorization")
-    val token = header.split("\\s")(1)
-    val req = basicRequest.post(Uri.unsafeParse(tokenCheckUri)).header("Authorization", s"Bearer $token")
-    val resp = req.send(backend)
-    resp.body match {
-      case Left(_) => false
-      case Right(value) =>
-        val n = for {
-          JObject(chld) <- parse(value)
-          JField("preferred_username", JString(un)) <- chld
-          if un == username
-        } yield un
-        n.nonEmpty
+  private def readFile(username: String, path: String)(request: HttpServletRequest): Try[String] = {
+    val p = gitlabPath(path)
+    client.readFile(username, p)
+      .map(
+        RdfConversions.processFile(
+          p,
+          _,
+          Option(request.getHeader("Accept")).map(RdfConversions.mapContentType)))
+      .map(new String(_))
+  }
+
+  private def gitlabPath(path: String): String = {
+    val pa = Paths.get(path)
+    if (pa.isAbsolute) {
+      Paths.get("/").relativize(pa).toString
+    } else {
+      path
     }
   }
 
-  private def readFile(username: String, path: String)(request: HttpServletRequest): Try[String] =
-    if (!checkAuth(username, request)) {
-      Failure(new RuntimeException("authorization failed"))
-    } else {
-      client.readFile(username, path)
-        .map(
-          RdfConversions.processFile(
-            path,
-            _,
-            Option(request.getHeader("Accept")).map(RdfConversions.mapContentType)))
-        .map(new String(_))
-    }
-
-  private def saveFile(username: String, path: String, data: Array[Byte])(request: HttpServletRequest): Try[ApiResponse] =
+  private def saveFileToGit(username: String, path: String, data: Array[Byte])(request: HttpServletRequest): Try[ApiResponse] =
     saveFiles(username, Map(path -> data))(request)
 
-  private def saveFiles(username: String, fullFilenamesAndData: Map[String, Array[Byte]])(request: HttpServletRequest): Try[ApiResponse] =
-    if (!checkAuth(username, request)) {
-      Failure(new RuntimeException("authorization failed"))
-    } else {
-      if (!client.projectExists(username)) {
-        client.createProject(username)
-      }
-      client.commitSeveralFiles(username, fullFilenamesAndData)
-        .map(s => ApiResponse(Some(200), None, Some(s)))
+  private def saveFiles(username: String, fullFilenamesAndData: Map[String, Array[Byte]])(request: HttpServletRequest): Try[ApiResponse] = {
+    if (!client.projectExists(username)) {
+      client.createProject(username)
     }
+    client.commitSeveralFiles(username, fullFilenamesAndData)
+      .map(s => ApiResponse(Some(200), None, Some(s)))
+  }
 
-  private def deleteFile(username: String, path: String)(request: HttpServletRequest): Try[ApiResponse] =
-    deleteFiles(username, Seq(path))(request)
+  private def deleteFileFromGit(username: String, path: String)(request: HttpServletRequest): Try[ApiResponse] = {
+    val p = gitlabPath(path)
+    deleteFiles(username, Seq(p))(request)
+  }
 
   private def deleteFiles(username: String, paths: Seq[String])(request: HttpServletRequest): Try[ApiResponse] =
-    if (!checkAuth(username, request)) {
-      Failure(new RuntimeException("authorization failed"))
-    } else {
-      client.deleteSeveralFiles(username, paths)
-        .map(s => ApiResponse(Some(200), None, Some(s)))
-    }
+    client.deleteSeveralFiles(username, paths)
+      .map(s => ApiResponse(Some(200), None, Some(s)))
 
 }
 
@@ -379,6 +306,9 @@ object RdfConversions {
 
   def generateGroupGraphId(user: String, group: String): String =
     s"https://databus.dbpedia.org/$user/$group/documentation.ttl"
+
+  def generateGraphId(user: String, path: String): String =
+    s"https://databus.dbpedia.org/$user/$path"
 
   def dropGraphSparqlQuery(graphId: String) =
     s"CLEAR GRAPH <$graphId>"
