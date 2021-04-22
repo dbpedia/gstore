@@ -133,8 +133,7 @@ object ApiImpl {
                      shaclUri: String,
                      virtuosoUri: Uri,
                      virtuosoUser: String,
-                     virtuosoPass: String,
-                     databusPrivateKey: PrivateKey
+                     virtuosoPass: String
                    )
 
   private[databus] def virtuosoRequest(request: String, virtuosoUri: Uri, un: String, pass: String) =
