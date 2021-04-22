@@ -18,8 +18,6 @@ DataIDs are planned.
 ## Deployment
 
 - go to the directory of the project
-- [optional] generate certificate and jks (if not yet generated) with 
-`keytool -genkeypair -alias <keystore alias> -storepass <some_pass> -keypass <some_other_pass> -keyalg RSA -keystore databus_keystore.jks -storetype pkcs12`
 - set the right configuration parameters in `src/main/webapp/WEB-INF/web.xml`
 - run `sbt clean package`
 - run `docker build -t databus-upload-<version> .`
