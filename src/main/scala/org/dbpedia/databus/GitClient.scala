@@ -30,15 +30,30 @@ trait GitClient {
 }
 
 
-class RemoteGitlabHttpClient(accessToken: String, scheme: String, hostname: String, port: Option[Int]) extends GitClient {
+class RemoteGitlabHttpClient(rootUser: String, rootPass: String, scheme: String, hostname: String, port: Option[Int]) extends GitClient {
 
-  private lazy val backend = HttpURLConnectionBackend()
   private val baseUri = port
     .map(p => Uri(scheme, hostname, p))
-    .getOrElse(Uri(scheme, hostname)).addPath("api", "v4")
+    .getOrElse(Uri(scheme, hostname))
+  private val baseApiUri = baseUri.addPath("api", "v4")
+
+  private lazy val backend = HttpURLConnectionBackend()
+  private lazy val accessToken: String = {
+    val req = authReq(rootUser, rootPass)
+    backend.send(req).body match {
+      case Left(e) => throw new RuntimeException(e)
+      case Right(value) =>
+        val flds = for {
+          JObject(ch) <- parse(value)
+          JField("access_token", JString(token)) <- ch
+        } yield token
+        flds.head
+    }
+  }
+
 
   override def createProject(name: String): Try[String] = Try {
-    val req = withAuth(basicRequest.post(baseUri.addPath("projects").addParam("name", name)))
+    val req = withAuth(basicRequest.post(baseApiUri.addPath("projects").addParam("name", name)))
     val resp = req.send(backend)
     resp.body match {
       case Left(e) => throw new RuntimeException(e)
@@ -82,7 +97,7 @@ class RemoteGitlabHttpClient(accessToken: String, scheme: String, hostname: Stri
 
   private def projectIdByName(name: String): Option[String] = {
     val req = withAuth(
-      basicRequest.get(baseUri
+      basicRequest.get(baseApiUri
         .addPath("projects")
         .addParam("search", name))
     )
@@ -113,7 +128,7 @@ class RemoteGitlabHttpClient(accessToken: String, scheme: String, hostname: Stri
       ("actions" -> actions.map(_.toGitlabApiJson))
 
     val req = withAuth(
-      basicRequest.post(baseUri
+      basicRequest.post(baseApiUri
         .addPath("projects")
         .addPath(projectId)
         .addPath("repository")
@@ -137,9 +152,18 @@ class RemoteGitlabHttpClient(accessToken: String, scheme: String, hostname: Stri
     req.header("Authorization", s"Bearer $accessToken")
   }
 
+  private def authReq(user: String, pass: String) =
+    basicRequest.post(baseUri
+      .addPath("oauth")
+      .addPath("token")
+    ).body(Map(
+      "grant_type" -> "password",
+      "username" -> user,
+      "password" -> pass))
+
   private def readSingleFile(projectId: String, fn: String): Try[Array[Byte]] = Try {
-    val req =  withAuth(
-      basicRequest.get(baseUri
+    val req = withAuth(
+      basicRequest.get(baseApiUri
         .addPath("projects")
         .addPath(projectId)
         .addPath("repository")

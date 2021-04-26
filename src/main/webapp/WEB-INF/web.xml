@@ -25,8 +25,12 @@
         <param-value>http</param-value>
     </context-param>
     <context-param>
-        <param-name>gitApiToken</param-name>
-        <param-value>MgY3GexxTyu7xMVk2vpS</param-value>
+        <param-name>gitApiUser</param-name>
+        <param-value>root</param-value>
+    </context-param>
+    <context-param>
+        <param-name>gitApiPass</param-name>
+        <param-value>password</param-value>
     </context-param>
     <context-param>
         <param-name>virtuosoUri</param-name>

@@ -27,7 +27,7 @@ class ApiImpl(config: Config) extends DatabusApi {
   import config._
 
   private lazy val backend = new DigestAuthenticationBackend(HttpURLConnectionBackend())
-  private val client = new RemoteGitlabHttpClient(accessToken, gitScheme, gitHostname, gitPort)
+  private val client = new RemoteGitlabHttpClient(gitUser, gitPass, gitScheme, gitHostname, gitPort)
 
   override def dataidSubgraph(body: String)(request: HttpServletRequest): Try[String] =
     readModel(body.getBytes)
@@ -122,7 +122,8 @@ object ApiImpl {
   val DatabusTractateFilename = "databus_tractate"
 
   case class Config(
-                     accessToken: String,
+                     gitUser: String,
+                     gitPass: String,
                      gitScheme: String,
                      gitHostname: String,
                      gitPort: Option[Int],
