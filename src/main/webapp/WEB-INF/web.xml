@@ -15,61 +15,29 @@
         <listener-class>org.scalatra.servlet.ScalatraListener</listener-class>
     </listener>
 
-    <!-- context params can also be set here-->
-    <!--context-param>
-      <param-name>requireDBpediaAccount</param-name>
-      <param-value>true</param-value>
-    </context-param-->
+
     <context-param>
         <param-name>gitHost</param-name>
-        <param-value>localhost</param-value>
+        <param-value>gitlab</param-value>
     </context-param>
     <context-param>
         <param-name>gitSchema</param-name>
         <param-value>http</param-value>
     </context-param>
     <context-param>
-        <param-name>gitPort</param-name>
-        <param-value>8088</param-value>
-    </context-param>
-    <context-param>
         <param-name>gitApiToken</param-name>
-        <param-value>sAmsxkNp4RGjFhxcq1rW</param-value>
-    </context-param>
-    <context-param>
-        <param-name>authCheckUrl</param-name>
-        <param-value>https://databus.dbpedia.org/auth/realms/databus/protocol/openid-connect/userinfo</param-value>
-    </context-param>
-    <context-param>
-        <param-name>shaclUri</param-name>
-        <param-value>https://raw.githubusercontent.com/dbpedia/databus-git-mockup/main/dev/dataid-shacl.ttl</param-value>
+        <param-value>MgY3GexxTyu7xMVk2vpS</param-value>
     </context-param>
     <context-param>
         <param-name>virtuosoUri</param-name>
-        <param-value>https://dbpedia-generic.tib.eu/sparql-auth</param-value>
+        <param-value>http://virtuoso:8890/sparql-auth</param-value>
     </context-param>
     <context-param>
         <param-name>virtuosoUser</param-name>
-        <param-value>tester</param-value>
+        <param-value>dba</param-value>
     </context-param>
     <context-param>
         <param-name>virtuosoPass</param-name>
-        <param-value>test</param-value>
-    </context-param>
-    <context-param>
-        <param-name>databusKeystoreFile</param-name>
-        <param-value>/Users/kirill/IdeaProjects/databus.dbpedia.org/keystore.jks</param-value>
-    </context-param>
-    <context-param>
-        <param-name>databusKeystorePass</param-name>
-        <param-value>111111</param-value>
-    </context-param>
-    <context-param>
-        <param-name>databusKeyPass</param-name>
-        <param-value>111111</param-value>
-    </context-param>
-    <context-param>
-        <param-name>databusKeyAlias</param-name>
-        <param-value>mykey</param-value>
+        <param-value>everyoneknows</param-value>
     </context-param>
 </web-app>

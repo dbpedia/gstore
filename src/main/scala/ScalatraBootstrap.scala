@@ -18,8 +18,6 @@ class ScalatraBootstrap extends LifeCycle with LazyLogging {
     val host = getParam("gitHost").getOrElse("localhost")
     val port = getParam("gitPort").map(_.toInt)
     val token = getParam("gitApiToken").get
-    val authCheckUrl = getParam("authCheckUrl").get
-    val shaclUri = getParam("shaclUri").get
     val virtUri = getParam("virtuosoUri").get
     val virtUser = getParam("virtuosoUser").get
     val virtPass = getParam("virtuosoPass").get
@@ -31,8 +29,6 @@ class ScalatraBootstrap extends LifeCycle with LazyLogging {
       schema,
       host,
       port,
-      authCheckUrl,
-      shaclUri,
       Uri.parse(virtUri).right.get,
       virtUser,
       virtPass

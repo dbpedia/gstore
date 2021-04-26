@@ -2,7 +2,6 @@ package org.dbpedia.databus
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.nio.file.Paths
-import java.security.PrivateKey
 import java.util.function.Consumer
 
 import javax.servlet.http.HttpServletRequest
@@ -13,7 +12,7 @@ import org.apache.jena.shacl.validation.ReportEntry
 import org.apache.jena.shacl.{ShaclValidator, Shapes}
 import org.apache.jena.sparql.graph.GraphFactory
 import org.dbpedia.databus.ApiImpl.Config
-import org.dbpedia.databus.RdfConversions.{generateGraphId, mapContentType, mapFilenameToContentType}
+import org.dbpedia.databus.RdfConversions.{generateGraphId, mapContentType, mapFilenameToContentType, readModel}
 import org.dbpedia.databus.swagger.api.DatabusApi
 import org.dbpedia.databus.swagger.model.ApiResponse
 import sttp.client3._
@@ -30,12 +29,10 @@ class ApiImpl(config: Config) extends DatabusApi {
   private lazy val backend = new DigestAuthenticationBackend(HttpURLConnectionBackend())
   private val client = new RemoteGitlabHttpClient(accessToken, gitScheme, gitHostname, gitPort)
 
-  override def dataidSubgraph(body: String)(request: HttpServletRequest): Try[String] = {
-    val data = body.getBytes
-    RdfConversions.validateWithShacl(data, shaclUri)
+  override def dataidSubgraph(body: String)(request: HttpServletRequest): Try[String] =
+    readModel(body.getBytes)
       .flatMap(m => Tractate.extract(m.getGraph, TractateV1.Version))
       .map(_.stringForSigning)
-  }
 
   override def deleteFile(username: String, path: String)(request: HttpServletRequest): Try[ApiResponse] =
     deleteFileFromGit(username, path)(request)
@@ -129,8 +126,6 @@ object ApiImpl {
                      gitScheme: String,
                      gitHostname: String,
                      gitPort: Option[Int],
-                     tokenCheckUri: String,
-                     shaclUri: String,
                      virtuosoUri: Uri,
                      virtuosoUser: String,
                      virtuosoPass: String
@@ -221,25 +216,32 @@ object RdfConversions {
     }
   }
 
+  def readModel(file: Array[Byte]) = Try {
+    val model = ModelFactory.createDefaultModel()
+    val dataStream = new ByteArrayInputStream(file)
+    RDFDataMgr.read(model, dataStream, Lang.JSONLD)
+    model
+  }
+
   def validateWithShacl(file: Array[Byte], shaclData: Array[Byte]): Try[Model] = {
     val shaclGra = GraphFactory.createDefaultGraph()
     val shaDataStream = new ByteArrayInputStream(shaclData)
     RDFDataMgr.read(shaclGra, shaDataStream, Lang.TTL)
-    val model = ModelFactory.createDefaultModel()
-    val dataStream = new ByteArrayInputStream(file)
-    RDFDataMgr.read(model, dataStream, Lang.JSONLD)
-    val shape = Shapes.parse(shaclGra)
-    val report = ShaclValidator.get().validate(shape, model.getGraph)
-    if (report.conforms()) {
-      Success(model)
-    } else {
-      val msg = new StringBuilder
-      report.getEntries.forEach(new Consumer[ReportEntry] {
-        override def accept(t: ReportEntry): Unit =
-          msg.append(t.message())
+    readModel(file)
+      .flatMap(model => Try {
+        val shape = Shapes.parse(shaclGra)
+        val report = ShaclValidator.get().validate(shape, model.getGraph)
+        if (report.conforms()) {
+          model
+        } else {
+          val msg = new StringBuilder
+          report.getEntries.forEach(new Consumer[ReportEntry] {
+            override def accept(t: ReportEntry): Unit =
+              msg.append(t.message())
+          })
+          throw new RuntimeException(msg.toString())
+        }
       })
-      Failure(new RuntimeException(msg.toString()))
-    }
   }
 
   def validateWithShacl(file: Array[Byte], shaclUri: String): Try[Model] = {
