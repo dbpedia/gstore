@@ -9,7 +9,7 @@ import org.json4s._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 
-import scala.util.{Failure, Try}
+import scala.util.{Failure, Success, Try}
 
 trait GitClient {
 
@@ -38,34 +38,38 @@ class RemoteGitlabHttpClient(rootUser: String, rootPass: String, scheme: String,
   private val baseApiUri = baseUri.addPath("api", "v4")
 
   private lazy val backend = HttpURLConnectionBackend()
-  private lazy val accessToken: String = {
+  private lazy val accessToken: Try[String] = Try {
     val req = authReq(rootUser, rootPass)
     backend.send(req).body match {
-      case Left(e) => throw new RuntimeException(e)
+      case Left(e) =>
+        Failure(new RuntimeException(e))
       case Right(value) =>
         val flds = for {
           JObject(ch) <- parse(value)
           JField("access_token", JString(token)) <- ch
         } yield token
-        flds.head
+        Success(flds.head)
     }
-  }
+  }.flatten
 
 
-  override def createProject(name: String): Try[String] = Try {
+  override def createProject(name: String): Try[String] = {
     val req = withAuth(basicRequest.post(baseApiUri.addPath("projects").addParam("name", name)))
-    val resp = req.send(backend)
-    resp.body match {
-      case Left(e) => throw new RuntimeException(e)
-      case Right(value) =>
-        println(value)
-        val flds = for {
-          JObject(chl) <- parse(value)
-          JField("id", JInt(id)) <- chl
-        } yield id
-        flds.head.toString
-    }
+    req.flatMap(r => {
+      val resp = r.send(backend)
+      resp.body match {
+        case Left(e) => Failure(new RuntimeException(e))
+        case Right(value) =>
+          println(value)
+          val flds = for {
+            JObject(chl) <- parse(value)
+            JField("id", JInt(id)) <- chl
+          } yield id
+          Success(flds.head.toString)
+      }
+    })
   }
+
 
   override def commitFileContent(projectName: String, name: String, data: Array[Byte]): Try[String] =
     commitSeveralFiles(projectName, Map(name -> data))
@@ -75,16 +79,14 @@ class RemoteGitlabHttpClient(rootUser: String, rootPass: String, scheme: String,
 
   override def projectExists(name: String): Boolean =
     projectIdByName(name)
-      .nonEmpty
+      .isSuccess
 
   override def readFile(projectName: String, name: String): Try[Array[Byte]] =
     projectIdByName(projectName)
-      .fold[Try[String]](Failure[String](new RuntimeException("no project found")))(Try[String](_))
       .flatMap(readSingleFile(_, name))
 
   override def commitSeveralFiles(projectName: String, filenameAndData: Map[String, Array[Byte]]): Try[String] =
     projectIdByName(projectName)
-      .fold[Try[String]](Failure[String](new RuntimeException("no project found")))(Try[String](_))
       .flatMap(id =>
         commitSeveralActions(id, filenameAndData.map(p => CreateFile(p._1, p._2)).toSeq)
           .orElse(commitSeveralActions(id, filenameAndData.map(p => UpdateFile(p._1, p._2)).toSeq))
@@ -92,37 +94,41 @@ class RemoteGitlabHttpClient(rootUser: String, rootPass: String, scheme: String,
 
   override def deleteSeveralFiles(projectName: String, names: Seq[String]): Try[String] =
     projectIdByName(projectName)
-      .fold[Try[String]](Failure[String](new RuntimeException("no project found")))(Try[String](_))
       .flatMap(id => commitSeveralActions(id, names.map(p => DeleteFile(p))))
 
-  private def projectIdByName(name: String): Option[String] = {
+  private def projectIdByName(name: String): Try[String] = {
     val req = withAuth(
       basicRequest.get(baseApiUri
         .addPath("projects")
         .addParam("search", name))
     )
-    val resp = req.send(backend)
-    resp.body match {
-      case Left(_) => None
-      case Right(li) =>
-        val ps = for {
-          JArray(a) <- parse(li)
-          e <- a
-          JObject(chld) <- e
-          JField("name", JString(n)) <- chld
-          if name == n
-        } yield e
-        val ids = for {
-          JObject(chld) <- ps
-          JField("id", JInt(id)) <- chld
-        } yield id
-        // todo here is a risk that we get 2 or more projects with the same name,
-        // then just taking the first one is not the right approach
-        ids.headOption.map(i => i.toString)
-    }
+    req.flatMap(r => {
+      val resp = r.send(backend)
+      resp.body match {
+        case Left(_) => Failure(new RuntimeException("Failed to get project id from gitlab"))
+        case Right(li) =>
+          val ps = for {
+            JArray(a) <- parse(li)
+            e <- a
+            JObject(chld) <- e
+            JField("name", JString(n)) <- chld
+            if name == n
+          } yield e
+          val ids = for {
+            JObject(chld) <- ps
+            JField("id", JInt(id)) <- chld
+          } yield id
+          // todo here is a risk that we get 2 or more projects with the same name,
+          // then just taking the first one is not the right approach
+          ids.headOption.map(i => i.toString)
+            .map(Success(_))
+            .getOrElse(Failure(new RuntimeException("Failed to get project id from gitlab")))
+      }
+    })
+
   }
 
-  private def commitSeveralActions(projectId: String, actions: Seq[FileAction]): Try[String] = Try {
+  private def commitSeveralActions(projectId: String, actions: Seq[FileAction]): Try[String] = {
     val bodyJson = ("branch" -> "master") ~
       ("commit_message" -> "new file") ~
       ("actions" -> actions.map(_.toGitlabApiJson))
@@ -136,21 +142,22 @@ class RemoteGitlabHttpClient(rootUser: String, rootPass: String, scheme: String,
         .body(compact(render(bodyJson)))
         .header("Content-Type", "application/json")
     )
-    val resp = req.send(backend)
-    resp.body match {
-      case Left(e) => throw new RuntimeException(e)
-      case Right(value) =>
-        val flds = for {
-          JObject(ch) <- parse(value)
-          JField("id", JString(id)) <- ch
-        } yield id
-        flds.head
-    }
+    req.flatMap(r => {
+      val resp = r.send(backend)
+      resp.body match {
+        case Left(e) =>  Failure(new RuntimeException(e))
+        case Right(value) =>
+          val flds = for {
+            JObject(ch) <- parse(value)
+            JField("id", JString(id)) <- ch
+          } yield id
+          Success(flds.head)
+      }
+    })
   }
 
-  private def withAuth[A1, A2](req: Request[A1, A2]): Request[A1, A2] = {
-    req.header("Authorization", s"Bearer $accessToken")
-  }
+  private def withAuth[A1, A2](req: Request[A1, A2]): Try[Request[A1, A2]] =
+    accessToken.map(t => req.header("Authorization", s"Bearer $t"))
 
   private def authReq(user: String, pass: String) =
     basicRequest.post(baseUri
@@ -161,7 +168,7 @@ class RemoteGitlabHttpClient(rootUser: String, rootPass: String, scheme: String,
       "username" -> user,
       "password" -> pass))
 
-  private def readSingleFile(projectId: String, fn: String): Try[Array[Byte]] = Try {
+  private def readSingleFile(projectId: String, fn: String): Try[Array[Byte]] = {
     val req = withAuth(
       basicRequest.get(baseApiUri
         .addPath("projects")
@@ -171,16 +178,18 @@ class RemoteGitlabHttpClient(rootUser: String, rootPass: String, scheme: String,
         .addPath(fn)
         .addParam("ref", "master"))
     )
-    val resp = req.send(backend)
-    resp.body match {
-      case Left(e) => throw new RuntimeException(e)
-      case Right(value) =>
-        val flds = for {
-          JObject(ch) <- parse(value)
-          JField("content", JString(content)) <- ch
-        } yield content
-        Base64.getDecoder.decode(flds.head)
-    }
+    req.flatMap(r => {
+      val resp = r.send(backend)
+      resp.body match {
+        case Left(e) =>  Failure(new RuntimeException(e))
+        case Right(value) =>
+          val flds = for {
+            JObject(ch) <- parse(value)
+            JField("content", JString(content)) <- ch
+          } yield content
+          Try(Base64.getDecoder.decode(flds.head))
+      }
+    })
   }
 
 }

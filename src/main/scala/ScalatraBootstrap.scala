@@ -1,12 +1,11 @@
-import com.typesafe.scalalogging.LazyLogging
 import org.scalatra._
 import javax.servlet.ServletContext
-import org.dbpedia.databus.{ApiImpl, Crypto}
+import org.dbpedia.databus.ApiImpl
 import org.dbpedia.databus.swagger.DatabusSwagger
 import org.dbpedia.databus.swagger.api.DefaultApi
 import sttp.model.Uri
 
-class ScalatraBootstrap extends LifeCycle with LazyLogging {
+class ScalatraBootstrap extends LifeCycle {
 
   override def init(context: ServletContext) {
     implicit val c = context
@@ -23,8 +22,6 @@ class ScalatraBootstrap extends LifeCycle with LazyLogging {
     val virtUser = getParam("virtuosoUser").get
     val virtPass = getParam("virtuosoPass").get
 
-    context.log(s"Git host: $host")
-
     val cfg = ApiImpl.Config(
       user,
       pass,
@@ -35,7 +32,13 @@ class ScalatraBootstrap extends LifeCycle with LazyLogging {
       virtUser,
       virtPass
     )
-
+    context.log(
+      s"""Appl config is:
+         |$host:$port
+         |$user
+         |$virtUri
+         |$virtUser
+         |""".stripMargin)
     context.mount(new DefaultApi()(sw, new ApiImpl(cfg)), "/*")
   }
 

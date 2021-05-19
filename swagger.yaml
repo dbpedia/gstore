@@ -110,7 +110,7 @@ paths:
           schema:
             type: string
             format: binary
-  /api/dataid/tractate:
+  /dataid/tractate:
     post:
       summary: "Returns a subgraph of dataid for signing"
       description: ""

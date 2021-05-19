@@ -20,12 +20,12 @@ DataIDs are planned.
 - go to the directory of the project
 - run `docker-compose up --build`
 
-After the containers are up, the databus is available on: http://localhost:8088/databus/;
+After the containers are up, the databus is available on: http://localhost:8088/;
 gitlab is on http://localhost:8880 and virtuoso is on: http://localhost:8890/sparql-auth
 
 ### External virtuoso and gitlab
 - go to the directory of the project
 - set the right configuration parameters in `src/main/webapp/WEB-INF/web.xml`
 - run `docker build -t databus-upload-<version> .`
-- run `docker run -p <out_port>:8080 -d databus-upload-<version>`
+- run `docker run -p <out_port>:8080 [-d] databus-upload-<version>`
 
