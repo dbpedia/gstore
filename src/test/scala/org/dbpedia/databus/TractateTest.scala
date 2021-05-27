@@ -19,14 +19,16 @@ class TractateTest extends FlatSpec with Matchers {
     val t = Tractate.extract(model.getGraph, TractateV1.Version)
     val expected =
       """Databus Tractate V1
-        |https://webid.dbpedia.org/webid.ttl#this
-        |https://databus.dbpedia.org/kuckuck/nest/eier/2020.10.10
-        |http://purl.oclc.org/NET/rdflicense/cc-0
-        |2020-12-06T00:00:00Z
-        |1be509fb64371dcf5fc7df334964753da4f2d33ba2d86b8e10150dbf64beef27
-        |2be509fb64371dcf5fc7df334964753da4f2d33ba2d86b8e10150dbf64beef27
+        |https://yum-yab.github.io/webid.ttl#this
+        |https://databus.dbpedia.org/denis/testgroup/testartifact/2021-04-28
+        |http://this.is.a.license.uri.com/test
+        |2021-04-28T14:26:20Z
+        |1c69ff99c105ab0f3459a4cd928f14284c996702148a2f62637df69f3e1a01ab
+        |af7b3594156ae9753eab55fa9dacbd2b352b8e75af2ec5068a09473014859816
+        |b71592685053db4171d2eaacb1eb1084d927fd6831f7ee8c9329903f90c72763
         |""".stripMargin
     t.get.stringForSigning should be(expected)
+
   }
 
 }

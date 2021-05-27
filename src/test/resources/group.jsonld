@@ -2,7 +2,19 @@
 	"@context" : "https://raw.githubusercontent.com/dbpedia/databus-git-mockup/main/dev/context.jsonld",
 	"@id": "http://databus.dbpedia.org/kuckuck/nest",
 	"@type": "dataid:Group",
-	"title": "label",
-	"abstract": "comment Lorem ipsum dolor sit",
-	"description": "description"
+	"title": {
+                    "@value": "Test Title",
+                    "@language": "en"
+                },
+                "comment": {
+                    "@value": "This is a short comment about the test."
+                },
+                "abstract": {
+                    "@value": "This a short abstract for the dataset. Since this is only a test it is quite insignificant.",
+                    "@language": "en"
+                },
+                "description": {
+                    "@value": "This is a descriptionIt is in markdown sytax. It can be much longer and detailed.",
+                    "@language": "en"
+                }
 }

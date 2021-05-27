@@ -2,11 +2,14 @@ package org.dbpedia.databus
 
 import java.nio.file.{Files, Paths}
 
+import org.apache.jena.query.ARQ
 import org.scalatest.{FlatSpec, Matchers}
 
 import scala.util.{Failure, Success}
 
 class ValidationTest extends FlatSpec with Matchers {
+
+  ARQ.init()
 
   "SHACL validation" should "work for version" in {
     val shacl = "https://raw.githubusercontent.com/dbpedia/databus-git-mockup/main/dev/dataid-shacl.ttl"
@@ -51,7 +54,7 @@ class ValidationTest extends FlatSpec with Matchers {
     val file = "version.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
     val re = RdfConversions.validateWithShacl(bytes, shacl)
-      .flatMap(m => RdfConversions.validateVersion(m, "kuckuck", "nest", "eier", "2020.10.10"))
+      .flatMap(m => RdfConversions.validateVersion(m, "denis", "testgroup", "testartifact", "2021-04-28"))
     re shouldBe a[Success[Unit]]
   }
 
