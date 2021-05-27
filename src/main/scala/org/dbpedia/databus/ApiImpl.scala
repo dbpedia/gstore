@@ -149,31 +149,17 @@ object ApiImpl {
     val dataStream = new ByteArrayInputStream(fileData)
     val lang = mapContentType(mapFilenameToContentType(path))
     RDFDataMgr.read(model, dataStream, lang)
-    val drop = virtuosoRequest(
-      RdfConversions.dropGraphSparqlQuery(graphId),
+
+    val dropNinsertRequest = RdfConversions.dropGraphSparqlQuery(graphId) + ";\n" + RdfConversions.makeInsertSparqlQuery(model.getGraph, graphId)
+    val dropAndInsert = virtuosoRequest(
+      dropNinsertRequest,
       viruosoUri,
       virtuosoUsername,
       virtuosoPass
     )
 
-    val insert = virtuosoRequest(
-      RdfConversions.makeInsertSparqlQuery(model.getGraph, graphId),
-      viruosoUri,
-      virtuosoUsername,
-      virtuosoPass
-    )
-
-    val re = backend.send(drop)
-    val succ = re.body match {
-      case Left(b) => b.contains("has not been explicitly created before")
-      case Right(_) => true
-    }
-
-    if (succ) {
-      backend.send(insert).isSuccess
-    } else {
-      false
-    }
+    backend.send(dropAndInsert)
+      .isSuccess
   }
 
 }
@@ -314,7 +300,7 @@ object RdfConversions {
     s"https://databus.dbpedia.org/$user/$path"
 
   def dropGraphSparqlQuery(graphId: String) =
-    s"CLEAR GRAPH <$graphId>"
+    s"DROP SILENT GRAPH <$graphId>"
 
   def makeInsertSparqlQuery(graph: Graph, graphId: String): String = {
     val bld = StringBuilder.newBuilder
