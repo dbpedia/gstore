@@ -37,8 +37,27 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
     post("/databus/file/save?username=kuckuck&path=pa/fl.jsonld", bytes){
       status should equal(200)
     }
-
-
   }
+
+  "Shacl" should "validate" in {
+    val file = "group.jsonld"
+    val sha = "test.shacl"
+    val bytes = Paths.get(getClass.getClassLoader.getResource(file).getFile).toFile
+    val shacl = Paths.get(getClass.getClassLoader.getResource(sha).getFile).toFile
+
+    val errFl = "version_wrong.jsonld"
+    val err = Paths.get(getClass.getClassLoader.getResource(errFl).getFile).toFile
+
+    post("/databus/shacl/validate", Map.empty, Map("shacl" -> shacl, "graph" -> bytes)){
+      status should equal(200)
+    }
+
+    post("/databus/shacl/validate", Map.empty, Map("shacl" -> shacl, "graph" -> err)){
+      //todo change to 400 or 200 but with error
+      status should equal(500)
+    }
+  }
+
+
 
 }
