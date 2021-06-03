@@ -60,7 +60,6 @@ class RemoteGitlabHttpClient(rootUser: String, rootPass: String, scheme: String,
       resp.body match {
         case Left(e) => Failure(new RuntimeException(e))
         case Right(value) =>
-          println(value)
           val flds = for {
             JObject(chl) <- parse(value)
             JField("id", JInt(id)) <- chl
