@@ -17,6 +17,10 @@
 
 
     <context-param>
+        <param-name>localGitRoot</param-name>
+        <param-value>/databus/git_root/</param-value>
+    </context-param>
+    <context-param>
         <param-name>gitHost</param-name>
         <param-value>gitlab</param-value>
     </context-param>
