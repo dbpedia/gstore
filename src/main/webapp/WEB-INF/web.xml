@@ -16,10 +16,14 @@
     </listener>
 
 
+    <!--    Comment this out to enable remote git with gitlab -->
     <context-param>
         <param-name>localGitRoot</param-name>
         <param-value>/databus/git_root/</param-value>
     </context-param>
+    <!--    Comment this out to enable remote git with gitlab -->
+
+
     <context-param>
         <param-name>gitHost</param-name>
         <param-value>gitlab</param-value>
