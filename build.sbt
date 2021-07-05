@@ -16,6 +16,7 @@ libraryDependencies ++= Seq(
   "org.scalatra" %% "scalatra-json" % ScalatraVersion,
   "org.apache.jena" % "apache-jena-libs" % jenaVersion,
   "org.apache.jena" % "jena-shacl" % jenaVersion,
+  "org.eclipse.jgit" % "org.eclipse.jgit" % "5.12.0.202106070339-r",
 
   "org.eclipse.jetty" % "jetty-webapp" % "9.4.9.v20180320" % "compile",
   "ch.qos.logback" % "logback-classic" % "1.2.3",
@@ -28,6 +29,9 @@ libraryDependencies ++= Seq(
 
 assemblyMergeStrategy in assembly := {
   case PathList("META-INF", "MANIFEST.MF") => MergeStrategy.discard
+  case ps if ps.endsWith(".SF") => MergeStrategy.discard
+  case ps if ps.endsWith(".DSA") => MergeStrategy.discard
+  case ps if ps.endsWith(".RSA") => MergeStrategy.discard
   case _ => MergeStrategy.first
 }
 unmanagedResourceDirectories in Compile += { baseDirectory.value / "src/main/webapp" }

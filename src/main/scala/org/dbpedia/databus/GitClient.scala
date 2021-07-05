@@ -1,8 +1,12 @@
 package org.dbpedia.databus
 
+
+import java.nio.file.{Files, Path, Paths}
 import java.util.Base64
 
 import org.dbpedia.databus.RemoteGitlabHttpClient.{CreateFile, DeleteFile, FileAction, UpdateFile}
+import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.lib.Repository
 import sttp.client3._
 import sttp.model.Uri
 import org.json4s._
@@ -17,15 +21,97 @@ trait GitClient {
 
   def createProject(name: String): Try[String]
 
-  def commitFileContent(projectName: String, name: String, data: Array[Byte]): Try[String]
+  def commitFileContent(projectName: String, name: String, data: Array[Byte]): Try[String] =
+    commitSeveralFiles(projectName, Map(name -> data))
 
-  def commitFileDelete(projectName: String, name: String): Try[String]
+  def commitFileDelete(projectName: String, name: String): Try[String] =
+    deleteSeveralFiles(projectName, Seq(name))
 
   def readFile(projectName: String, name: String): Try[Array[Byte]]
 
   def commitSeveralFiles(projectName: String, filenameAndData: Map[String, Array[Byte]]): Try[String]
 
   def deleteSeveralFiles(projectName: String, names: Seq[String]): Try[String]
+
+}
+
+//todo concurrency! limit method invocation to one simultaneous for a repo
+class LocalGitClient(rootPath: Path) extends GitClient {
+
+  override def projectExists(name: String): Boolean =
+    initrepo(getRepoPathFromUsername(name)).isSuccess
+
+  override def createProject(name: String): Try[String] =
+    Try(Git.init()
+      .setDirectory(getRepoPathFromUsername(name).toFile)
+      .call()
+    ).map(_ => name)
+
+  override def readFile(projectName: String, name: String): Try[Array[Byte]] =
+    Try(Files.readAllBytes(getFilePath(projectName, name)))
+
+  override def commitSeveralFiles(projectName: String, filenameAndData: Map[String, Array[Byte]]): Try[String] = Try({
+    val git = Git.open(getRepoPathFromUsername(projectName).toFile)
+    val add = git.add()
+
+    filenameAndData.foreach {
+      case (fp, data) =>
+        val pa = getRelativeFilePath(fp)
+        val apa = getFilePath(projectName, fp)
+        Files.createDirectories(apa.getParent)
+        Files.write(apa, data)
+        add.addFilepattern(pa.toString)
+    }
+    add.call()
+
+    val commit = git.commit()
+    val ref = commit
+      .setCommitter("databus", "databus@infai.org")
+      .setMessage(s"$projectName: committed ${filenameAndData.keys}")
+      .call()
+    ref.getName
+  })
+
+  override def deleteSeveralFiles(projectName: String, names: Seq[String]): Try[String] = Try {
+    val git = Git.open(getRepoPathFromUsername(projectName).toFile)
+    val rm = git.rm()
+    names.foreach(fp => {
+      val pa = getRelativeFilePath(fp)
+      rm.addFilepattern(pa.toString)
+      pa
+    })
+    rm.call()
+
+    val commit = git.commit()
+    val hash = commit
+      .setCommitter("databus", "databus@infai.org")
+      .setMessage(s"$projectName: removed $names")
+      .call()
+      .getName
+    hash
+  }
+
+  private def getFilePath(repoName: String, filePath: String): Path = {
+    val projPath = getRepoPathFromUsername(repoName)
+    projPath.resolve(getRelativeFilePath(filePath))
+  }
+
+  private def getRelativeFilePath(filePath: String): Path = {
+    val fp = Paths.get(filePath)
+    if (fp.isAbsolute) {
+      Paths.get("/").relativize(fp)
+    } else {
+      fp
+    }
+  }
+
+  private def initrepo(pa: Path): Try[Repository] = Try(
+    Git.open(pa.toFile)
+      .getRepository
+  )
+
+  private def getRepoPathFromUsername(un: String) =
+    rootPath.resolve(Paths.get(un))
 
 }
 
@@ -68,13 +154,6 @@ class RemoteGitlabHttpClient(rootUser: String, rootPass: String, scheme: String,
       }
     })
   }
-
-
-  override def commitFileContent(projectName: String, name: String, data: Array[Byte]): Try[String] =
-    commitSeveralFiles(projectName, Map(name -> data))
-
-  override def commitFileDelete(projectName: String, name: String): Try[String] =
-    deleteSeveralFiles(projectName, Seq(name))
 
   override def projectExists(name: String): Boolean =
     projectIdByName(name)
@@ -144,7 +223,7 @@ class RemoteGitlabHttpClient(rootUser: String, rootPass: String, scheme: String,
     req.flatMap(r => {
       val resp = r.send(backend)
       resp.body match {
-        case Left(e) =>  Failure(new RuntimeException(e))
+        case Left(e) => Failure(new RuntimeException(e))
         case Right(value) =>
           val flds = for {
             JObject(ch) <- parse(value)
@@ -180,7 +259,7 @@ class RemoteGitlabHttpClient(rootUser: String, rootPass: String, scheme: String,
     req.flatMap(r => {
       val resp = r.send(backend)
       resp.body match {
-        case Left(e) =>  Failure(new RuntimeException(e))
+        case Left(e) => Failure(new RuntimeException(e))
         case Right(value) =>
           val flds = for {
             JObject(ch) <- parse(value)

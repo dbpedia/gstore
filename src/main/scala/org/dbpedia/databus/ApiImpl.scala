@@ -1,7 +1,7 @@
 package org.dbpedia.databus
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
-import java.nio.file.Paths
+import java.nio.file.{Path, Paths}
 import java.util.function.Consumer
 
 import javax.servlet.http.HttpServletRequest
@@ -27,7 +27,7 @@ class ApiImpl(config: Config) extends DatabusApi {
   import config._
 
   private lazy val backend = new DigestAuthenticationBackend(HttpURLConnectionBackend())
-  private val client = new RemoteGitlabHttpClient(gitUser, gitPass, gitScheme, gitHostname, gitPort)
+  private val client: GitClient = initGitClient(config)
 
   override def dataidSubgraph(body: String)(request: HttpServletRequest): Try[String] =
     readModel(body.getBytes)
@@ -111,6 +111,20 @@ class ApiImpl(config: Config) extends DatabusApi {
     client.deleteSeveralFiles(username, paths)
       .map(s => ApiResponse(Some(200), None, Some(s)))
 
+  private def initGitClient(config: Config): GitClient = {
+    import config._
+    localGitReposRoot.map(new LocalGitClient(_))
+      .getOrElse({
+        val scheme = gitScheme.getOrElse("https")
+        val cl = for {
+          user <- gitUser
+          pass <- gitPass
+          host <- gitHostname
+        } yield new RemoteGitlabHttpClient(user, pass, scheme, host, gitPort)
+        cl.getOrElse(throw new RuntimeException("Wrong remote git client configuration"))
+      })
+  }
+
 }
 
 
@@ -122,11 +136,12 @@ object ApiImpl {
   val DatabusTractateFilename = "databus_tractate"
 
   case class Config(
-                     gitUser: String,
-                     gitPass: String,
-                     gitScheme: String,
-                     gitHostname: String,
+                     gitUser: Option[String],
+                     gitPass: Option[String],
+                     gitScheme: Option[String],
+                     gitHostname: Option[String],
                      gitPort: Option[Int],
+                     localGitReposRoot: Option[Path],
                      virtuosoUri: Uri,
                      virtuosoUser: String,
                      virtuosoPass: String
