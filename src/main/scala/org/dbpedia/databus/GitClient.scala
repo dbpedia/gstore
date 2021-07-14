@@ -3,6 +3,7 @@ package org.dbpedia.databus
 
 import java.nio.file.{Files, Path, Paths}
 import java.util.Base64
+import java.util.concurrent.ConcurrentHashMap
 
 import org.dbpedia.databus.RemoteGitlabHttpClient.{CreateFile, DeleteFile, FileAction, UpdateFile}
 import org.eclipse.jgit.api.Git
@@ -35,61 +36,81 @@ trait GitClient {
 
 }
 
-//todo concurrency! limit method invocation to one simultaneous for a repo
 class LocalGitClient(rootPath: Path) extends GitClient {
 
+  // here we do not cleanup, assuming that the number os repos is relatively low (less than 1 000 000)
+  private val locks = new ConcurrentHashMap[String, Object]()
+
   override def projectExists(name: String): Boolean =
-    initrepo(getRepoPathFromUsername(name)).isSuccess
+    wrapWithSync(name) {
+      initrepo(getRepoPathFromUsername(name)).isSuccess
+    }
 
   override def createProject(name: String): Try[String] =
-    Try(Git.init()
-      .setDirectory(getRepoPathFromUsername(name).toFile)
-      .call()
-    ).map(_ => name)
+    wrapWithSync(name) {
+      Try(Git.init()
+        .setDirectory(getRepoPathFromUsername(name).toFile)
+        .call()
+      ).map(_ => name)
+    }
 
   override def readFile(projectName: String, name: String): Try[Array[Byte]] =
-    Try(Files.readAllBytes(getFilePath(projectName, name)))
-
-  override def commitSeveralFiles(projectName: String, filenameAndData: Map[String, Array[Byte]]): Try[String] = Try({
-    val git = Git.open(getRepoPathFromUsername(projectName).toFile)
-    val add = git.add()
-
-    filenameAndData.foreach {
-      case (fp, data) =>
-        val pa = getRelativeFilePath(fp)
-        val apa = getFilePath(projectName, fp)
-        Files.createDirectories(apa.getParent)
-        Files.write(apa, data)
-        add.addFilepattern(pa.toString)
+    wrapWithSync(projectName) {
+      Try(Files.readAllBytes(getFilePath(projectName, name)))
     }
-    add.call()
 
-    val commit = git.commit()
-    val ref = commit
-      .setCommitter("databus", "databus@infai.org")
-      .setMessage(s"$projectName: committed ${filenameAndData.keys}")
-      .call()
-    ref.getName
-  })
+  override def commitSeveralFiles(projectName: String, filenameAndData: Map[String, Array[Byte]]): Try[String] =
+    wrapWithSync(projectName) {
+      Try({
+        val git = Git.open(getRepoPathFromUsername(projectName).toFile)
+        val add = git.add()
 
-  override def deleteSeveralFiles(projectName: String, names: Seq[String]): Try[String] = Try {
-    val git = Git.open(getRepoPathFromUsername(projectName).toFile)
-    val rm = git.rm()
-    names.foreach(fp => {
-      val pa = getRelativeFilePath(fp)
-      rm.addFilepattern(pa.toString)
-      pa
-    })
-    rm.call()
+        filenameAndData.foreach {
+          case (fp, data) =>
+            val pa = getRelativeFilePath(fp)
+            val apa = getFilePath(projectName, fp)
+            Files.createDirectories(apa.getParent)
+            Files.write(apa, data)
+            add.addFilepattern(pa.toString)
+        }
+        add.call()
 
-    val commit = git.commit()
-    val hash = commit
-      .setCommitter("databus", "databus@infai.org")
-      .setMessage(s"$projectName: removed $names")
-      .call()
-      .getName
-    hash
-  }
+        val commit = git.commit()
+        val ref = commit
+          .setCommitter("databus", "databus@infai.org")
+          .setMessage(s"$projectName: committed ${filenameAndData.keys}")
+          .call()
+        ref.getName
+      })
+    }
+
+
+  override def deleteSeveralFiles(projectName: String, names: Seq[String]): Try[String] =
+    wrapWithSync(projectName) {
+      Try {
+        val git = Git.open(getRepoPathFromUsername(projectName).toFile)
+        val rm = git.rm()
+        names.foreach(fp => {
+          val pa = getRelativeFilePath(fp)
+          rm.addFilepattern(pa.toString)
+          pa
+        })
+        rm.call()
+
+        val commit = git.commit()
+        val hash = commit
+          .setCommitter("databus", "databus@infai.org")
+          .setMessage(s"$projectName: removed $names")
+          .call()
+          .getName
+        hash
+      }
+    }
+
+  private def wrapWithSync[R](name: String)(func: => R): R =
+    locks.computeIfAbsent(name, _ => new Object)
+      .synchronized(func)
+
 
   private def getFilePath(repoName: String, filePath: String): Path = {
     val projPath = getRepoPathFromUsername(repoName)
