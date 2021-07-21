@@ -40,7 +40,10 @@ class ScalatraBootstrap extends LifeCycle {
     context.mount(new DefaultApi()(sw, new ApiImpl(cfg)), "/*")
   }
 
-  private def getParam(name: String)(implicit context: ServletContext): Option[String] =
-    Option(context.getInitParameter(name))
+  private def getParam(name: String)(implicit context: ServletContext): Option[String] = {
+    Option(System.getProperty(name))
+      .orElse(Option(context.getInitParameter(name)))
+
+  }
 
 }

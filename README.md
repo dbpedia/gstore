@@ -32,6 +32,11 @@ comment out `localGitRoot` configuration parameter, and
 run docker-compose with merged `remote_git` config: `docker-compose -f docker-compose.yml -f docker-compose.remote_git.yml up --build`. 
 Gitlab is then available on http://localhost:8880 
 
+You can set configuration parameters passing `JAVA_PRMS` environment variable to databus' docker container. You need to specify `JAVA_PRMS` variable with values in java vm arguments style (parameter names must be the same as in the `web.xml`), for example:
+```
+JAVA_PRMS=-DgitHost=bestgitlabhost -DgitApiUser=toor
+```
+
 ### External virtuoso and gitlab
 - go to the directory of the project
 - set the right configuration parameters in `src/main/webapp/WEB-INF/web.xml`
