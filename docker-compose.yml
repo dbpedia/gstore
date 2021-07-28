@@ -3,7 +3,7 @@ services:
   databus:
     build: .
     ports:
-      - "8088:8080"
+      - "8088:80"
     depends_on:
       - "virtuoso"
   virtuoso:
@@ -12,5 +12,3 @@ services:
       DBA_PASSWORD: "everyoneknows"
       SPARQL_UPDATE: "true"
       DEFAULT_GRAPH: "http://www.example.com/my-graph"
-    ports:
-      - "8890:8890"

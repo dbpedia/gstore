@@ -42,6 +42,8 @@ class ScalatraBootstrap extends LifeCycle {
 
   private def getParam(name: String)(implicit context: ServletContext): Option[String] = {
     Option(System.getProperty(name))
+      .map(_.trim)
+      .filter(_.nonEmpty)
       .orElse(Option(context.getInitParameter(name)))
 
   }

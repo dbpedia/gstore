@@ -38,7 +38,7 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
     val file = "group.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
 
-    post("/databus/file/save?username=kuckuck&path=pa/fl.jsonld", bytes){
+    post("/databus/file/save?repo=kuckuck&path=pa/fl.jsonld", bytes){
       status should equal(200)
     }
   }

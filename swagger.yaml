@@ -45,7 +45,7 @@ paths:
         - "application/json"
       parameters:
         - in: query
-          name: username
+          name: repo
           type: string
           required: true
         - in: query
@@ -75,7 +75,7 @@ paths:
         - "application/json"
       parameters:
         - in: query
-          name: username
+          name: repo
           type: string
           required: true
         - in: query
@@ -97,7 +97,7 @@ paths:
         - "text/turtle"
       parameters:
         - in: query
-          name: username
+          name: repo
           type: string
           required: true
         - in: query
