@@ -22,7 +22,7 @@ DataIDs are planned.
 - run `docker-compose up --build`
 
 After the containers are up, the databus is available on: http://localhost:8088/;
-virtuoso is on: http://localhost:8890/sparql-auth
+virtuoso is on: http://localhost:8088/sparql
 
 Current version supports two configurations:
 - with local git (default)
@@ -32,9 +32,12 @@ comment out `localGitRoot` configuration parameter, and
 run docker-compose with merged `remote_git` config: `docker-compose -f docker-compose.yml -f docker-compose.remote_git.yml up --build`. 
 Gitlab is then available on http://localhost:8880 
 
-You can set configuration parameters passing `JAVA_PRMS` environment variable to databus' docker container. You need to specify `JAVA_PRMS` variable with values in java vm arguments style (parameter names must be the same as in the `web.xml`), for example:
+You can set following config paraters as env variables in docker for g-store container:
 ```
-JAVA_PRMS=-DgitHost=bestgitlabhost -DgitApiUser=toor
+VIRT_URI=http://virtuoso:8890/sparql-auth #default, virtuoso uri
+VIRT_USER="" # virtuoso user
+VIRT_PASS="" # virtuoso password
+GIT_ROOT="" # root folder for git inside g-store container (recommended not to change)
 ```
 
 ### External virtuoso and gitlab
