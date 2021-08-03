@@ -34,7 +34,7 @@ Gitlab is then available on http://localhost:8880
 
 You can set following config paraters as env variables in docker for g-store container:
 ```
-VIRT_URI=http://virtuoso:8890/sparql-auth #default, virtuoso uri
+VIRT_URI=http://virtuoso:8890 #default, virtuoso base uri
 VIRT_USER="" # virtuoso user
 VIRT_PASS="" # virtuoso password
 GIT_ROOT="" # root folder for git inside g-store container (recommended not to change)

@@ -6,7 +6,7 @@ RUN sbt 'set test in assembly := {}' clean assembly
 
 FROM openjdk:8-alpine
 
-ENV VIRT_URI=http://virtuoso:8890/sparql-auth
+ENV VIRT_URI=http://virtuoso:8890
 ENV VIRT_USER=""
 ENV VIRT_PASS=""
 ENV GIT_ROOT=""
@@ -31,7 +31,7 @@ CMD echo -e "events {\n\
                 proxy_pass      http://127.0.0.1:8080;\n\
             }\n\
             location /sparql {\n\
-                proxy_pass      $VIRT_URI;\n\
+                proxy_pass      $VIRT_URI/sparql;\n\
             }\n\
         }\n\
-    }\n" > /etc/nginx/nginx.conf ; nginx ; java -DvirtuosoUri=$VIRT_URI -DvirtuosoUser=$VIRT_USER -DvirtuosoPass=$VIRT_PASS -DlocalGitRoot=$GIT_ROOT -jar /app/app.jar
+    }\n" > /etc/nginx/nginx.conf ; nginx ; java -DvirtuosoUri=$VIRT_URI/sparql-auth -DvirtuosoUser=$VIRT_USER -DvirtuosoPass=$VIRT_PASS -DlocalGitRoot=$GIT_ROOT -jar /app/app.jar
