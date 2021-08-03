@@ -312,7 +312,7 @@ object RdfConversions {
     s"https://databus.dbpedia.org/$user/$group/documentation.ttl"
 
   def generateGraphId(user: String, path: String): String =
-    s"https://databus.dbpedia.org/$user/$path"
+    s"/$user/$path"
 
   def dropGraphSparqlQuery(graphId: String) =
     s"DROP SILENT GRAPH <$graphId>"
