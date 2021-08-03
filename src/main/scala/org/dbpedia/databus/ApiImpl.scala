@@ -228,7 +228,6 @@ object RdfConversions {
   def validateWithShacl(file: Array[Byte], shaclData: Array[Byte]): Try[Model] = {
     val shaclGra = GraphFactory.createDefaultGraph()
     val shaDataStream = new ByteArrayInputStream(shaclData)
-    println(s"lalala $shaclGra $shaDataStream")
     RDFDataMgr.read(shaclGra, shaDataStream, Lang.TTL)
     readModel(file)
       .flatMap(model => Try {
