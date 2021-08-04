@@ -27,6 +27,7 @@ CMD echo -e "events {\n\
         resolver 127.0.0.11 ipv6=off;\n\
         server { # simple reverse-proxy\n\
             listen       0.0.0.0:80;\n\
+            add_header Access-Control-Allow-Origin *;\n\
             location / {\n\
                 proxy_pass      http://127.0.0.1:8080;\n\
             }\n\
