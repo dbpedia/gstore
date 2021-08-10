@@ -4,6 +4,7 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.nio.file.{Path, Paths}
 import java.util.function.Consumer
 
+import javax.servlet.ServletContext
 import javax.servlet.http.HttpServletRequest
 import org.apache.jena.graph.Graph
 import org.apache.jena.rdf.model.{Model, ModelFactory}
@@ -15,10 +16,12 @@ import org.dbpedia.databus.ApiImpl.Config
 import org.dbpedia.databus.RdfConversions.{generateGraphId, mapContentType, mapFilenameToContentType, readModel}
 import org.dbpedia.databus.swagger.api.DatabusApi
 import org.dbpedia.databus.swagger.model.ApiResponse
+import org.eclipse.jetty.xml.XmlConfiguration
 import sttp.client3._
 import sttp.model.Uri
 
 import scala.util.{Failure, Success, Try}
+import scala.xml.{Document, Node}
 
 
 class ApiImpl(config: Config) extends DatabusApi {
@@ -130,11 +133,6 @@ class ApiImpl(config: Config) extends DatabusApi {
 
 object ApiImpl {
 
-  val DefaultGroupFn = "group.jsonld"
-  val DefaultVersionFn = "dataid.jsonld"
-  val DatabusSignatureFilename = "databus_signature"
-  val DatabusTractateFilename = "databus_tractate"
-
   case class Config(
                      gitUser: Option[String],
                      gitPass: Option[String],
@@ -146,6 +144,65 @@ object ApiImpl {
                      virtuosoUser: String,
                      virtuosoPass: String
                    )
+
+  object Config {
+
+    def default: Config = fromMapper(SystemMapper)
+    def fromWebXml(xml: Node): Config = fromMapper(xml)
+    def fromServletContext(ctx: ServletContext): Config = fromMapper(ctx)
+
+    private def fromMapper(mapper: Mapper): Config = {
+      implicit val mp = mapper
+      val schema = getParam("gitSchema").orElse(Some("http"))
+      val host = getParam("gitHost").orElse(Some("localhost"))
+      val port = getParam("gitPort").map(_.toInt)
+      val user = getParam("gitApiUser")
+      val pass = getParam("gitApiPass")
+      val localGitRoot = getParam("localGitRoot").map(Paths.get(_))
+      val virtUri = getParam("virtuosoUri").get
+      val virtUser = getParam("virtuosoUser").get
+      val virtPass = getParam("virtuosoPass").get
+
+      ApiImpl.Config(
+        user,
+        pass,
+        schema,
+        host,
+        port,
+        localGitRoot,
+        Uri.parse(virtUri).right.get,
+        virtUser,
+        virtPass
+      )
+    }
+
+    implicit class ServletContextToMapper(ctx: ServletContext) extends Mapper {
+      override def getKeyValue(name: String): String = ctx.getInitParameter(name)
+    }
+
+    implicit class XmlToMapper(xml: Node) extends Mapper {
+      override def getKeyValue(name: String): String = {
+        val p = (xml \\ "context-param")
+          .filter(p => (p \ "param-name").text == name)
+        p.map(_ \ "param-value").headOption.map(_.head.text).orNull
+      }
+    }
+
+    object SystemMapper extends Mapper {
+      override def getKeyValue(name: String): String = System.getProperty(name)
+    }
+
+    trait Mapper {
+      def getKeyValue(name: String): String
+    }
+
+    private def getParam(name: String)(implicit mapper: Mapper): Option[String] =
+      Option(System.getProperty(name))
+        .map(_.trim)
+        .filter(_.nonEmpty)
+        .orElse(Option(mapper.getKeyValue(name)))
+
+  }
 
   private[databus] def virtuosoRequest(request: String, virtuosoUri: Uri, un: String, pass: String) =
     basicRequest
@@ -181,42 +238,6 @@ object ApiImpl {
 
 
 object RdfConversions {
-
-  import collection.JavaConverters._
-
-  def validateVersion(model: Model,
-                      username: String,
-                      groupId: String,
-                      artifactId: String,
-                      versionId: String): Try[Unit] =
-    model.getGraph.find().toList.asScala
-      .find(_.getPredicate.getURI == "http://dataid.dbpedia.org/ns/core#version")
-      .map(_.getMatchObject.getURI)
-      .map(v => RdfConversions.validateVersion(v, username, groupId, artifactId, versionId)) match {
-      case Some(v) => v
-      case None => Failure(new RuntimeException("Invalid version"))
-    }
-
-
-  def validateVersion(versionToCheck: String,
-                      username: String,
-                      groupId: String,
-                      artifactId: String,
-                      versionId: String): Try[Unit] = {
-    val left = Uri.parse(versionToCheck)
-    val right = Uri.parse(s"https://databus.dbpedia.org/$username/$groupId/$artifactId/$versionId")
-    left.flatMap(l =>
-      right
-        .map(l == _)
-        .map(r => if (r) {
-          Success({})
-        } else {
-          Failure(new RuntimeException("Invalid version"))
-        })) match {
-      case Left(s) => Failure(new RuntimeException("Invalid version: " + s))
-      case Right(value) => value
-    }
-  }
 
   def readModel(file: Array[Byte]) = Try {
     val model = ModelFactory.createDefaultModel()
@@ -302,13 +323,6 @@ object RdfConversions {
     }
 
   import org.apache.jena.graph.Triple
-
-  def generateVersionGraphId(user: String, group: String, artifact: String, version: String): String =
-  // todo detect original uri from the request
-    s"https://databus.dbpedia.org/$user/$group/$artifact/$version/dataid.ttl#Dataset"
-
-  def generateGroupGraphId(user: String, group: String): String =
-    s"https://databus.dbpedia.org/$user/$group/documentation.ttl"
 
   def generateGraphId(user: String, path: String): String =
     s"/$user/$path"

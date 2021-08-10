@@ -37,14 +37,6 @@ class VirtuosoQueriesTest extends FlatSpec with Matchers {
     bld.toString()
   }
 
-  "Generator" should "generate graph uri" in {
-    val r1 = RdfConversions.generateVersionGraphId("kytest","mygroupid","artifact", "version")
-    r1 should equal("https://databus.dbpedia.org/kytest/mygroupid/artifact/version/dataid.ttl#Dataset")
-
-    val r3 = RdfConversions.generateGroupGraphId("kytest","mygroupid")
-    r3 should equal("https://databus.dbpedia.org/kytest/mygroupid/documentation.ttl")
-  }
-
   ignore should "save to virtuoso" in {
     val backend = new DigestAuthenticationBackend(HttpURLConnectionBackend())
     val file = "version.jsonld"

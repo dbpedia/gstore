@@ -22,7 +22,7 @@ DataIDs are planned.
 - run `docker-compose up --build`
 
 After the containers are up, the databus is available on: http://localhost:8088/;
-virtuoso is on: http://localhost:8088/sparql
+virtuoso is on: http://localhost:8088/sparql. You can also view file structure at http://localhost:8088/git.
 
 Current version supports two configurations:
 - with local git (default)
