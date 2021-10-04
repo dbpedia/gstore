@@ -348,12 +348,12 @@ object RdfConversions {
         bld.append(" ")
         if (t.getObject.isLiteral) {
           bld.append("\"")
-          bld.append(t.getObject.getLiteral.getLexicalForm)
+          bld.append(escapeChars(t.getObject.getLiteral.getLexicalForm))
           bld.append("\"")
           bld.append("^^")
           wrapWithAngleBracketsQuote(bld, t.getObject.getLiteralDatatypeURI)
         } else {
-          wrapWithAngleBracketsQuote(bld, t.getObject.toString())
+          wrapWithAngleBracketsQuote(bld, escapeChars(t.getObject.toString()))
         }
         bld.append(" ")
         bld.append(".")
@@ -362,6 +362,10 @@ object RdfConversions {
     })
     bld
   }
+
+  def escapeChars(s: String) = s
+    .replaceAllLiterally("\"", "\\\"")
+    .replaceAllLiterally("\n", "\\n")
 
   def wrapWithAngleBracketsQuote(bld: StringBuilder, s: String) = {
     bld.append("<")
