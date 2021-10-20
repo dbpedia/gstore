@@ -13,11 +13,19 @@ ENV GIT_ROOT=""
 
 RUN apk update
 RUN apk upgrade
+RUN apk add tar
+RUN apk add outils-sha256
+RUN apk add gawk
 RUN apk add bash
+RUN apk add curl
 RUN apk add nginx
 RUN mkdir /run/nginx
 
 COPY --from=build /databus/target/scala-2.12/databus-dataid-repo-assembly-0.2.0-SNAPSHOT.jar /app/app.jar
+COPY backup.sh /backup.sh
+COPY generate-backup-meta.sh /generate-backup-meta.sh
+RUN chmod +x /backup.sh
+RUN chmod +x /generate-backup-meta.sh
 
 SHELL ["/bin/bash", "-c"]
 CMD echo -e "events {\n\
