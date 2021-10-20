@@ -1,15 +1,16 @@
 NOW=$(date --utc +%FT%TZ)
 VERSION=$5
+GROUP=$6
+ARTIFACT=$7
 
 echo "Databus URI: " $1
 echo "Account name: " $2
 echo "SIZE: " $3
 echo "HASH: " $4
 echo "Version: " $VERSION
+echo "Artifact: " $ARTIFACT
+echo "Group: " $GROUP
 echo "Issued: " $NOW
-
-GROUP=databus
-ARTIFACT=backup
 
 read -r -d '' DATAID_DATA << _EOT_
 {
@@ -51,7 +52,7 @@ read -r -d '' DATAID_DATA << _EOT_
           "file": "%DATABUS_URI%/%ACCOUNT%/%GROUP%/%ARTIFACT%/%VERSION%#ontology--DEV_type=backup.tar.gz",
           "format": "tar",
           "compression": "gz",
-          "downloadURL": "https://akswnc7.informatik.uni-leipzig.de/dstreitmatter/archivo/dbpedia.org/ontology--DEV/2021.07.09-070001/ontology--DEV_type=parsed_sorted.nt",
+          "downloadURL": "%DATABUS_URI%/DAV/repo/%GROUP%/%ARTIFACT%/%VERSION%/bckp_%VERSION%.tar.gz",
           "byteSize": "%SIZE%",
           "sha256sum": "%HASH%",
           "hasVersion": "%VERSION%"

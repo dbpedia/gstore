@@ -23,8 +23,10 @@ RUN mkdir /run/nginx
 
 COPY --from=build /databus/target/scala-2.12/databus-dataid-repo-assembly-0.2.0-SNAPSHOT.jar /app/app.jar
 COPY backup.sh /backup.sh
+COPY deploy.sh /deploy.sh
 COPY generate-backup-meta.sh /generate-backup-meta.sh
 RUN chmod +x /backup.sh
+RUN chmod +x /deploy.sh
 RUN chmod +x /generate-backup-meta.sh
 
 SHELL ["/bin/bash", "-c"]
@@ -41,6 +43,9 @@ CMD echo -e "events {\n\
             }\n\
             location /sparql {\n\
                 proxy_pass      $VIRT_URI/sparql;\n\
+            }\n\
+            location /DAV {\n\
+                proxy_pass      $VIRT_URI/DAV;\n\
             }\n\
         }\n\
     }\n" > /etc/nginx/nginx.conf ; nginx ; java -DvirtuosoUri=$VIRT_URI/sparql-auth -DvirtuosoUser=$VIRT_USER -DvirtuosoPass=$VIRT_PASS -DlocalGitRoot=$GIT_ROOT -jar /app/app.jar
