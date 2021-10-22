@@ -38,8 +38,12 @@ To do a backup just run backup script in the container
 ```
 docker exec <gstore container id> /backup.sh <URI of databus> <username> <api-token for the user> <DAV uri> <DAV user> <DAV password>
 
+
 #for example:
-docker exec <gstore container id> /backup.sh http://localhost:3000 databusadmin 8d0eb95f-e3ab-4916-bd5a-fb6599a841f6 http://192.168.0.135:3003/DAV dav dav
+GSTORE=`docker ps | grep gstore | cut -f1 -d ' '`
+echo "GSTORE CONTAINER ID $GSTORE"
+
+docker exec $GSTORE /backup.sh http://localhost:3000 databusadmin 8d0eb95f-e3ab-4916-bd5a-fb6599a841f6 http://192.168.0.135:3003/DAV dav dav
 ```
 - \<username\> is the name of the user who will publish generated jsonld file
 - running the `backup.sh` file will generate `bckp_${VERSION}.tar.gz` 
