@@ -1,4 +1,10 @@
-NOW=$(date --utc +%FT%TZ)
+if [ "$(uname)" == "Darwin" ]
+then
+  NOW=$(date -u +%FT%TZ)
+else
+  NOW=$(date --utc +%FT%TZ)
+fi
+
 VERSION=$5
 GROUP=$6
 ARTIFACT=$7
@@ -49,7 +55,7 @@ read -r -d '' DATAID_DATA << _EOT_
           "@id": "%DATABUS_URI%/%ACCOUNT%/%GROUP%/%ARTIFACT%/%VERSION%#ontology--DEV_type=backup.tar.gz",
           "@type": "dataid:SingleFile",
           "issued": "%NOW%",
-          "file": "%DATABUS_URI%/%ACCOUNT%/%GROUP%/%ARTIFACT%/%VERSION%#ontology--DEV_type=backup.tar.gz",
+          "file": "%DATABUS_URI%/%ACCOUNT%/%GROUP%/%ARTIFACT%/%VERSION%/#ontology--DEV_type=backup.tar.gz",
           "format": "tar",
           "compression": "gz",
           "downloadURL": "%DATABUS_URI%/DAV/repo/%GROUP%/%ARTIFACT%/%VERSION%/bckp_%VERSION%.tar.gz",
