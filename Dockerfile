@@ -22,19 +22,13 @@ RUN apk add nginx
 RUN mkdir /run/nginx
 
 COPY --from=build /databus/target/scala-2.12/databus-dataid-repo-assembly-0.2.0-SNAPSHOT.jar /app/app.jar
-COPY backup.sh /backup.sh
-COPY deploy.sh /deploy.sh
-COPY generate-backup-meta.sh /generate-backup-meta.sh
-RUN chmod +x /backup.sh
-RUN chmod +x /deploy.sh
-RUN chmod +x /generate-backup-meta.sh
 
 SHELL ["/bin/bash", "-c"]
 CMD echo -e "events {\n\
       worker_connections  4096;\n\
     }\n\
     http {\n\
-        resolver 127.0.0.11 ipv6=off;\n\
+        resolver 127.0.0.1 ipv6=off;\n\
         server { # simple reverse-proxy\n\
             listen       0.0.0.0:80;\n\
             add_header Access-Control-Allow-Origin *;\n\
