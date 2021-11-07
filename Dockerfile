@@ -1,15 +1,11 @@
 FROM hseeberger/scala-sbt:graalvm-ce-21.1.0-java8_1.5.1_2.12.13 AS build
 
-COPY . /databus
-WORKDIR /databus
+COPY . /gstore
+WORKDIR /gstore
 RUN sbt 'set test in assembly := {}' clean assembly
 
 FROM openjdk:8-alpine
 
-ENV VIRT_URI=http://virtuoso:8890
-ENV VIRT_USER=""
-ENV VIRT_PASS=""
-ENV GIT_ROOT=""
 
 RUN apk update
 RUN apk upgrade

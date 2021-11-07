@@ -8,6 +8,8 @@
 # project specific
 dataid-file-storage/
 dataid-repo-tdb/
+.myenv 
+
 
 # rails specific
 *.sqlite3

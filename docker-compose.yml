@@ -1,14 +1,22 @@
 version: "3.0"
 services:
-  databus:
-    build: .
-    ports:
-      - "8088:80"
-    depends_on:
-      - "virtuoso"
-  virtuoso:
-    image: "tenforce/virtuoso:1.3.2-virtuoso7.2.5.1"
+#  databus:
+#    build: .
+#    ports:
+#      - "8088:80"
+#    depends_on:
+#      - "virtuoso"
+  gstore-virtuoso:
+    image: "openlink/virtuoso-opensource-7"
     environment:
-      DBA_PASSWORD: "everyoneknows"
+    # note: 
+    # these params only work first time to create ini
+    # to change after edit virtuoso.ini
+      VIRT_HTTPSERVER_SERVERPORT: "$VIRT_HTTPSERVER_SERVERPORT"
       SPARQL_UPDATE: "true"
+      DBA_PASSWORD: "${DBA_PASSWORD}"
       DEFAULT_GRAPH: "http://www.example.com/my-graph"
+    ports:
+      - "3003:${VIRT_HTTPSERVER_SERVERPORT}"
+    volumes:
+      - ./databus/virtuoso:/database

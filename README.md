@@ -2,9 +2,26 @@
 
 A web service for storing and retrieving rdf data (jsonld), has SPARQL endpoint and git-enabled storage.  
 
-## Deployment
+## Running
 ### docker-compose
+Compatible down to docker-compose version 1.25.0, [see here](https://docs.docker.com/compose/environment-variables/) for other ways to configure docker-compose >1.25.0
 
+```
+git clone https://github.com/dbpedia/gstore.git
+cd gstore
+
+echo "
+VIRT_HTTPSERVER_SERVERPORT=3003
+DBA_PASSWORD=\"everyoneknows\"
+VIRT_URI=http://gstore-virtuoso:3003
+VIRT_USER=\"dba\"
+VIRT_PASS=\"everyoneknows\"
+GIT_ROOT=\"\"
+"> .myenv
+
+docker-compose up --build
+
+```
 - go to the directory of the project
 - run `docker-compose up --build`
 
