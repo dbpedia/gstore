@@ -19,7 +19,7 @@ VIRT_PASS=\"everyoneknows\"
 GIT_ROOT=\"\"
 "> .myenv
 
-docker-compose up --build
+docker-compose --env-file .myenv up --build
 
 ```
 - go to the directory of the project
