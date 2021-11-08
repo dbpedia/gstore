@@ -16,14 +16,39 @@
     </listener>
 
 
-    <!--    Comment this out to enable remote git with gitlab -->
+    <!--    Port for starting the gstore api -->
     <context-param>
-        <param-name>localGitRoot</param-name>
-        <param-value>/databus/git_root/</param-value>
+        <param-name>port</param-name>
+        <param-value>3003</param-value>
     </context-param>
-    <!--    Comment this out to enable remote git with gitlab -->
 
 
+    <!-- Virtuoso SPARQL Endpoint -->
+    <context-param>
+        <param-name>virtuosoUri</param-name>
+        <param-value>http://gstore-virtuoso:3003/sparql-auth</param-value>
+        <!--
+        <param-value>http://localhost:3003/sparql-auth</param-value>
+        -->
+
+    </context-param>
+    <context-param>
+        <param-name>virtuosoUser</param-name>
+        <param-value>dba</param-value>
+    </context-param>
+    <context-param>
+        <param-name>virtuosoPass</param-name>
+        <param-value>everyoneknows</param-value>
+    </context-param>
+
+    <!-- GIT -->
+    <!-- Comment this out to enable remote git with gitlab -->
+    <context-param>
+        <param-name>localGitPath</param-name>
+        <param-value>/databus/git/</param-value>
+    </context-param>
+
+    <!--  Comment this in to enable remote git with gitlab
     <context-param>
         <param-name>gitHost</param-name>
         <param-value>gitlab</param-value>
@@ -40,16 +65,6 @@
         <param-name>gitApiPass</param-name>
         <param-value>password</param-value>
     </context-param>
-    <context-param>
-        <param-name>virtuosoUri</param-name>
-        <param-value>http://virtuoso:8890/sparql-auth</param-value>
-    </context-param>
-    <context-param>
-        <param-name>virtuosoUser</param-name>
-        <param-value>dba</param-value>
-    </context-param>
-    <context-param>
-        <param-name>virtuosoPass</param-name>
-        <param-value>everyoneknows</param-value>
-    </context-param>
+    -->
+
 </web-app>

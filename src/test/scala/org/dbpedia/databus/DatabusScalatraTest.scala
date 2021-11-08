@@ -17,15 +17,18 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
   override def port = 55388
 
   val config = Config(
+    None,
+
+    Uri.parse(s"http://localhost:${port}/virtu/oso").right.get,
+    "u",
+    "p",
+
     Some("u"),
     Some("p"),
     Some("http"),
     Some("localhost"),
-    Some(port),
-    None,
-    Uri.parse(s"http://localhost:${port}/virtu/oso").right.get,
-    "u",
-    "p")
+    Some(port)
+)
 
   implicit val sw = new DatabusSwagger
   implicit val impl = new ApiImpl(config)

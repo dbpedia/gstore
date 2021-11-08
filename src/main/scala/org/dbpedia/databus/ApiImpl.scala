@@ -116,14 +116,14 @@ class ApiImpl(config: Config) extends DatabusApi {
 
   private def initGitClient(config: Config): GitClient = {
     import config._
-    localGitReposRoot.map(new LocalGitClient(_))
+    localGitPath.map(new LocalGitClient(_))
       .getOrElse({
-        val scheme = gitScheme.getOrElse("https")
+        val scheme = gitApiScheme.getOrElse("https")
         val cl = for {
-          user <- gitUser
-          pass <- gitPass
-          host <- gitHostname
-        } yield new RemoteGitlabHttpClient(user, pass, scheme, host, gitPort)
+          user <- gitApiUser
+          pass <- gitApiPass
+          host <- gitApiHostname
+        } yield new RemoteGitlabHttpClient(user, pass, scheme, host, gitApiPort)
         cl.getOrElse(throw new RuntimeException("Wrong remote git client configuration"))
       })
   }
@@ -134,16 +134,30 @@ class ApiImpl(config: Config) extends DatabusApi {
 object ApiImpl {
 
   case class Config(
-                     gitUser: Option[String],
-                     gitPass: Option[String],
-                     gitScheme: Option[String],
-                     gitHostname: Option[String],
-                     gitPort: Option[Int],
-                     localGitReposRoot: Option[Path],
+                     localGitPath: Option[Path],
+
                      virtuosoUri: Uri,
                      virtuosoUser: String,
-                     virtuosoPass: String
-                   )
+                     virtuosoPass: String,
+
+                     gitApiUser: Option[String],
+                     gitApiPass: Option[String],
+                     // TODO isn't URI enough here
+                     gitApiScheme: Option[String],
+                     gitApiHostname: Option[String],
+                     gitApiPort: Option[Int]
+
+
+                   ){
+    override def toString: String =
+      s"""
+         |virtuosoUri: $virtuosoUri
+         |virtuosoUser: $virtuosoUser
+         |virtuosoPass: hidden, length ${virtuosoPass.length}
+         |localGitPath: ${localGitPath.get}
+         |""".stripMargin
+  }
+
 
   object Config {
 
@@ -151,28 +165,40 @@ object ApiImpl {
     def fromWebXml(xml: Node): Config = fromMapper(xml)
     def fromServletContext(ctx: ServletContext): Config = fromMapper(ctx)
 
+
+
     private def fromMapper(mapper: Mapper): Config = {
       implicit val mp = mapper
-      val schema = getParam("gitSchema").orElse(Some("http"))
-      val host = getParam("gitHost").orElse(Some("localhost"))
-      val port = getParam("gitPort").map(_.toInt)
-      val user = getParam("gitApiUser")
-      val pass = getParam("gitApiPass")
-      val localGitRoot = getParam("localGitRoot").map(Paths.get(_))
+      val port = getParam("port").map(_.toInt)
+
+
       val virtUri = getParam("virtuosoUri").get
       val virtUser = getParam("virtuosoUser").get
       val virtPass = getParam("virtuosoPass").get
 
+      // folder
+      val localGitPath: Option[Path] = getParam("localGitPath").map(Paths.get(_))
+
+      val gitApiUser = getParam("gitApiUser")
+      val gitApiPass = getParam("gitApiPass")
+
+      // TODO isn't URI enough here
+      val gitApiSchema = getParam("gitSchema").orElse(Some("http"))
+      val gitApiHost = getParam("gitHost").orElse(Some("localhost"))
+      val gitApiPort = getParam("gitPort").map(_.toInt)
+
       ApiImpl.Config(
-        user,
-        pass,
-        schema,
-        host,
-        port,
-        localGitRoot,
+
+        localGitPath,
         Uri.parse(virtUri).right.get,
         virtUser,
-        virtPass
+        virtPass,
+        gitApiUser,
+        gitApiPass,
+        // TODO isn't URI enough here
+        gitApiSchema,
+        gitApiHost,
+        gitApiPort
       )
     }
 

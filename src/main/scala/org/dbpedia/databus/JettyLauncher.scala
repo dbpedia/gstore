@@ -1,5 +1,8 @@
 package org.dbpedia.databus // remember this package in the sbt project definition
 
+import java.net.URL
+import java.util.logging.Logger
+
 import org.eclipse.jetty.server.{Handler, Server}
 import org.eclipse.jetty.servlet.DefaultServlet
 import org.eclipse.jetty.webapp.WebAppContext
@@ -7,20 +10,21 @@ import org.scalatra.servlet.ScalatraListener
 import org.eclipse.jetty.server.handler.ContextHandlerCollection
 import org.eclipse.jetty.server.handler.ContextHandler
 import org.eclipse.jetty.server.handler.ResourceHandler
+import org.slf4j.LoggerFactory
 
 import scala.util.Try
 import scala.xml.XML
 
 object JettyLauncher { // this is my entry object as specified in sbt project definition
+  val LOGGER = LoggerFactory.getLogger(this.getClass);
+
   def main(args: Array[String]) {
-    val port = if (System.getenv("PORT") != null) System.getenv("PORT").toInt else 8080
 
-    println(s"Starting the service on port $port")
+    // handle config options
+    val port = if (System.getProperty("PORT") != null) System.getProperty("PORT").toInt else 3002
 
-    val server = new Server(port)
-    val context = new WebAppContext()
-
-    val webXml = getClass.getResource("/WEB-INF/web.xml")
+    // locating webxml, allowing a local one
+    val webXml: URL = getClass.getResource("/WEB-INF/web.xml")
     val webappDirLocation =
       if (webXml != null) {
         webXml.toString.replaceFirst("/WEB-INF/web.xml$", "/")
@@ -28,19 +32,27 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
         "src/main/webapp/"
       }
 
-    context.setContextPath("/")
-    context.setResourceBase(webappDirLocation)
-    context.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false")
-    context.addEventListener(new ScalatraListener)
-    context.addServlet(classOf[DefaultServlet], "/")
 
-
-    val config = Option(webXml)
+    // reading config
+    // Priority
+    // 1. read from CLI/System params
+    // 2. else take webxml
+    val config: ApiImpl.Config = Option(webXml)
       .map(XML.load)
       .map(ApiImpl.Config.fromWebXml)
       .getOrElse(ApiImpl.Config.default)
 
-    val fileListHandler = config.localGitReposRoot
+    // init server
+    val server = new Server(port)
+    val contextScalatra: WebAppContext = new WebAppContext()
+    contextScalatra.setContextPath("/")
+    contextScalatra.setResourceBase(webappDirLocation)
+    contextScalatra.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false")
+    contextScalatra.addEventListener(new ScalatraListener)
+    contextScalatra.addServlet(classOf[DefaultServlet], "/")
+
+
+    val fileListHandler: Option[ContextHandler] = config.localGitPath
       .flatMap(p => Try {
         val resourceHandler = new ResourceHandler
         resourceHandler.setResourceBase(p.toAbsolutePath.toString)
@@ -53,14 +65,21 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
 
 
     val contexts = new ContextHandlerCollection
+    // if successful, take both contexts, else only scalatra
     val handlers = fileListHandler
-        .map(h => Array[Handler](context, h))
-        .getOrElse(Array[Handler](context))
+        .map(h => Array[Handler](contextScalatra, h))
+        .getOrElse(Array[Handler](contextScalatra))
     contexts.setHandlers(handlers)
     server.setHandler(contexts)
 
     server.start
-    println("The service has been started.")
+    LOGGER.info(
+      s"""
+         |The service has been started at port $port.
+         |Useful URIs
+         |* http://localhost:$port/git  <- fileviewer
+         |* http://localhost:$port/
+         |""".stripMargin)
     server.join
   }
 }
