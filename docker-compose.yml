@@ -1,11 +1,11 @@
 version: "3.0"
 services:
-#  databus:
-#    build: .
-#    ports:
-#      - "8088:80"
-#    depends_on:
-#      - "virtuoso"
+  databus:
+    build: .
+    ports:
+      - "3002:3002"
+    depends_on:
+      - "gstore-virtuoso"
   gstore-virtuoso:
     image: "openlink/virtuoso-opensource-7"
     environment:

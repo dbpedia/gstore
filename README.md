@@ -21,7 +21,7 @@ echo "
 VIRT_HTTPSERVER_SERVERPORT=3003
 VIRT_URI=http://gstore-virtuoso:${VIRT_HTTPSERVER_SERVERPORT}
 VIRT_PASS='everyoneknows'
-LOCAL_GIT_PATH='' # root folder for git
+LOCAL_GIT_PATH='`pwd`/databus' # root folder for git
 "> .myenv
 
 docker-compose --env-file .myenv up --build
@@ -36,21 +36,22 @@ VIRT_HTTPSERVER_SERVERPORT=3003
 VIRT_PASS='everyoneknows'
 LOCAL_GIT_PATH='' # root folder for git
 VIRT_URI=http://localhost:${VIRT_HTTPSERVER_SERVERPORT}
+GSTOREPATH=`pwd`"/databus"
 
 # Virtuoso
 docker run \
-    --name gstore-virtuoso \
     --interactive \
     --tty \
     --env DBA_PASSWORD=$VIRT_PASS \
+    --env VIRT_HTTPSERVER_SERVERPORT=$VIRT_HTTPSERVER_SERVERPORT \
     --publish 1111:1111 \
     --publish  $VIRT_HTTPSERVER_SERVERPORT:$VIRT_HTTPSERVER_SERVERPORT \
-    --volume ./databus/virtuoso:/database \
+    --volume $GSTOREPATH/virtuoso:/database \
     openlink/virtuoso-opensource-7:latest
     
 # sbt build and run
-sbt assembly
-java -DvirtuosoUri=$VIRT_URI/sparql-auth -DvirtuosoPass=$VIRT_PASS -DlocalGitRoot=$LOCAL_GIT_PATH -jar target/scala-2.12/databus-dataid-repo-assembly-0.2.0-SNAPSHOT.jar
+sbt clean assembly
+java -DvirtuosoUri=$VIRT_URI/sparql-auth -DvirtuosoPass=$VIRT_PASS -DlocalGitRoot=$GSTOREPATH/git -jar target/scala-2.12/databus-dataid-repo-assembly-0.2.0-SNAPSHOT.jar
 ```
 ## Using
 
