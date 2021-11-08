@@ -14,9 +14,9 @@ services:
     # to change after edit virtuoso.ini
       VIRT_HTTPSERVER_SERVERPORT: "$VIRT_HTTPSERVER_SERVERPORT"
       SPARQL_UPDATE: "true"
-      DBA_PASSWORD: "${DBA_PASSWORD}"
+      DBA_PASSWORD: "${VIRT_PASS}"
       DEFAULT_GRAPH: "http://www.example.com/my-graph"
     ports:
-      - "3003:${VIRT_HTTPSERVER_SERVERPORT}"
+      - "${VIRT_HTTPSERVER_SERVERPORT}:${VIRT_HTTPSERVER_SERVERPORT}"
     volumes:
       - ./databus/virtuoso:/database

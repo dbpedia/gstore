@@ -1,9 +1,16 @@
-# G(raph) Store
+# G(it|raph) Store
 
-A web service for storing and retrieving rdf data (jsonld), has SPARQL endpoint and git-enabled storage.  
+A web service for retrieving, validating and storing rdf data (jsonld) in 
+1. a SPARQL endpoint using filepath as graph 
+2. a git-enabled storage.  
+
+The G is an ORcronym for (git|graph).
+
+## Overview
+TODO architecture diagram showing the three components, maybe include a centralized and a de-centralized archticture view
 
 ## Running
-### docker-compose
+### docker-compose 
 Compatible down to docker-compose version 1.25.0, [see here](https://docs.docker.com/compose/environment-variables/) for other ways to configure docker-compose >1.25.0
 
 ```
@@ -12,22 +19,47 @@ cd gstore
 
 echo "
 VIRT_HTTPSERVER_SERVERPORT=3003
-DBA_PASSWORD=\"everyoneknows\"
-VIRT_URI=http://gstore-virtuoso:3003
-VIRT_USER=\"dba\"
-VIRT_PASS=\"everyoneknows\"
-GIT_ROOT=\"\"
+VIRT_URI=http://gstore-virtuoso:${VIRT_HTTPSERVER_SERVERPORT}
+VIRT_PASS='everyoneknows'
+LOCAL_GIT_PATH='' # root folder for git
 "> .myenv
 
 docker-compose --env-file .myenv up --build
 
 ```
-- go to the directory of the project
-- run `docker-compose up --build`
+### dev build and run
+```
+git clone https://github.com/dbpedia/gstore.git
+cd gstore
+
+VIRT_HTTPSERVER_SERVERPORT=3003
+VIRT_PASS='everyoneknows'
+LOCAL_GIT_PATH='' # root folder for git
+VIRT_URI=http://localhost:${VIRT_HTTPSERVER_SERVERPORT}
+
+# Virtuoso
+docker run \
+    --name gstore-virtuoso \
+    --interactive \
+    --tty \
+    --env DBA_PASSWORD=$VIRT_PASS \
+    --publish 1111:1111 \
+    --publish  $VIRT_HTTPSERVER_SERVERPORT:$VIRT_HTTPSERVER_SERVERPORT \
+    --volume ./databus/virtuoso:/database \
+    openlink/virtuoso-opensource-7:latest
+    
+# sbt build and run
+sbt assembly
+java -DvirtuosoUri=$VIRT_URI/sparql-auth -DvirtuosoPass=$VIRT_PASS -DlocalGitRoot=$LOCAL_GIT_PATH -jar target/scala-2.12/databus-dataid-repo-assembly-0.2.0-SNAPSHOT.jar
+```
+## Using
 
 After the containers are up, the g-store is available on: http://localhost:8088/;
 virtuoso is on: http://localhost:8088/sparql. You can also view file structure at http://localhost:8088/git.
 
+
+
+## TODO explain local/remote virtuoso
 Current version supports two configurations:
 - with local git (default)
 - with remote git based on gitlab. 
@@ -44,6 +76,7 @@ VIRT_PASS="" # virtuoso password
 GIT_ROOT="" # root folder for git inside g-store container (recommended not to change)
 ```
 
+## TODO explain local/remote virtuoso
 ### External virtuoso and gitlab
 - go to the directory of the project
 - set the right configuration parameters in `src/main/webapp/WEB-INF/web.xml`
