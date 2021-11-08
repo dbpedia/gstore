@@ -1,6 +1,6 @@
 version: "3.0"
 services:
-  databus:
+  gstore:
     build: .
     ports:
       - "3002:3002"

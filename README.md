@@ -14,17 +14,13 @@ TODO architecture diagram showing the three components, maybe include a centrali
 Compatible down to docker-compose version 1.25.0, [see here](https://docs.docker.com/compose/environment-variables/) for other ways to configure docker-compose >1.25.0
 
 ```
+# clone repo
 git clone https://github.com/dbpedia/gstore.git
 cd gstore
-
-echo "
-VIRT_HTTPSERVER_SERVERPORT=3003
-VIRT_URI=http://gstore-virtuoso:${VIRT_HTTPSERVER_SERVERPORT}
-VIRT_PASS='everyoneknows'
-LOCAL_GIT_PATH='`pwd`/databus' # root folder for git
-"> .myenv
-
-docker-compose --env-file .myenv up --build
+# create folder
+mkdir databus
+# run docker-compose (see .env file for config)
+docker-compose up --build
 
 ```
 ### dev build and run
