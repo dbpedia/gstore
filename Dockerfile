@@ -7,7 +7,8 @@ ENV VIRT_URI=http://gstore-virtuoso:3002
 # ENV VIRT_URI=http://localhost:3002
 ENV VIRT_PASS=everyoneknows
 
-COPY ./build.sbt src project /gstore
+COPY ./build.sbt ./swagger.yaml src /gstore/
+COPY ./project /gstore/project
 WORKDIR /gstore
 RUN sbt 'set test in assembly := {}' clean assembly
 
