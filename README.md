@@ -17,37 +17,36 @@ Compatible down to docker-compose version 1.25.0, [see here](https://docs.docker
 # clone repo
 git clone https://github.com/dbpedia/gstore.git
 cd gstore
-# create folder
+# create folder (writable by all services)
 mkdir databus
-# run docker-compose (see .env file for config)
+# run docker-compose 
 docker-compose up --build
 
 ```
 ### dev build and run
 ```
+# clone repo
 git clone https://github.com/dbpedia/gstore.git
 cd gstore
+# create folder (writable by all services)
+mkdir databus
 
-VIRT_HTTPSERVER_SERVERPORT=3003
 VIRT_PASS='everyoneknows'
-LOCAL_GIT_PATH='' # root folder for git
-VIRT_URI=http://localhost:${VIRT_HTTPSERVER_SERVERPORT}
-GSTOREPATH=`pwd`"/databus"
 
 # Virtuoso
 docker run \
     --interactive \
     --tty \
     --env DBA_PASSWORD=$VIRT_PASS \
-    --env VIRT_HTTPSERVER_SERVERPORT=$VIRT_HTTPSERVER_SERVERPORT \
+    --env VIRT_HTTPSERVER_SERVERPORT=3003 \
     --publish 1111:1111 \
-    --publish  $VIRT_HTTPSERVER_SERVERPORT:$VIRT_HTTPSERVER_SERVERPORT \
-    --volume $GSTOREPATH/virtuoso:/database \
+    --publish 3003:3003 \
+    --volume ./databus/virtuoso:/database \
     openlink/virtuoso-opensource-7:latest
     
 # sbt build and run
 sbt clean assembly
-java -DvirtuosoUri=$VIRT_URI/sparql-auth -DvirtuosoPass=$VIRT_PASS -DlocalGitRoot=$GSTOREPATH/git -jar target/scala-2.12/databus-dataid-repo-assembly-0.2.0-SNAPSHOT.jar
+java -DvirtuosoPass=$VIRT_PASS target/scala-2.12/gstore-assembly-0.2.0-SNAPSHOT.jar
 ```
 ## Using
 

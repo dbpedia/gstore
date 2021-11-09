@@ -4,6 +4,9 @@ services:
     build: .
     ports:
       - "3002:3002"
+    volumes:
+      - ./databus/git:/databus/git
+      - ./databus/logs:/databus/logs
     depends_on:
       - "gstore-virtuoso"
   gstore-virtuoso:
@@ -12,11 +15,11 @@ services:
     # note: 
     # these params only work first time to create ini
     # to change after edit virtuoso.ini
-      VIRT_HTTPSERVER_SERVERPORT: "$VIRT_HTTPSERVER_SERVERPORT"
+      VIRT_HTTPSERVER_SERVERPORT: "3003"
       SPARQL_UPDATE: "true"
-      DBA_PASSWORD: "${VIRT_PASS}"
+      DBA_PASSWORD: "everyoneknows"
       DEFAULT_GRAPH: "http://www.example.com/my-graph"
     ports:
-      - "${VIRT_HTTPSERVER_SERVERPORT}:${VIRT_HTTPSERVER_SERVERPORT}"
+      - "3003:3003"
     volumes:
       - ./databus/virtuoso:/database

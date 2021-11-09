@@ -178,7 +178,7 @@ object ApiImpl {
 
       // folder
       val baseDir: Option[Path] = getParam("baseDir").map(Paths.get(_))
-      val localGitPath: Option[Path] = getParam("localGitPath").map(Paths.get(_))
+      val gitLocalDir: Option[Path] = getParam("gitLocalDir").map(Paths.get(_))
 
       val gitApiUser = getParam("gitApiUser")
       val gitApiPass = getParam("gitApiPass")
@@ -191,7 +191,7 @@ object ApiImpl {
       ApiImpl.Config(
 
         baseDir,
-        localGitPath,
+        gitLocalDir,
 
         Uri.parse(virtUri).right.get,
         virtUser,

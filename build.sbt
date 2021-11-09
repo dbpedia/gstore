@@ -4,7 +4,7 @@ import org.dbpedia.sbt.Codegen
 scalaVersion := "2.12.6"
 
 organization := "org.dbpedia"
-name := "databus-dataid-repo"
+name := "gstore"
 version := "0.2.0-SNAPSHOT"
 
 val ScalatraVersion = "2.6.3"

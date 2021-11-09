@@ -18,6 +18,7 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
 
   val config = Config(
     None,
+    None,
 
     Uri.parse(s"http://localhost:${port}/virtu/oso").right.get,
     "u",
