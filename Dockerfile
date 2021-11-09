@@ -3,7 +3,7 @@ FROM hseeberger/scala-sbt:graalvm-ce-21.1.0-java8_1.5.1_2.12.13 AS build
 ENV GSTORE_BASE_DIR=/databus 
 ENV GSTORE_PORT=3002
 ENV GIT_LOCAL_DIR=/databus/git 
-ENV VIRT_URI=http://gstore-virtuoso:3002
+ENV VIRT_URI=http://localhost:3003
 # ENV VIRT_URI=http://localhost:3002
 ENV VIRT_PASS=everyoneknows
 
