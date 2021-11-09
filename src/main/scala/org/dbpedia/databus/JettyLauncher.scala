@@ -1,8 +1,8 @@
 package org.dbpedia.databus // remember this package in the sbt project definition
 
 import java.net.URL
-import java.util.logging.Logger
 
+import ch.qos.logback.classic.{Level, Logger, LoggerContext}
 import org.eclipse.jetty.server.{Handler, Server}
 import org.eclipse.jetty.servlet.DefaultServlet
 import org.eclipse.jetty.webapp.WebAppContext
@@ -10,13 +10,14 @@ import org.scalatra.servlet.ScalatraListener
 import org.eclipse.jetty.server.handler.ContextHandlerCollection
 import org.eclipse.jetty.server.handler.ContextHandler
 import org.eclipse.jetty.server.handler.ResourceHandler
-import org.slf4j.LoggerFactory
 
 import scala.util.Try
 import scala.xml.XML
+import org.slf4j.LoggerFactory
 
 object JettyLauncher { // this is my entry object as specified in sbt project definition
-  val LOGGER = LoggerFactory.getLogger(this.getClass);
+
+  val LOGGER: Logger =  LoggerFactory.getLogger(this.getClass).asInstanceOf[Logger]
 
   def main(args: Array[String]) {
 

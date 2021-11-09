@@ -13,9 +13,25 @@
     </encoder>
   </appender>
 
-  <logger name="org.dbpedia.databus" level="info" />
+  <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>./databus/logs/gstore.log</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <!-- daily rollover -->
+      <fileNamePattern>gstore.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+      <!-- keep 30 days' worth of history capped at 3GB total size -->
+      <maxHistory>30</maxHistory>
+      <totalSizeCap>3GB</totalSizeCap>
+    </rollingPolicy>
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} %-5level %logger{0} - %msg%n</pattern>
+    </encoder>
+  </appender>
 
   <root level="info">
     <appender-ref ref="STDOUT" />
+    <appender-ref ref="FILE" />
   </root>
+
+  <logger name="org.dbpedia.databus" level="info" />
+
 </configuration>
