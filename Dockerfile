@@ -5,6 +5,7 @@ ENV GSTORE_PORT=3002
 ENV GIT_LOCAL_DIR=/databus/git 
 ENV VIRT_URI=http://localhost:3003
 # ENV VIRT_URI=http://localhost:3002
+ENV VIRT_USER=dba
 ENV VIRT_PASS=everyoneknows
 
 COPY ./build.sbt ./swagger.yaml src /gstore/
@@ -40,5 +41,4 @@ CMD echo -e "events {\n\
                 proxy_pass      $VIRT_URI/DAV;\n\
             }\n\
         }\n\
-    }\n" > /etc/nginx/nginx.conf ; nginx
-CMD java -DbaseDir=$GSTORE_BASE_DIR -DgitLocalDir $GIT_LOCAL_DIR -DvirtuosoUri=$VIRT_URI/sparql-auth  -DvirtuosoPass=$VIRT_PASS -jar /app/app.jar
+    }\n" > /etc/nginx/nginx.conf ; nginx ; java -DbaseDir=$GSTORE_BASE_DIR -DgitLocalDir $GIT_LOCAL_DIR -DvirtuosoUri=$VIRT_URI/sparql-auth  -DvirtuosoUser=$VIRT_USER -DvirtuosoPass=$VIRT_PASS -jar /app/app.jar
