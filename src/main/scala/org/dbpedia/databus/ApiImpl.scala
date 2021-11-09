@@ -134,6 +134,7 @@ class ApiImpl(config: Config) extends DatabusApi {
 object ApiImpl {
 
   case class Config(
+                     baseDir: Option[Path],
                      localGitPath: Option[Path],
 
                      virtuosoUri: Uri,
@@ -151,10 +152,11 @@ object ApiImpl {
                    ){
     override def toString: String =
       s"""
+         |baseDir: ${baseDir.get}
+         |localGitPath: ${localGitPath.get}
          |virtuosoUri: $virtuosoUri
          |virtuosoUser: $virtuosoUser
          |virtuosoPass: hidden, length ${virtuosoPass.length}
-         |localGitPath: ${localGitPath.get}
          |""".stripMargin
   }
 
@@ -169,14 +171,13 @@ object ApiImpl {
 
     private def fromMapper(mapper: Mapper): Config = {
       implicit val mp = mapper
-      val port = getParam("port").map(_.toInt)
-
 
       val virtUri = getParam("virtuosoUri").get
       val virtUser = getParam("virtuosoUser").get
       val virtPass = getParam("virtuosoPass").get
 
       // folder
+      val baseDir: Option[Path] = getParam("baseDir").map(Paths.get(_))
       val localGitPath: Option[Path] = getParam("localGitPath").map(Paths.get(_))
 
       val gitApiUser = getParam("gitApiUser")
@@ -189,7 +190,9 @@ object ApiImpl {
 
       ApiImpl.Config(
 
+        baseDir,
         localGitPath,
+
         Uri.parse(virtUri).right.get,
         virtUser,
         virtPass,

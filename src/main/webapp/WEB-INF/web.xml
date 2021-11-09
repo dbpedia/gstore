@@ -15,22 +15,13 @@
         <listener-class>org.scalatra.servlet.ScalatraListener</listener-class>
     </listener>
 
-
-    <!--    Port for starting the gstore api -->
-    <context-param>
-        <param-name>port</param-name>
-        <param-value>3003</param-value>
-    </context-param>
-
-
     <!-- Virtuoso SPARQL Endpoint -->
     <context-param>
         <param-name>virtuosoUri</param-name>
-        <param-value>http://gstore-virtuoso:3003/sparql-auth</param-value>
-        <!--
         <param-value>http://localhost:3003/sparql-auth</param-value>
+        <!--
+        <param-value>http://gstore-virtuoso:3003/sparql-auth</param-value>
         -->
-
     </context-param>
     <context-param>
         <param-name>virtuosoUser</param-name>
@@ -41,11 +32,16 @@
         <param-value>everyoneknows</param-value>
     </context-param>
 
+    <context-param>
+        <param-name>baseDir</param-name>
+        <param-value>./databus</param-value>
+    </context-param>
+
     <!-- GIT -->
     <!-- Comment this out to enable remote git with gitlab -->
     <context-param>
         <param-name>localGitPath</param-name>
-        <param-value>/databus/git/</param-value>
+        <param-value>./databus/git/</param-value>
     </context-param>
 
     <!--  Comment this in to enable remote git with gitlab
