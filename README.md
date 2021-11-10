@@ -70,7 +70,7 @@ VIRT_PASS='everyoneknows'
 
 # Virtuoso
 docker run \
-    -d
+    -d\ 
     --interactive \
     --tty \
     --env DBA_PASSWORD=$VIRT_PASS \
