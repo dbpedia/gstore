@@ -9,8 +9,7 @@ The G is an ORcronym for (git|graph).
 ## Overview
 TODO architecture diagram showing the three components, maybe include a centralized and a de-centralized archticture view
 
-## Running
-### docker-compose 
+## Running with docker-compose 
 Compatible down to docker-compose version 1.25.0, [see here](https://docs.docker.com/compose/environment-variables/) for other ways to configure docker-compose >1.25.0
 
 ```
@@ -23,7 +22,22 @@ mkdir databus
 docker-compose up --build
 
 ```
-### dev build and run
+
+## Using
+
+After the containers are up, the following services will be available:
+
+* GIT File Browser http://localhost:3002/git
+* Virtuoso SPARQL http://localhost:3003/sparql
+* GSTORE http://localhost:3002/ with 
+    * GET /file/read
+    * POST /file/delete
+    * POST /file/save
+    * POST /dataid/tractate
+    * POST /shacl/validate
+
+
+## Dev build (running Virtuoso and Gstore scala code separately)
 ```
 # clone repo
 git clone https://github.com/dbpedia/gstore.git
@@ -33,27 +47,23 @@ mkdir databus
 
 VIRT_PASS='everyoneknows'
 
+
 # Virtuoso
 docker run \
+    -d
     --interactive \
     --tty \
     --env DBA_PASSWORD=$VIRT_PASS \
     --env VIRT_HTTPSERVER_SERVERPORT=3003 \
     --publish 1111:1111 \
     --publish 3003:3003 \
-    --volume ./databus/virtuoso:/database \
+    --volume `pwd`/databus/virtuoso:/database \
     openlink/virtuoso-opensource-7:latest
     
 # sbt build and run
 sbt clean assembly
-java -DvirtuosoPass=$VIRT_PASS target/scala-2.12/gstore-assembly-0.2.0-SNAPSHOT.jar
+java -jar -DvirtuosoPass=$VIRT_PASS target/scala-2.12/gstore-assembly-0.2.0-SNAPSHOT.jar
 ```
-## Using
-
-After the containers are up, the g-store is available on: http://localhost:8088/;
-virtuoso is on: http://localhost:8088/sparql. You can also view file structure at http://localhost:8088/git.
-
-
 
 ## TODO explain local/remote virtuoso
 Current version supports two configurations:

@@ -40,7 +40,7 @@
     <!-- GIT -->
     <!-- Comment this out to enable remote git with gitlab -->
     <context-param>
-        <param-name>localGitPath</param-name>
+        <param-name>gitLocalDir</param-name>
         <param-value>./databus/git/</param-value>
     </context-param>
 

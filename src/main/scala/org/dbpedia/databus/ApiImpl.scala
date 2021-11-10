@@ -116,7 +116,7 @@ class ApiImpl(config: Config) extends DatabusApi {
 
   private def initGitClient(config: Config): GitClient = {
     import config._
-    localGitPath.map(new LocalGitClient(_))
+    gitLocalDir.map(new LocalGitClient(_))
       .getOrElse({
         val scheme = gitApiScheme.getOrElse("https")
         val cl = for {
@@ -135,7 +135,7 @@ object ApiImpl {
 
   case class Config(
                      baseDir: Option[Path],
-                     localGitPath: Option[Path],
+                     gitLocalDir: Option[Path],
 
                      virtuosoUri: Uri,
                      virtuosoUser: String,
@@ -152,8 +152,8 @@ object ApiImpl {
                    ){
     override def toString: String =
       s"""
-         |baseDir: ${baseDir.get}
-         |localGitPath: ${localGitPath.get}
+         |baseDir: ${baseDir}
+         |gitLocalDir: ${gitLocalDir}
          |virtuosoUri: $virtuosoUri
          |virtuosoUser: $virtuosoUser
          |virtuosoPass: hidden, length ${virtuosoPass.length}

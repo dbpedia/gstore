@@ -53,7 +53,7 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
     contextScalatra.addServlet(classOf[DefaultServlet], "/")
 
 
-    val fileListHandler: Option[ContextHandler] = config.localGitPath
+    val fileListHandler: Option[ContextHandler] = config.gitLocalDir
       .flatMap(p => Try {
         val resourceHandler = new ResourceHandler
         resourceHandler.setResourceBase(p.toAbsolutePath.toString)
