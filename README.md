@@ -36,6 +36,26 @@ After the containers are up, the following services will be available:
     * POST /dataid/tractate
     * POST /shacl/validate
 
+### Example: Saving a file
+
+```
+curl -X 'POST'   'http://localhost:3002/file/save?repo=kurzum&path=example.jsonld'   -H 'accept: application/json'   -H 'Content-Type: application/ld+json'   -d '{
+  "@context": "http://schema.org/",
+  "@type": "Person",
+  "name": "Jane Doe",
+  "jobTitle": "Professor",
+  "telephone": "(425) 123-4567",
+  "url": "http://www.janedoe.com"
+}'
+```
+
+
+
+### Example 1 Saving a fil
+### Example 1 Saving a fil
+### Example 1 Saving a fil
+
+
 
 ## Dev build (running Virtuoso and Gstore scala code separately)
 ```
