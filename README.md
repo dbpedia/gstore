@@ -48,10 +48,11 @@ curl -X 'POST'   'http://localhost:3002/file/save?repo=kurzum&path=example.jsonl
   "url": "http://www.janedoe.com"
 }'
 ```
+### Example: Query over saved file
+```
+curl --data-urlencode query="SELECT * {GRAPH </kurzum/example.jsonld> {?s ?p ?o }}" http://localhost:3003/sparql
+```
 
-
-
-### Example 1 Saving a fil
 ### Example 1 Saving a fil
 ### Example 1 Saving a fil
 
@@ -70,7 +71,6 @@ VIRT_PASS='everyoneknows'
 
 # Virtuoso
 docker run \
-    -d\ 
     --interactive \
     --tty \
     --env DBA_PASSWORD=$VIRT_PASS \

@@ -1,19 +1,19 @@
 FROM hseeberger/scala-sbt:graalvm-ce-21.1.0-java8_1.5.1_2.12.13 AS build
 
-ENV GSTORE_BASE_DIR=/databus 
-ENV GSTORE_PORT=3002
-ENV GIT_LOCAL_DIR=/databus/git 
-ENV VIRT_URI=http://localhost:3003
-# ENV VIRT_URI=http://localhost:3002
-ENV VIRT_USER=dba
-ENV VIRT_PASS=everyoneknows
-
 COPY ./build.sbt ./swagger.yaml src /gstore/
 COPY ./project /gstore/project
 WORKDIR /gstore
 RUN sbt 'set test in assembly := {}' clean assembly
 
 FROM openjdk:8-alpine
+
+ENV GSTORE_BASE_DIR=/databus 
+ENV GSTORE_PORT=3002
+ENV GIT_LOCAL_DIR=/databus/git 
+ENV VIRT_URI="http://localhost:3003"
+# ENV VIRT_URI=http://localhost:3002
+ENV VIRT_USER=dba
+ENV VIRT_PASS=everyoneknows
 
 RUN apk update
 RUN apk upgrade
@@ -35,10 +35,10 @@ CMD echo -e "events {\n\
                 proxy_pass      http://127.0.0.1:8080;\n\
             }\n\
             location /sparql {\n\
-                proxy_pass      $VIRT_URI/sparql;\n\
+                proxy_pass      ${VIRT_URI}/sparql;\n\
             }\n\
             location /DAV {\n\
-                proxy_pass      $VIRT_URI/DAV;\n\
+                proxy_pass      ${VIRT_URI}/DAV;\n\
             }\n\
         }\n\
-    }\n" > /etc/nginx/nginx.conf ; nginx ; java -DbaseDir=$GSTORE_BASE_DIR -DgitLocalDir $GIT_LOCAL_DIR -DvirtuosoUri=$VIRT_URI/sparql-auth  -DvirtuosoUser=$VIRT_USER -DvirtuosoPass=$VIRT_PASS -jar /app/app.jar
+    }\n" > /etc/nginx/nginx.conf ; nginx ; java -DbaseDir=$GSTORE_BASE_DIR -DgitLocalDir=$GIT_LOCAL_DIR -DvirtuosoUri=$VIRT_URI/sparql-auth  -DvirtuosoUser=$VIRT_USER -DvirtuosoPass=$VIRT_PASS -jar /app/app.jar
