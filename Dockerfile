@@ -1,8 +1,7 @@
 FROM hseeberger/scala-sbt:graalvm-ce-21.1.0-java8_1.5.1_2.12.13 AS build
 
-COPY ./build.sbt ./swagger.yaml src /gstore/
-COPY ./project /gstore/project
-WORKDIR /gstore
+COPY . /databus   
+WORKDIR /databus   
 RUN sbt 'set test in assembly := {}' clean assembly
 
 FROM openjdk:8-alpine
@@ -20,7 +19,10 @@ RUN apk upgrade
 RUN apk add tar outils-sha256 gawk bash curl nginx
 RUN mkdir /run/nginx
 
-COPY --from=build /gstore/target/scala-2.12/gstore-assembly-0.2.0-SNAPSHOT.jar /app/app.jar
+#COPY --from=build /gstore/target/scala-2.12/gstore-assembly-0.2.0-SNAPSHOT.jar /app/app.jar
+COPY --from=build /databus/target/scala-2.12/gstore-assembly-0.2.0-SNAPSHOT.jar /app/app.jar
+
+
 
 SHELL ["/bin/bash", "-c"]
 CMD echo -e "events {\n\
