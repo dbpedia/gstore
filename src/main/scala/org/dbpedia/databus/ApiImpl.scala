@@ -1,27 +1,22 @@
 package org.dbpedia.databus
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+import java.io.ByteArrayInputStream
 import java.nio.file.{Path, Paths}
-import java.util.function.Consumer
 
 import javax.servlet.ServletContext
 import javax.servlet.http.HttpServletRequest
-import org.apache.jena.graph.Graph
-import org.apache.jena.rdf.model.{Model, ModelFactory}
-import org.apache.jena.riot.{Lang, RDFDataMgr}
-import org.apache.jena.shacl.validation.ReportEntry
-import org.apache.jena.shacl.{ShaclValidator, Shapes}
-import org.apache.jena.sparql.graph.GraphFactory
+
+import org.apache.jena.rdf.model.ModelFactory
+import org.apache.jena.riot.RDFDataMgr
 import org.dbpedia.databus.ApiImpl.Config
 import org.dbpedia.databus.RdfConversions.{generateGraphId, mapContentType, mapFilenameToContentType, readModel}
 import org.dbpedia.databus.swagger.api.DatabusApi
 import org.dbpedia.databus.swagger.model.ApiResponse
-import org.eclipse.jetty.xml.XmlConfiguration
-import sttp.client3._
 import sttp.model.Uri
 
-import scala.util.{Failure, Success, Try}
-import scala.xml.{Document, Node}
+import scala.util.Try
+import scala.xml.Node
+import collection.JavaConverters._
 
 
 class ApiImpl(config: Config) extends DatabusApi {
@@ -29,8 +24,13 @@ class ApiImpl(config: Config) extends DatabusApi {
   import ApiImpl._
   import config._
 
-  private lazy val backend = new DigestAuthenticationBackend(HttpURLConnectionBackend())
   private val client: GitClient = initGitClient(config)
+  private lazy val writeVirtUri = Uri.unsafeParse(s"$virtuosoUri/sparql-auth")
+  private lazy val sparqlClient: SparqlClient =
+    if (virtuosoOverHttp)
+      new HttpVirtClient(writeVirtUri, virtuosoUser, virtuosoPass)
+    else
+      new JdbcCLient(writeVirtUri.host, virtuosoJdbcPort, virtuosoUser, virtuosoPass)
 
   override def dataidSubgraph(body: String)(request: HttpServletRequest): Try[String] =
     readModel(body.getBytes)
@@ -48,24 +48,14 @@ class ApiImpl(config: Config) extends DatabusApi {
                         body: String)
                        (request: HttpServletRequest): Try[ApiResponse] = {
     val data = body.getBytes
-    val pa = gitlabPath(path)
+    val pa = gitPath(path)
     saveFiles(username, Map(
       pa -> data
     ))(request)
-      .flatMap(a => {
-        if (saveToVirtuoso(
-          backend,
-          data,
-          path,
-          generateGraphId(username, pa),
-          virtuosoUri,
-          virtuosoUser,
-          virtuosoPass)) {
-          Success(a)
-        } else {
-          Failure(new RuntimeException("Saving to virtuoso did not work."))
-        }
-      })
+      .flatMap(a =>
+        saveToVirtuoso(data, path, username)
+          .map(_ => a)
+      )
   }
 
   override def shaclValidate(dataid: String, shacl: String)(request: HttpServletRequest): Try[ApiResponse] =
@@ -75,7 +65,7 @@ class ApiImpl(config: Config) extends DatabusApi {
     ).map(_ => ApiResponse(Some(200), None, None))
 
   private def readFile(username: String, path: String)(request: HttpServletRequest): Try[String] = {
-    val p = gitlabPath(path)
+    val p = gitPath(path)
     client.readFile(username, p)
       .map(
         RdfConversions.processFile(
@@ -85,13 +75,32 @@ class ApiImpl(config: Config) extends DatabusApi {
       .map(new String(_))
   }
 
-  private def gitlabPath(path: String): String = {
+  private def gitPath(path: String): String = {
     val pa = Paths.get(path)
     if (pa.isAbsolute) {
       Paths.get("/").relativize(pa).toString
     } else {
       path
     }
+  }
+
+  private[databus] def saveToVirtuoso(data: Array[Byte], path: String, repo: String) = {
+    val model = ModelFactory.createDefaultModel()
+    val dataStream = new ByteArrayInputStream(data)
+    val lang = mapContentType(mapFilenameToContentType(path))
+    val graphId = generateGraphId(repo, path)
+    RDFDataMgr.read(model, dataStream, lang)
+
+    val rqsts = model.getGraph.find().asScala
+      .grouped(1000)
+      .map(tpls => RdfConversions.makeInsertSparqlQuery(tpls, graphId))
+      .toSeq
+    val fRs = Seq(RdfConversions.dropGraphSparqlQuery(graphId)) ++ rqsts
+
+    sparqlClient.executeUpdates(
+      RdfConversions.clearGraphSparqlQuery(graphId),
+      fRs:_*
+    )
   }
 
   private def saveFileToGit(username: String, path: String, data: Array[Byte])(request: HttpServletRequest): Try[ApiResponse] =
@@ -106,7 +115,7 @@ class ApiImpl(config: Config) extends DatabusApi {
   }
 
   private def deleteFileFromGit(username: String, path: String)(request: HttpServletRequest): Try[ApiResponse] = {
-    val p = gitlabPath(path)
+    val p = gitPath(path)
     deleteFiles(username, Seq(p))(request)
   }
 
@@ -140,6 +149,9 @@ object ApiImpl {
                      virtuosoUri: Uri,
                      virtuosoUser: String,
                      virtuosoPass: String,
+                     virtuosoJdbcPort: Int,
+                     virtuosoOverHttp: Boolean,
+
 
                      gitApiUser: Option[String],
                      gitApiPass: Option[String],
@@ -149,17 +161,7 @@ object ApiImpl {
                      gitApiPort: Option[Int]
 
 
-                   ){
-    override def toString: String =
-      s"""
-         |baseDir: ${baseDir}
-         |gitLocalDir: ${gitLocalDir}
-         |virtuosoUri: $virtuosoUri
-         |virtuosoUser: $virtuosoUser
-         |virtuosoPass: hidden, length ${virtuosoPass.length}
-         |""".stripMargin
-  }
-
+                   )
 
   object Config {
 
@@ -167,17 +169,16 @@ object ApiImpl {
     def fromWebXml(xml: Node): Config = fromMapper(xml)
     def fromServletContext(ctx: ServletContext): Config = fromMapper(ctx)
 
-
-
     private def fromMapper(mapper: Mapper): Config = {
       implicit val mp = mapper
 
       val virtUri = getParam("virtuosoUri").get
+      val vUri = if (virtUri.endsWith("/")) virtUri.dropRight(1) else virtUri
       val virtUser = getParam("virtuosoUser").get
       val virtPass = getParam("virtuosoPass").get
+      val virtuosoJdbcPort = getParam("virtuosoJdbcPort").map(_.toInt).get
+      val virtuosoOverHttp = getParam("virtuosoOverHttp").map(_.toBoolean).get
 
-      // folder
-      val baseDir: Option[Path] = getParam("baseDir").map(Paths.get(_))
       val gitLocalDir: Option[Path] = getParam("gitLocalDir").map(Paths.get(_))
 
       val gitApiUser = getParam("gitApiUser")
@@ -189,13 +190,12 @@ object ApiImpl {
       val gitApiPort = getParam("gitPort").map(_.toInt)
 
       ApiImpl.Config(
-
-        baseDir,
         gitLocalDir,
-
-        Uri.parse(virtUri).right.get,
+        Uri.parse(vUri).right.get,
         virtUser,
         virtPass,
+        virtuosoJdbcPort,
+        virtuosoOverHttp
         gitApiUser,
         gitApiPass,
         // TODO isn't URI enough here
@@ -230,176 +230,6 @@ object ApiImpl {
         .map(_.trim)
         .filter(_.nonEmpty)
         .orElse(Option(mapper.getKeyValue(name)))
-
-  }
-
-  private[databus] def virtuosoRequest(request: String, virtuosoUri: Uri, un: String, pass: String) =
-    basicRequest
-      .post(virtuosoUri)
-      .body("query" -> request)
-      .auth.digest(un, pass)
-
-  private[databus] def saveToVirtuoso(backend: SttpBackend[Identity, Any],
-                                      fileData: Array[Byte],
-                                      path: String,
-                                      graphId: String,
-                                      viruosoUri: Uri,
-                                      virtuosoUsername: String,
-                                      virtuosoPass: String): Boolean = {
-    val model = ModelFactory.createDefaultModel()
-    val dataStream = new ByteArrayInputStream(fileData)
-    val lang = mapContentType(mapFilenameToContentType(path))
-    RDFDataMgr.read(model, dataStream, lang)
-
-    val dropNinsertRequest = RdfConversions.dropGraphSparqlQuery(graphId) + ";\n" + RdfConversions.makeInsertSparqlQuery(model.getGraph, graphId)
-    val dropAndInsert = virtuosoRequest(
-      dropNinsertRequest,
-      viruosoUri,
-      virtuosoUsername,
-      virtuosoPass
-    )
-
-    backend.send(dropAndInsert)
-      .isSuccess
-  }
-
-}
-
-
-object RdfConversions {
-
-  def readModel(file: Array[Byte]) = Try {
-    val model = ModelFactory.createDefaultModel()
-    val dataStream = new ByteArrayInputStream(file)
-    RDFDataMgr.read(model, dataStream, Lang.JSONLD)
-    model
-  }
-
-  def validateWithShacl(file: Array[Byte], shaclData: Array[Byte]): Try[Model] = {
-    val shaclGra = GraphFactory.createDefaultGraph()
-    val shaDataStream = new ByteArrayInputStream(shaclData)
-    RDFDataMgr.read(shaclGra, shaDataStream, Lang.TTL)
-    readModel(file)
-      .flatMap(model => Try {
-        val shape = Shapes.parse(shaclGra)
-        val report = ShaclValidator.get().validate(shape, model.getGraph)
-        if (report.conforms()) {
-          model
-        } else {
-          val msg = new StringBuilder
-          report.getEntries.forEach(new Consumer[ReportEntry] {
-            override def accept(t: ReportEntry): Unit =
-              msg.append(t.message())
-          })
-          throw new RuntimeException(msg.toString())
-        }
-      })
-  }
-
-  def validateWithShacl(file: Array[Byte], shaclUri: String): Try[Model] = {
-    val graph = RDFDataMgr.loadGraph(shaclUri)
-    val model = ModelFactory.createDefaultModel()
-    val dataStream = new ByteArrayInputStream(file)
-    RDFDataMgr.read(model, dataStream, Lang.JSONLD)
-    val shape = Shapes.parse(graph)
-    val report = ShaclValidator.get().validate(shape, model.getGraph)
-    if (report.conforms()) {
-      Success(model)
-    } else {
-      val msg = new StringBuilder
-      report.getEntries.forEach(new Consumer[ReportEntry] {
-        override def accept(t: ReportEntry): Unit =
-          msg.append(t.message())
-      })
-      Failure(new RuntimeException(msg.toString()))
-    }
-  }
-
-  def processFile(path: String, fileData: Array[Byte], outpuLang: Option[Lang] = None): Array[Byte] = {
-    val model = ModelFactory.createDefaultModel()
-    val dataStream = new ByteArrayInputStream(fileData)
-    val lang = mapContentType(mapFilenameToContentType(path))
-    RDFDataMgr.read(model, dataStream, lang)
-    val str = new ByteArrayOutputStream()
-    RDFDataMgr.write(str, model, outpuLang.getOrElse(Lang.TURTLE))
-    str.toByteArray
-  }
-
-  def mapFilenameToContentType(fn: String): String =
-    fn.split('.').last match {
-      case "ttl" => "text/turtle"
-      case "rdf" => "application/rdf+xml"
-      case "nt" => "application/n-triples"
-      case "jsonld" => "application/ld+json"
-      case "trig" => "text/trig"
-      case "nq" => "application/n-quads"
-      case "trix" => "application/trix+xml"
-      case "trdf" => "application/rdf+thrift"
-      case _ => "text/turtle"
-    }
-
-  def mapContentType(cn: String): Lang =
-    cn match {
-      case "text/turtle" => Lang.TURTLE
-      case "application/rdf+xml" => Lang.RDFXML
-      case "application/n-triples" => Lang.NTRIPLES
-      case "application/ld+json" => Lang.JSONLD
-      case "text/trig" => Lang.TRIG
-      case "application/n-quads" => Lang.NQUADS
-      case "application/trix+xml" => Lang.TRIX
-      case "application/rdf+thrift" => Lang.RDFTHRIFT
-      case _ => Lang.TURTLE
-    }
-
-  import org.apache.jena.graph.Triple
-
-  def generateGraphId(user: String, path: String): String =
-    s"/$user/$path"
-
-  def dropGraphSparqlQuery(graphId: String) =
-    s"DROP SILENT GRAPH <$graphId>"
-
-  def makeInsertSparqlQuery(graph: Graph, graphId: String): String = {
-    val bld = StringBuilder.newBuilder
-    bld.append("INSERT IN GRAPH ")
-    wrapWithAngleBracketsQuote(bld, graphId)
-    bld.append(" {\n")
-    generateQueryTriples(bld, graph)
-    bld.append("}").toString()
-  }
-
-  def generateQueryTriples(bld: StringBuilder, graph: Graph): StringBuilder = {
-    graph.find().forEach(new Consumer[Triple] {
-      override def accept(t: Triple): Unit = {
-        wrapWithAngleBracketsQuote(bld, t.getSubject.toString())
-        bld.append(" ")
-        wrapWithAngleBracketsQuote(bld, t.getPredicate.toString())
-        bld.append(" ")
-        if (t.getObject.isLiteral) {
-          bld.append("\"")
-          bld.append(escapeChars(t.getObject.getLiteral.getLexicalForm))
-          bld.append("\"")
-          bld.append("^^")
-          wrapWithAngleBracketsQuote(bld, t.getObject.getLiteralDatatypeURI)
-        } else {
-          wrapWithAngleBracketsQuote(bld, escapeChars(t.getObject.toString()))
-        }
-        bld.append(" ")
-        bld.append(".")
-        bld.append("\n")
-      }
-    })
-    bld
-  }
-
-  def escapeChars(s: String) = s
-    .replaceAllLiterally("\"", "\\\"")
-    .replaceAllLiterally("\n", "\\n")
-
-  def wrapWithAngleBracketsQuote(bld: StringBuilder, s: String) = {
-    bld.append("<")
-    bld.append(s)
-    bld.append(">")
   }
 
 }

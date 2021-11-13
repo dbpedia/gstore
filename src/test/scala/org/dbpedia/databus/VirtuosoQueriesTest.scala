@@ -10,6 +10,7 @@ import sttp.client3.{DigestAuthenticationBackend, HttpURLConnectionBackend}
 import sttp.model.Uri
 
 class VirtuosoQueriesTest extends FlatSpec with Matchers {
+  import collection.JavaConverters._
 
   "Generator" should "work" in {
     val file = "version.jsonld"
@@ -18,7 +19,7 @@ class VirtuosoQueriesTest extends FlatSpec with Matchers {
     val dataStream = new ByteArrayInputStream(bytes)
     RDFDataMgr.read(model, dataStream, Lang.JSONLD)
 
-    val bld = RdfConversions.makeInsertSparqlQuery(model.getGraph, "http://randomGraphId")
+    val bld = RdfConversions.makeInsertSparqlQuery(model.getGraph.find().asScala.toSeq, "http://randomGraphId")
 
     println(bld.toString)
     bld.toString()
@@ -31,26 +32,10 @@ class VirtuosoQueriesTest extends FlatSpec with Matchers {
     val dataStream = new ByteArrayInputStream(bytes)
     RDFDataMgr.read(model, dataStream, Lang.JSONLD)
 
-    val bld = RdfConversions.makeInsertSparqlQuery(model.getGraph, "http://randomGraphId")
+    val bld = RdfConversions.makeInsertSparqlQuery(model.getGraph.find().asScala.toSeq, "http://randomGraphId")
 
     println(bld.toString)
     bld.toString()
-  }
-
-  ignore should "save to virtuoso" in {
-    val backend = new DigestAuthenticationBackend(HttpURLConnectionBackend())
-    val file = "version.jsonld"
-    val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
-
-    val re = ApiImpl.saveToVirtuoso(backend,
-      bytes,
-      "/sdc.jsonld",
-      "http://fromthecode",
-      Uri.parse("https://dbpedia-generic.tib.eu/sparql-auth/").right.get,
-      "tester",
-      "test")
-
-    re should equal(true)
   }
 
 
