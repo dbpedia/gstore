@@ -30,22 +30,4 @@ RUN chmod +x /deploy.sh
 RUN chmod +x /generate-backup-meta.sh
 
 SHELL ["/bin/bash", "-c"]
-CMD echo -e "events {\n\
-      worker_connections  4096;\n\
-    }\n\
-    http {\n\
-        resolver 127.0.0.11 ipv6=off;\n\
-        server { # simple reverse-proxy\n\
-            listen       0.0.0.0:80;\n\
-            add_header Access-Control-Allow-Origin *;\n\
-            location / {\n\
-                proxy_pass      http://127.0.0.1:8080;\n\
-            }\n\
-            location /sparql {\n\
-                proxy_pass      $VIRT_URI/sparql;\n\
-            }\n\
-            location /DAV {\n\
-                proxy_pass      $VIRT_URI/DAV;\n\
-            }\n\
-        }\n\
-    }\n" > /etc/nginx/nginx.conf ; nginx ; java -DvirtuosoUri=$VIRT_URI/sparql-auth -DvirtuosoUser=$VIRT_USER -DvirtuosoPass=$VIRT_PASS -DlocalGitRoot=$GIT_ROOT -jar /app/app.jar
+CMD java -DvirtuosoUri=$VIRT_URI -DvirtuosoUser=$VIRT_USER -DvirtuosoPass=$VIRT_PASS -DlocalGitRoot=$GIT_ROOT -jar /app/app.jar

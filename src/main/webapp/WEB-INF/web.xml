@@ -42,7 +42,11 @@
     </context-param>
     <context-param>
         <param-name>virtuosoUri</param-name>
-        <param-value>http://virtuoso:8890/sparql-auth</param-value>
+        <param-value>http://virtuoso:8890</param-value>
+    </context-param>
+    <context-param>
+        <param-name>virtuosoJdbcPort</param-name>
+        <param-value>1111</param-value>
     </context-param>
     <context-param>
         <param-name>virtuosoUser</param-name>
@@ -51,5 +55,9 @@
     <context-param>
         <param-name>virtuosoPass</param-name>
         <param-value>everyoneknows</param-value>
+    </context-param>
+    <context-param>
+        <param-name>virtuosoOverHttp</param-name>
+        <param-value>false</param-value>
     </context-param>
 </web-app>

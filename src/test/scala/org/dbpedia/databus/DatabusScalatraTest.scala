@@ -10,7 +10,6 @@ import org.dbpedia.databus.ApiImpl.Config
 import org.dbpedia.databus.swagger.DatabusSwagger
 import org.dbpedia.databus.swagger.api.DefaultApi
 import org.scalatra.test.scalatest.ScalatraFlatSpec
-import sttp.model.Uri
 
 class DatabusScalatraTest extends ScalatraFlatSpec {
 
@@ -23,9 +22,11 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
     Some("localhost"),
     Some(port),
     None,
-    Uri.parse(s"http://localhost:${port}/virtu/oso").right.get,
+    s"http://localhost:${port}/virtu/oso",
     "u",
-    "p")
+    "p",
+    1111,
+    true)
 
   implicit val sw = new DatabusSwagger
   implicit val impl = new ApiImpl(config)
