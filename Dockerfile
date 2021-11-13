@@ -13,10 +13,9 @@ ENV GIT_LOCAL_DIR=""
 
 RUN apk update
 RUN apk upgrade
-RUN apk add tar outils-sha256 gawk bash curl nginx
-RUN mkdir /run/nginx
+RUN apk add bash
 
-COPY --from=build /databus/target/scala-2.12/gstore-assembly-0.2.0-SNAPSHOT.jar /app/app.jar
+COPY --from=build /databus/target/scala-2.12/databus-dataid-repo-assembly-0.2.0-SNAPSHOT.jar /app/app.jar
 
 SHELL ["/bin/bash", "-c"]
 CMD java -DvirtuosoUri=$VIRT_URI -DvirtuosoUser=$VIRT_USER -DvirtuosoPass=$VIRT_PASS -DlocalGitRoot=$GIT_LOCAL_DIR -jar /app/app.jar
