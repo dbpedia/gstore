@@ -10,7 +10,6 @@ ENV GSTORE_BASE_DIR=/databus
 ENV GSTORE_PORT=3002
 ENV GIT_LOCAL_DIR=/databus/git 
 ENV VIRT_URI="http://localhost:3003"
-# ENV VIRT_URI=http://localhost:3002
 ENV VIRT_USER=dba
 ENV VIRT_PASS=everyoneknows
 

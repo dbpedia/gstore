@@ -1,6 +1,8 @@
 version: "3.0"
 services:
   gstore:
+    environment:
+      VIRT_URI: "http://gstore-virtuoso:8890"
     build: .
     ports:
       - "3002:3002"
@@ -15,11 +17,10 @@ services:
     # note: 
     # these params only work first time to create ini
     # to change after edit virtuoso.ini
-      VIRT_HTTPSERVER_SERVERPORT: "3003"
       SPARQL_UPDATE: "true"
       DBA_PASSWORD: "everyoneknows"
       DEFAULT_GRAPH: "http://www.example.com/my-graph"
     ports:
-      - "3003:3003"
+      - "3003:8890"
     volumes:
       - ./databus/virtuoso:/database
