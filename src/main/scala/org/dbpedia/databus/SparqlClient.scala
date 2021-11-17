@@ -19,7 +19,7 @@ import scala.util.{Failure, Success, Try}
 
 trait SparqlClient {
 
-  def executeUpdates(q1: String, qX: String*): Try[Unit]
+  def executeUpdates[T](q1: String, qX: String*)(execInTransaction: => Try[T]): Try[T]
 
 }
 
@@ -29,7 +29,7 @@ class HttpVirtClient(virtUri: Uri, virtUser: String, virtPass: String) extends S
 
   private lazy val backend = new DigestAuthenticationBackend(HttpURLConnectionBackend())
 
-  def executeUpdates(q: String, qX: String*): Try[Unit] = {
+  def executeUpdates[T](q: String, qX: String*)(trans: => Try[T]): Try[T] = {
     val fq = qX.foldLeft(q)((l, r) => l + ";\n" + r)
     val vr = virtuosoRequest(
       fq,
@@ -37,12 +37,13 @@ class HttpVirtClient(virtUri: Uri, virtUser: String, virtPass: String) extends S
       virtUser,
       virtPass
     )
-    backend.send(vr).body match {
+    val re = backend.send(vr).body match {
       case Left(s) =>
         Failure(new RuntimeException(s))
       case Right(s) =>
         Success(s)
     }
+    re.flatMap(_ => trans)
   }
 
 }
@@ -70,19 +71,26 @@ class JdbcCLient(host: String, port: Int, user: String, pass: String) extends Sp
     cpds
   }
 
-  override def executeUpdates(q1: String, qX: String*): Try[Unit] = {
+  def executeUpdates[T](q: String, qX: String*)(trans: => Try[T]): Try[T] = {
     val conn = ds.getConnection
-    val upds = Seq(q1) ++ qX
+    val upds = Seq(q) ++ qX
     Try {
       val stms = upds.map(s => conn.prepareStatement("sparql\n" + s))
       conn.setAutoCommit(false)
       stms.foreach(s => s.executeUpdate())
-      conn.commit()
-    }.recoverWith {
-      case err =>
-        Try(conn.rollback())
-          .flatMap(_ => Failure(err))
+
+
     }
+      .flatMap(_ => trans)
+      .map(r => {
+        conn.commit()
+        r
+      })
+      .recoverWith {
+        case err =>
+          Try(conn.rollback())
+            .flatMap(_ => Failure(err))
+      }
   }
 
 }

@@ -49,13 +49,9 @@ class ApiImpl(config: Config) extends DatabusApi {
                        (request: HttpServletRequest): Try[ApiResponse] = {
     val data = body.getBytes
     val pa = gitPath(path)
-    saveFiles(username, Map(
+    saveToVirtuoso(data, path, username)(saveFiles(username, Map(
       pa -> data
-    ))(request)
-      .flatMap(a =>
-        saveToVirtuoso(data, path, username)
-          .map(_ => a)
-      )
+    )))
   }
 
   override def shaclValidate(dataid: String, shacl: String)(request: HttpServletRequest): Try[ApiResponse] =
@@ -84,7 +80,7 @@ class ApiImpl(config: Config) extends DatabusApi {
     }
   }
 
-  private[databus] def saveToVirtuoso(data: Array[Byte], path: String, repo: String) = {
+  private[databus] def saveToVirtuoso[T](data: Array[Byte], path: String, repo: String)(execInTransaction: => Try[T]): Try[T] = {
     val model = ModelFactory.createDefaultModel()
     val dataStream = new ByteArrayInputStream(data)
     val lang = mapContentType(mapFilenameToContentType(path))
@@ -99,14 +95,14 @@ class ApiImpl(config: Config) extends DatabusApi {
 
     sparqlClient.executeUpdates(
       RdfConversions.clearGraphSparqlQuery(graphId),
-      fRs:_*
-    )
+      fRs: _*
+    )(execInTransaction)
   }
 
-  private def saveFileToGit(username: String, path: String, data: Array[Byte])(request: HttpServletRequest): Try[ApiResponse] =
-    saveFiles(username, Map(path -> data))(request)
+  private def saveFileToGit(username: String, path: String, data: Array[Byte]): Try[ApiResponse] =
+    saveFiles(username, Map(path -> data))
 
-  private def saveFiles(username: String, fullFilenamesAndData: Map[String, Array[Byte]])(request: HttpServletRequest): Try[ApiResponse] = {
+  private def saveFiles(username: String, fullFilenamesAndData: Map[String, Array[Byte]]): Try[ApiResponse] = {
     if (!client.projectExists(username)) {
       client.createProject(username)
     }
@@ -166,7 +162,9 @@ object ApiImpl {
   object Config {
 
     def default: Config = fromMapper(SystemMapper)
+
     def fromWebXml(xml: Node): Config = fromMapper(xml)
+
     def fromServletContext(ctx: ServletContext): Config = fromMapper(ctx)
 
     private def fromMapper(mapper: Mapper): Config = {
