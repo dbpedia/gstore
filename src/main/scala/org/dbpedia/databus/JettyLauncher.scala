@@ -53,7 +53,7 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
   def proxyContext(parent: HandlerContainer, virtUri: String) = {
     val proxyContext = new ServletContextHandler(parent, "/sparql", ServletContextHandler.SESSIONS)
     val handler = new ServletHandler
-    val holder = handler.addServletWithMapping(classOf[ProxyServlet.Transparent], "/")
+    val holder = handler.addServletWithMapping(classOf[ProxyServlet.Transparent], "/*")
     holder.setInitParameter("proxyTo", s"$virtUri/sparql")
     proxyContext.setServletHandler(handler)
     proxyContext
