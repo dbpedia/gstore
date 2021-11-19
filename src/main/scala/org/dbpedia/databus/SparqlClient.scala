@@ -82,13 +82,15 @@ class JdbcCLient(host: String, port: Int, user: String, pass: String) extends Sp
 
     }
       .flatMap(_ => trans)
-      .map(r => {
+      .flatMap(r => Try {
         conn.commit()
+        conn.close()
         r
       })
       .recoverWith {
         case err =>
           Try(conn.rollback())
+            .flatMap(_ => Try(conn.close()))
             .flatMap(_ => Failure(err))
       }
   }
