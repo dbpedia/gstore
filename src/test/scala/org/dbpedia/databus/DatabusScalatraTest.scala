@@ -17,13 +17,12 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
   override def port = 55388
 
   val config = Config(
-    None,
-    None,
-
     Uri.parse(s"http://localhost:${port}/virtu/oso").right.get,
     "u",
     "p",
-
+    1111,
+    true,
+    None,
     Some("u"),
     Some("p"),
     Some("http"),

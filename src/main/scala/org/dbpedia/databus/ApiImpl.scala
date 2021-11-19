@@ -123,11 +123,11 @@ class ApiImpl(config: Config) extends DatabusApi {
     import config._
     gitLocalDir.map(new LocalGitClient(_))
       .getOrElse({
-        val scheme = gitApiScheme.getOrElse("https")
+        val scheme = gitApiSchema.getOrElse("https")
         val cl = for {
           user <- gitApiUser
           pass <- gitApiPass
-          host <- gitApiHostname
+          host <- gitApiHost
         } yield new RemoteGitlabHttpClient(user, pass, scheme, host, gitApiPort)
         cl.getOrElse(throw new RuntimeException("Wrong remote git client configuration"))
       })
@@ -138,26 +138,20 @@ class ApiImpl(config: Config) extends DatabusApi {
 
 object ApiImpl {
 
-  case class Config(
-                     baseDir: Option[Path],
-                     gitLocalDir: Option[Path],
-
-                     virtuosoUri: Uri,
-                     virtuosoUser: String,
-                     virtuosoPass: String,
-                     virtuosoJdbcPort: Int,
-                     virtuosoOverHttp: Boolean,
-
-
-                     gitApiUser: Option[String],
-                     gitApiPass: Option[String],
-                     // TODO isn't URI enough here
-                     gitApiScheme: Option[String],
-                     gitApiHostname: Option[String],
-                     gitApiPort: Option[Int]
-
-
-                   )
+  case class Config(virtuosoUri: Uri,
+                    virtuosoUser: String,
+                    virtuosoPass: String,
+                    virtuosoJdbcPort: Int,
+                    virtuosoOverHttp: Boolean,
+                    // that is for using local jgit git provider
+                    gitLocalDir: Option[Path],
+                    // props below are for using gitlab as a git provider
+                    gitApiUser: Option[String],
+                    gitApiPass: Option[String],
+                    // TODO isn't URI enough here
+                    gitApiSchema: Option[String],
+                    gitApiHost: Option[String],
+                    gitApiPort: Option[Int])
 
   object Config {
 
@@ -183,17 +177,17 @@ object ApiImpl {
       val gitApiPass = getParam("gitApiPass")
 
       // TODO isn't URI enough here
-      val gitApiSchema = getParam("gitSchema").orElse(Some("http"))
-      val gitApiHost = getParam("gitHost").orElse(Some("localhost"))
-      val gitApiPort = getParam("gitPort").map(_.toInt)
+      val gitApiSchema = getParam("gitApiSchema").orElse(Some("http"))
+      val gitApiHost = getParam("gitApiHost").orElse(Some("localhost"))
+      val gitApiPort = getParam("gitApiPort").map(_.toInt)
 
       ApiImpl.Config(
-        gitLocalDir,
         Uri.parse(vUri).right.get,
         virtUser,
         virtPass,
         virtuosoJdbcPort,
-        virtuosoOverHttp
+        virtuosoOverHttp,
+        gitLocalDir,
         gitApiUser,
         gitApiPass,
         // TODO isn't URI enough here

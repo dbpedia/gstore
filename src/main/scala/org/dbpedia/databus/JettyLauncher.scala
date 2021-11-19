@@ -13,15 +13,19 @@ import org.eclipse.jetty.server.handler.ContextHandler
 import org.eclipse.jetty.server.handler.ResourceHandler
 import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHandler
+import org.slf4j.LoggerFactory
 
 import scala.util.Try
 import scala.xml.XML
 
 object JettyLauncher { // this is my entry object as specified in sbt project definition
-  def main(args: Array[String]) {
-    val port = if (System.getenv("PORT") != null) System.getenv("PORT").toInt else 8080
 
-    println(s"Starting the service on port $port")
+  private val log = LoggerFactory.getLogger(this.getClass)
+
+  def main(args: Array[String]) {
+    val port = if (System.getProperty("PORT") != null) System.getProperty("PORT").toInt else 8080
+
+    log.info(s"Starting the service on port $port")
 
     val server = new Server(port)
     val webXml = getClass.getResource("/WEB-INF/web.xml")
@@ -33,11 +37,11 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
       .map(ApiImpl.Config.fromWebXml)
       .getOrElse(ApiImpl.Config.default)
 
-    val fileListHandler = config.localGitReposRoot
+    val fileListHandler = config.gitLocalDir
       .flatMap(p => Try(fileBrowserContext(p)).toOption)
 
     val contexts = new ContextHandlerCollection
-    val proxyCtx = proxyContext(contexts, config.virtuosoUri)
+    val proxyCtx = proxyContext(contexts, config.virtuosoUri.toString())
 
     val handlers = fileListHandler
         .map(h => Array[Handler](scalatraCtx, proxyCtx, h))
@@ -46,7 +50,12 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
     server.setHandler(contexts)
 
     server.start
-    println("The service has been started.")
+    log.info(
+      s"""The service has been started.
+        |api is available under: http://localhost:$port/
+        |git repo: http://localhost:$port/git
+        |sparql endpoint: http://localhost:$port/sparql
+        |""".stripMargin)
     server.join
   }
 

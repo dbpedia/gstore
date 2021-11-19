@@ -4,10 +4,9 @@ services:
     build: .
     ports:
       - "3002:8080"
-      - "3002:3002"
     volumes:
-      - ./databus/git:/databus/git
-      - ./databus/logs:/databus/logs
+      - ./databus/git:/gstore/git
+      - ./databus/logs:/gstore/logs
     depends_on:
       - "gstore-virtuoso"
   gstore-virtuoso:

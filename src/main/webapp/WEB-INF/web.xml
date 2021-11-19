@@ -15,31 +15,6 @@
         <listener-class>org.scalatra.servlet.ScalatraListener</listener-class>
     </listener>
 
-
-    <!--    Comment this out to enable remote git with gitlab -->
-    <context-param>
-        <param-name>localGitRoot</param-name>
-        <param-value>/databus/git_root/</param-value>
-    </context-param>
-    <!--    Comment this out to enable remote git with gitlab -->
-
-
-    <context-param>
-        <param-name>gitHost</param-name>
-        <param-value>gitlab</param-value>
-    </context-param>
-    <context-param>
-        <param-name>gitSchema</param-name>
-        <param-value>http</param-value>
-    </context-param>
-    <context-param>
-        <param-name>gitApiUser</param-name>
-        <param-value>root</param-value>
-    </context-param>
-    <context-param>
-        <param-name>gitApiPass</param-name>
-        <param-value>password</param-value>
-    </context-param>
     <context-param>
         <param-name>virtuosoUri</param-name>
         <param-value>http://virtuoso:8890</param-value>
@@ -60,4 +35,29 @@
         <param-name>virtuosoOverHttp</param-name>
         <param-value>false</param-value>
     </context-param>
+
+    <!--    Comment this out to enable remote git with gitlab -->
+    <context-param>
+        <param-name>gitLocalDir</param-name>
+        <param-value>/gstore/git/</param-value>
+    </context-param>
+    <!--    Comment this out to enable remote git with gitlab -->
+
+    <context-param>
+        <param-name>gitApiHost</param-name>
+        <param-value>gitlab</param-value>
+    </context-param>
+    <context-param>
+        <param-name>gitApiSchema</param-name>
+        <param-value>http</param-value>
+    </context-param>
+    <context-param>
+        <param-name>gitApiUser</param-name>
+        <param-value>root</param-value>
+    </context-param>
+    <context-param>
+        <param-name>gitApiPass</param-name>
+        <param-value>password</param-value>
+    </context-param>
+
 </web-app>

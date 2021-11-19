@@ -3,7 +3,7 @@ services:
   databus:
     depends_on:
       - "gitlab"
-      - "virtuoso"
+      - "gstore-virtuoso"
   gitlab:
     image: "gitlab/gitlab-ce:13.8.8-ce.0"
     environment:
