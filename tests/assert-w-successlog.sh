@@ -22,6 +22,7 @@
 if command -v tput &>/dev/null; then
   RED=$(tput setaf 1)
   GREEN=$(tput setaf 2)
+  BLUE=$(tput setaf 4)
   MAGENTA=$(tput setaf 5)
   NORMAL=$(tput sgr0)
   BOLD=$(tput bold)
@@ -32,6 +33,14 @@ else
   NORMAL=$(echo -en "\e[00m")
   BOLD=$(echo -en "\e[01m")
 fi
+
+get_return_code() {
+	
+  >&2 printf "${BLUE}Test: %s${NORMAL}\n" "$1"
+  echo $(curl -f -Li $1 -o /dev/null -w '%{http_code}\n' -s)
+}
+
+
 
 log_header() {
   printf "\n${BOLD}${MAGENTA}==========  %s  ==========${NORMAL}\n" "$@" >&2
@@ -58,6 +67,7 @@ assert_eq() {
   fi
 
   if [ "$expected" == "$actual" ]; then
+    [ "${#msg}" -gt 0 ] && log_success "success :: $msg" 
     return 0
   else
     [ "${#msg}" -gt 0 ] && log_failure "$expected == $actual :: $msg" || true
