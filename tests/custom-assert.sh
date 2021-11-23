@@ -36,8 +36,9 @@ fi
 
 get_return_code() {
 	
-  >&2 printf "${BLUE}Test: %s${NORMAL}\n" "$1"
+  >&2 printf "${BLUE}Test: %s${NORMAL}\n" "curl -f -Li $1 -o /dev/null -w '%{http_code}\n' -s"
   echo $(curl -f -Li $1 -o /dev/null -w '%{http_code}\n' -s)
+  "000"
 }
 
 

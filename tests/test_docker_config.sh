@@ -1,5 +1,5 @@
 #!/bin/bash
-source ./assert-w-successlog.sh
+source ./custom-assert.sh
 #source ./functions.sh
 
 
