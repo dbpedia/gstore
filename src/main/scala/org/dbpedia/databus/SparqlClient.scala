@@ -78,8 +78,6 @@ class JdbcCLient(host: String, port: Int, user: String, pass: String) extends Sp
       val stms = upds.map(s => conn.prepareStatement("sparql\n" + s))
       conn.setAutoCommit(false)
       stms.foreach(s => s.executeUpdate())
-
-
     }
       .flatMap(_ => trans)
       .flatMap(r => Try {
