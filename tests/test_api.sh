@@ -6,16 +6,16 @@ SHACLFILE="../src/test/resources/test.shacl"
 
 # SHACL
 
-code=`curl -X 'POST' 'localhost:3002/shacl/validate'   -H 'accept: application/json'   -H 'Content-Type: multipart/form-data'   -F 'graph=@dataids/invalid_testfile.jsonld' -F 'shacl=@../src/test/resources/test.shacl' -o /dev/null -w '%{http_code}\n' -s `
+code=`curl -X 'POST' 'localhost:3002/shacl/validate'   -H 'accept: application/json'   -H 'Content-Type: multipart/form-data'   -F 'graph=@data/invalid_testfile.jsonld' -F 'shacl=@../src/test/resources/test.shacl' -o /dev/null -w '%{http_code}\n' -s `
 assert_not_eq "$code" "200" " http code $code SHACL against invalid file"
 
-code=`curl -X 'POST' 'localhost:3002/shacl/validate'   -H 'accept: application/json'   -H 'Content-Type: multipart/form-data'   -F 'graph=@dataids/invalid_testfile.jsonld' -F 'shacl=@../src/test/resources/test.shacl' -s `
+code=`curl -X 'POST' 'localhost:3002/shacl/validate'   -H 'accept: application/json'   -H 'Content-Type: multipart/form-data'   -F 'graph=@data/invalid_testfile.jsonld' -F 'shacl=@../src/test/resources/test.shacl' -s `
 assert_not_eq "$code" "{\"code\":200}" "response body, $code SHACL against invalid file"
 
-code=`curl -X 'POST' 'localhost:3002/shacl/validate'   -H 'accept: application/json'   -H 'Content-Type: multipart/form-data'   -F 'graph=@dataids/valid_dataid.jsonld' -F 'shacl=@../src/test/resources/test.shacl' -o /dev/null -w '%{http_code}\n' -s `
+code=`curl -X 'POST' 'localhost:3002/shacl/validate'   -H 'accept: application/json'   -H 'Content-Type: multipart/form-data'   -F 'graph=@data/valid_dataid.jsonld' -F 'shacl=@../src/test/resources/test.shacl' -o /dev/null -w '%{http_code}\n' -s `
 assert_eq "$code" "200" "http code, $code SHACL against valid file"
 
-code=`curl -X 'POST' 'localhost:3002/shacl/validate'   -H 'accept: application/json'   -H 'Content-Type: multipart/form-data'   -F 'graph=@dataids/valid_dataid.jsonld' -F 'shacl=@../src/test/resources/test.shacl' -s `
+code=`curl -X 'POST' 'localhost:3002/shacl/validate'   -H 'accept: application/json'   -H 'Content-Type: multipart/form-data'   -F 'graph=@data/valid_dataid.jsonld' -F 'shacl=@../src/test/resources/test.shacl' -s `
 assert_eq "$code" "{\"code\":200}" "response body, $code SHACL against invalid file"
 
 
