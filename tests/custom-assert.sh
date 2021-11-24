@@ -36,9 +36,8 @@ fi
 
 get_return_code() {
 	
-  >&2 printf "${BLUE}Test: %s${NORMAL}\n" "curl -f -Li $1 -o /dev/null -w '%{http_code}\n' -s"
+  >&2 printf "Test ${BLUE}%s${NORMAL}\n" "curl -f -Li $1 -o /dev/null -w '%{http_code}\n' -s"
   echo $(curl -f -Li $1 -o /dev/null -w '%{http_code}\n' -s)
-  #"000"
 }
 
 
@@ -53,7 +52,7 @@ log_success() {
 
 log_failure() {
   output="{'text':'ERROR: ${1}'}"
-  curl -X POST -H 'Content-type: application/json' --data "$output" https://hooks.slack.com/services/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
+  #curl -X POST -H 'Content-type: application/json' --data "$output" https://hooks.slack.com/services/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
   printf "${RED}✖ %s${NORMAL}\n" "$@" >&2
 }
 
@@ -68,7 +67,7 @@ assert_eq() {
   fi
 
   if [ "$expected" == "$actual" ]; then
-    [ "${#msg}" -gt 0 ] && log_success "success :: $msg" 
+    [ "${#msg}" -gt 0 ] && log_success "$expected == $actual :: $msg" 
     return 0
   else
     [ "${#msg}" -gt 0 ] && log_failure "$expected == $actual :: $msg" || true
@@ -86,6 +85,7 @@ assert_not_eq() {
   fi
 
   if [ ! "$expected" == "$actual" ]; then
+    [ "${#msg}" -gt 0 ] && log_success "$expected == $actual :: $msg" 
     return 0
   else
     [ "${#msg}" -gt 0 ] && log_failure "$expected != $actual :: $msg" || true
