@@ -1,0 +1,135 @@
+{
+    "@context": {
+        "databus": "https://databus.dbpedia.org/",
+        "dataid-mt": "http://dataid.dbpedia.org/ns/mt#",
+        "dct": "http://purl.org/dc/terms/",
+        "dataid": "http://dataid.dbpedia.org/ns/core#",
+        "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+        "dataid-cv": "http://dataid.dbpedia.org/ns/cv#",
+        "xsd": "http://www.w3.org/2001/XMLSchema#",
+        "dataid-pl": "http://dataid.dbpedia.org/ns/pl#",
+        "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+        "dcat": "http://www.w3.org/ns/dcat#",
+        "prov": "http://www.w3.org/ns/prov#"
+    },
+    "@graph": [{
+        "@id": "http://localhost:3000/jan/wikidata/mappingbased-literals/2018.08.01",
+        "@type": "dataid:Version"
+    }, {
+        "@id": "http://localhost:3000/jan/wikidata/mappingbased-literals",
+        "@type": "dataid:Artifact"
+    }, {
+        "@id": "http://localhost:3000/jan/wikidata/mappingbased-literals/2018.08.01#Dataset",
+        "@type": "dataid:Dataset",
+        "rdfs:comment": {
+            "@value": "High-quality data extracted using the mapping-based extraction (Literal properties only).",
+            "@language": "en"
+        },
+        "rdfs:label": {
+            "@value": "Wikidata Mappingbased Literals",
+            "@language": "en"
+        },
+        "dataid:account": {
+            "@id": "databus:dbpedia"
+        },
+        "dataid:artifact": {
+            "@id": "http://localhost:3000/jan/wikidata/mappingbased-literals"
+        },
+        "dataid:associatedAgent": {
+            "@id": "https://webid.dbpedia.org/webid.ttl#this"
+        },
+        "dataid:group": {
+            "@id": "http://localhost:3000/jan/wikidata"
+        },
+        "dataid:maintainer": {
+            "@id": "https://alismayilov.github.io/webid-ali.ttl#this"
+        },
+        "dataid:version": {
+            "@id": "http://localhost:3000/jan/wikidata/mappingbased-literals/2018.08.01"
+        },
+        "dct:conformsTo": "http://dataid.dbpedia.org/ns/core#",
+        "dct:description": {
+            "@value": "High-quality data extracted using the mapping-based extraction (Literal properties only).",
+            "@language": "en"
+        },
+        "dct:hasVersion": "2018.08.01",
+        "dct:issued": {
+            "@value": "2018-08-01T00:00:00Z",
+            "@type": "xsd:dateTime"
+        },
+        "dct:license": {
+            "@id": "http://purl.oclc.org/NET/rdflicense/cc-by3.0"
+        },
+        "dct:publisher": {
+            "@id": "http://localhost:3000/jan#this"
+        },
+        "dct:title": {
+            "@value": "Wikidata Mappingbased Literals",
+            "@language": "en"
+        },
+        "dcat:distribution": [{
+            "@id": "http://localhost:3000/jan/wikidata/mappingbased-literals/2018.08.01#mappingbased-literals.ttl.bz2"
+        }],
+        "dct:abstract": {
+            "@value": "High-quality data extracted using the mapping-based extraction (Literal properties only).",
+            "@language": "en"
+        }
+    }, {
+        "@id": "http://localhost:3000/jan/wikidata/mappingbased-literals/2018.08.01#mappingbased-literals.ttl.bz2",
+        "@type": "dataid:SingleFile",
+        "rdfs:comment": {
+            "@value": "High-quality data extracted using the mapping-based extraction (Literal properties only).",
+            "@language": "en"
+        },
+        "rdfs:label": {
+            "@value": "Wikidata Mappingbased Literals",
+            "@language": "en"
+        },
+        "dataid:compression": "bzip2",
+        "dataid:formatExtension": "ttl",
+        "dataid:maintainer": {
+            "@id": "https://alismayilov.github.io/webid-ali.ttl#this"
+        },
+        "dataid:nonEmptyLines": {
+            "@value": "8850",
+            "@type": "xsd:decimal"
+        },
+        "dataid:preview": "<http://wikidata.dbpedia.org/resource/Q10000001> <http://dbpedia.org/ontology/birthDate> \"1937-4-11\"^^<http://www.w3.org/2001/XMLSchema#date> .\n<http://wikidata.dbpedia.org/resource/Q10000001> <http://dbpedia.org/ontology/deathDate> \"2016-3-17\"^^<http://www.w3.org/2001/XMLSchema#date> .\n<http://wikidata.dbpedia.org/resource/Q1000001> <http://dbpedia.org/ontology/releaseDate> \"2011-6-28\"^^<http://www.w3.org/2001/XMLSchema#date> .\n<http://wikidata.dbpedia.org/resource/Q1000002> <http://dbpedia.org/ontology/birthDate> \"1932-12-4\"^^<http://www.w3.org/2001/XMLSchema#date> .\n<http://wikidata.dbpedia.org/resource/Q1000002> <http://dbpedia.org/ontology/deathDate> \"1990-4-12\"^^<http://www.w3.org/2001/XMLSchema#date> .\n<http://wikidata.dbpedia.org/resource/Q1000003> <http://dbpedia.org/ontology/populationTotal> \"833\"^^<http://www.w3.org/2001/XMLSchema#nonNegativeInteger> .\n<http://wikidata.dbpedia.org/resource/Q1000003> <http://dbpedia.org/ontology/zipCode> \"62380\" .\n<http://wikidata.dbpedia.org/resource/Q1000005> <http://dbpedia.org/ontology/birthDate> \"1860-2-21\"^^<http://www.w3.org/2001/XMLSchema#date> .\n<http://wikidata.dbpedia.org/resource/Q1000005> <http://dbpedia.org/ontology/deathDate> \"1927-11-3\"^^<http://www.w3.org/2001/XMLSchema#date> .\n<http://wikidata.dbpedia.org/resource/Q1000006> <http://dbpedia.org/ontology/birthDate> \"1971-7-14\"^^<http://www.w3.org/2001/XMLSchema#date> .",
+        "dataid:sha256sum": "407bb1a00279b9b8f90e12a54e4d01b7eab4de850d5f14662657fa744d0c6ede",
+        "dataid:sorted": true,
+        "dataid:uncompressedByteSize": {
+            "@value": "1165052",
+            "@type": "xsd:decimal"
+        },
+        "dct:conformsTo": "http://dataid.dbpedia.org/ns/core#",
+        "dct:hasVersion": "2018.08.01",
+        "dct:issued": {
+            "@value": "2018-08-01T00:00:00Z",
+            "@type": "xsd:dateTime"
+        },
+        "dct:license": {
+            "@id": "http://purl.oclc.org/NET/rdflicense/cc-by3.0"
+        },
+        "dct:modified": {
+            "@value": "2019-01-24T09:35:44Z",
+            "@type": "xsd:dateTime"
+        },
+        "dct:title": {
+            "@value": "Wikidata Mappingbased Literals",
+            "@language": "en"
+        },
+        "dcat:byteSize": {
+            "@value": "123122478",
+            "@type": "xsd:decimal"
+        },
+        "dcat:downloadURL": {
+            "@id": "https://downloads.dbpedia.org/repo/lts/wikidata/mappingbased-literals/2018.08.01/mappingbased-literals.ttl.bz2"
+        },
+        "dcat:mediaType": {
+            "@id": "dataid-mt:ApplicationNTriples"
+        },
+        "dataid:file": {
+            "@id": "http://localhost:3000/jan/wikidata/mappingbased-literals/2018.08.01/mappingbased-literals.ttl.bz2"
+        }
+    }]
+}
