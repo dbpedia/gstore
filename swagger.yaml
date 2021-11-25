@@ -1,12 +1,114 @@
 swagger: "2.0"
 info:
-  description: "This is the DbPedia databus web-api draft."
+  description: "This is the DbPedia GStore web-api documentation."
   version: "1.0.0"
-  title: "Databus API"
-basePath: "/databus"
+  title: "GStore API"
+basePath: "/"
 schemes:
-  - "https"
+  - "http"
 paths:
+  /file/save:
+    post:
+      summary: "Save file"
+      description: "Saving a graph to gstore"
+      operationId: "saveFile"
+      consumes:
+        - "application/ld+json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: query
+          name: repo
+          type: string
+          required: true
+          example: "testuser"
+        - in: query
+          name: path
+          type: string
+          required: true
+          example: "testgroup/test.jsonld"
+        - in: body
+          name: body
+          description: "Turtle or JSONLD."
+          required: true
+          schema:
+            type: string
+            format: binary
+            example: '{
+                      	"@context" : "https://raw.githubusercontent.com/dbpedia/databus-git-mockup/main/dev/context.jsonld",
+                      	"@id": "http://databus.dbpedia.org/kuckuck/nest",
+                      	"@type": "dataid:Group",
+                      	"title": {
+                                          "@value": "Test Title",
+                                          "@language": "en"
+                                      },
+                                      "comment": {
+                                          "@value": "This is a short comment about the test."
+                                      },
+                                      "abstract": {
+                                          "@value": "This a short abstract for the dataset. Since this is only a test it is quite insignificant.",
+                                          "@language": "en"
+                                      },
+                                      "description": {
+                                          "@value": "This is a descriptionIt is in markdown sytax. It can be much longer and detailed.",
+                                          "@language": "en"
+                                      }
+                      }'
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+  /file/delete:
+    post:
+      summary: "Delete file"
+      description: "Delete a graph from gstore."
+      operationId: "deleteFile"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: query
+          name: repo
+          type: string
+          required: true
+          example: "testuser"
+        - in: query
+          name: path
+          type: string
+          required: true
+          example: "testgroup/test.jsonld"
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+  /file/read:
+    get:
+      summary: "Get file"
+      description: "Read rdf graph from gstore."
+      operationId: "getFile"
+      produces:
+        - "application/ld+json"
+        - "text/turtle"
+      parameters:
+        - in: query
+          name: repo
+          type: string
+          required: true
+          example: "testuser"
+        - in: query
+          name: path
+          type: string
+          required: true
+          example: "testgroup/test.jsonld"
+      responses:
+        "200":
+          description: "A file"
+          schema:
+            type: string
+            format: binary
   /shacl/validate:
     post:
       summary: "Validate dataid with shacl"
@@ -22,94 +124,18 @@ paths:
           type: string
           required: true
           format: binary
-          description: "dataid contents (jsonld expected)"
+          description: "RDF graph contents (jsonld expected)"
         - in: formData
           name: shacl
           type: string
           required: true
           format: binary
-          description: "contents of a shacl file"
+          description: "Contents of a shacl file"
       responses:
         "200":
           description: "successful operation"
           schema:
             $ref: "#/definitions/ApiResponse"
-  /file/save:
-    post:
-      summary: "Save file"
-      description: ""
-      operationId: "saveFile"
-      consumes:
-        - "application/ld+json"
-      produces:
-        - "application/json"
-      parameters:
-        - in: query
-          name: repo
-          type: string
-          required: true
-        - in: query
-          name: path
-          type: string
-          required: true
-        - in: body
-          name: body
-          description: "Turtle or JSONLD."
-          required: true
-          schema:
-            type: string
-            format: binary
-      responses:
-        "200":
-          description: "successful operation"
-          schema:
-            $ref: "#/definitions/ApiResponse"
-  /file/delete:
-    post:
-      summary: "Delete file"
-      description: ""
-      operationId: "deleteFile"
-      consumes:
-        - "application/json"
-      produces:
-        - "application/json"
-      parameters:
-        - in: query
-          name: repo
-          type: string
-          required: true
-        - in: query
-          name: path
-          type: string
-          required: true
-      responses:
-        "200":
-          description: "successful operation"
-          schema:
-            $ref: "#/definitions/ApiResponse"
-  /file/read:
-    get:
-      summary: "Get file"
-      description: ""
-      operationId: "getFile"
-      produces:
-        - "application/ld+json"
-        - "text/turtle"
-      parameters:
-        - in: query
-          name: repo
-          type: string
-          required: true
-        - in: query
-          name: path
-          type: string
-          required: true
-      responses:
-        "200":
-          description: "A file"
-          schema:
-            type: string
-            format: binary
   /dataid/tractate:
     post:
       summary: "Returns a subgraph of dataid for signing"

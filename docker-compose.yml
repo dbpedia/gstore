@@ -3,7 +3,9 @@ services:
   gstore:
     build: .
     ports:
-      - "3002:8080"
+      - "3002:3002"
+    environment:
+      GSTORE_JETTY_PORT: 3002
     volumes:
       - ./databus/git:/gstore/git
       - ./databus/logs:/gstore/logs

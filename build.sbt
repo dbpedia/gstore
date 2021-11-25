@@ -48,3 +48,27 @@ unmanagedResourceDirectories in Compile += {
 Compile / sourceGenerators += Def.task {
   Codegen.generate(baseDirectory.value, (Compile / sourceManaged).value)
 }.taskValue
+
+(Compile / compile) := ((Compile / compile) dependsOn genApiDocsSources).value
+
+lazy val genApiDocsSources = taskKey[Unit]("Generates API docs sources")
+
+// this task copies swagger.yaml to Jetty root and dowloads and copies swagger UI to Jetty root as well.
+genApiDocsSources := {
+  val fn = "swagger.yaml"
+  val swVersion = "4.1.0"
+  val swaggerUIDist = url(s"https://github.com/swagger-api/swagger-ui/archive/refs/tags/v$swVersion.zip")
+  val ctargetBase = crossTarget.value / "classes"
+  val swagger = ctargetBase / fn
+
+  val sw = baseDirectory.value / fn
+  val filter = NameFilter.fnToNameFilter(fn => {
+    fn.contains(s"$swVersion/dist/") &&
+      !fn.contains("index.html") &&
+      !fn.contains(".npmrc")
+  })
+  IO.copyFile(sw, swagger)
+
+  val fs = IO.unzipURL(swaggerUIDist, target.value, filter, false)
+  fs.foreach(f => IO.copyFile(f, ctargetBase / f.getName))
+}

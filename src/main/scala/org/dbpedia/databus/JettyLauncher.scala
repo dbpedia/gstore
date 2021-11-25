@@ -23,7 +23,7 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
   private lazy val log = LoggerFactory.getLogger(this.getClass)
 
   def main(args: Array[String]) {
-    val port = if (System.getProperty("PORT") != null) System.getProperty("PORT").toInt else 8080
+    val port = if (System.getenv("GSTORE_JETTY_PORT") != null) System.getenv("GSTORE_JETTY_PORT").toInt else 8080
     val logBaseProp = "logsFolder"
     val logBase = Paths.get(Option(System.getProperty(logBaseProp))
       .getOrElse(System.setProperty(logBaseProp, "./logs/")))
