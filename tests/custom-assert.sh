@@ -35,10 +35,23 @@ else
 fi
 
 get_return_code() {
-  >&2 printf "Test ${BLUE}%s${NORMAL}\n" "curl -f -Li $1 -o /dev/null -w '%{http_code}\n' -s"
-  echo $(curl -f -Li $1 -o /dev/null -w '%{http_code}\n' -s)
+  CMD="curl -s -o /dev/null -w %{http_code} $1"
+  >&2 printf "Test ${BLUE}%s${NORMAL}\n" "`echo -n $CMD | sed 's/&/\\\&/g'`"
+  
+  CMDDEBUG="curl -v $1"
+  >&2 printf "%s\n" "$($CMDDEBUG)"
+  
+  echo -n $($CMD)
+  
 }
-
+  # some debugging lines for get_return_doce
+  #>&2 printf "Test ${BLUE}%s${NORMAL}\n" "curl -f -Li $1 -o /dev/null -w '%{http_code}\n' "
+  #echo $(curl -f -Li $1 -o /dev/null -w '%{http_code}\n' -s)
+  #RET=$CMD
+  #>&2 printf "%s\n" "$RET"
+  #RET="$($CMD)"
+  #>&2 printf "%s\n" "$RET"
+  
 
 log_header() {
   printf "\n${BOLD}${MAGENTA}==========  %s  ==========${NORMAL}\n" "$@" >&2
