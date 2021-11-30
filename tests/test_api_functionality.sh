@@ -34,12 +34,14 @@ assert_eq "$check" "valid" "rapper: $check, valid turtle?"
 code=$(get_contenttype "http://localhost:3002/file/read?repo=janni&path=testing/group.jsonld")
 assert_eq "$code" "text/turtle;charset=utf-8"  "Content-Type: $code, testing content type of no accept (default) TODO this might also be ld+json"
 
+code=$(get_contenttype_accept_applicationldjson "http://localhost:3002/file/read?repo=janni&path=testing/group.jsonld")
+assert_eq "$code" "application/ld+json;charset=utf-8"  "Content-Type: $code, testing content type of accept application/ld+json"
 
 code=$(get_contenttype_accept_textturtle "http://localhost:3002/file/read?repo=janni&path=testing/group.jsonld")
 assert_eq "$code" "text/turtle;charset=utf-8"  "Content-Type: $code, testing content type of accept text/turtle"
 
 ## Virtuoso saving in DB
-body=$(get_body_accept_textturle "http://localhost:3002/file/read?repo=janni&path=testing/group.jsonld")
+body=$(get_body_accept_textturtle "http://localhost:3002/file/read?repo=janni&path=testing/group.jsonld")
 enc=$(rawurlencode "ASK { $body }")
 #echo $enc
 code=$(get_body "localhost:3002/sparql?default-graph-uri=&query=$enc" )
