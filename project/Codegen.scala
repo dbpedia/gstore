@@ -12,6 +12,9 @@ object Codegen {
   def generate(baseDir: File, outBase: File): Seq[File] = {
     System.setProperty(CodegenConstants.APIS, "")
     System.setProperty(CodegenConstants.MODELS, "")
+//    enabling this is useful for mustache generator variables
+//    System.setProperty("debugModels", "")
+//    System.setProperty("debugOperations", "")
     val gen = new DefaultGenerator()
     gen.opts(configurator(baseDir, outBase).toClientOptInput)
       .generate()

@@ -52,7 +52,12 @@ class {{classname}}(implicit val swagger: Swagger, apiImpl: DatabusApi) extends 
         case Success(r) => Ok(r)
         case Failure(e) =>
             log("Error processing request", e)
+    {{#responses}}{{^isDefault}}{{^hasMore}}
+            apiImpl.{{nickname}}MapToResponse(e)
+    {{/hasMore}}{{/isDefault}}{{/responses}}
+    {{#responses}}{{#isDefault}}{{^hasMore}}
             InternalServerError(e)
+    {{/hasMore}}{{/isDefault}}{{/responses}}
     }
   }
 
@@ -61,11 +66,28 @@ class {{classname}}(implicit val swagger: Swagger, apiImpl: DatabusApi) extends 
 }
 
 trait DatabusApi {
-
 {{#operations}}
 {{#operation}}
 {{newline}}
   def {{nickname}}({{#allParams}}{{paramName}}: {{dataType}}{{#hasMore}}, {{/hasMore}}{{/allParams}})(request: HttpServletRequest): Try[{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}Unit{{/returnType}}]
+{{#responses}}
+  {{^isDefault}}
+  def  {{nickname}}MapException{{code}}(e: Throwable): {{#dataType}}Option[{{.}}]{{/dataType}}{{^dataType}}Option[String]{{/dataType}}
+  {{/isDefault}}
+{{/responses}}
+
+{{#responses}}{{^isDefault}}{{^hasMore}}
+  protected[api] def {{nickname}}MapToResponse(e: Throwable): ActionResult =
+    List(
+{{/hasMore}}{{/isDefault}}{{/responses}}
+    {{#responses}}
+        {{^isDefault}}
+      {{nickname}}MapException{{code}}(e).map(r => ActionResult({{code}}, r, Map.empty)){{#hasMore}},{{/hasMore}}
+        {{/isDefault}}
+    {{/responses}}
+{{#responses}}{{^isDefault}}{{^hasMore}}
+    ).flatten.headOption.getOrElse(InternalServerError(e))
+{{/hasMore}}{{/isDefault}}{{/responses}}
 {{/operation}}
 {{/operations}}
 

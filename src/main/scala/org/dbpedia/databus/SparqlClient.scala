@@ -164,7 +164,7 @@ object RdfConversions {
       case "nq" => "application/n-quads"
       case "trix" => "application/trix+xml"
       case "trdf" => "application/rdf+thrift"
-      case _ => "text/turtle"
+      case _ => "application/ld+json"
     }
 
   def mapContentType(cn: String): Lang =
@@ -177,7 +177,7 @@ object RdfConversions {
       case "application/n-quads" => Lang.NQUADS
       case "application/trix+xml" => Lang.TRIX
       case "application/rdf+thrift" => Lang.RDFTHRIFT
-      case _ => Lang.TURTLE
+      case _ => Lang.JSONLD
     }
 
   import org.apache.jena.graph.Triple

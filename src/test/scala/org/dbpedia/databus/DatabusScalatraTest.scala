@@ -46,6 +46,16 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
     }
   }
 
+  "File read" should "work" in {
+
+    val file = "group.jsonld"
+    val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
+
+    get("/databus/file/read?repo=kuckuck&path=pa/not_existing.jsonld"){
+      status should equal(500)
+    }
+  }
+
   "Shacl" should "validate" in {
     val file = "group.jsonld"
     val sha = "test.shacl"
@@ -60,8 +70,7 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
     }
 
     post("/databus/shacl/validate", Map.empty, Map("shacl" -> shacl, "graph" -> err)){
-      //todo change to 400 or 200 but with error
-      status should equal(500)
+      status should equal(400)
     }
   }
 

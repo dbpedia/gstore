@@ -14,6 +14,7 @@ paths:
       operationId: "saveFile"
       consumes:
         - "application/ld+json"
+        - "text/turtle"
       produces:
         - "application/json"
       parameters:
@@ -58,14 +59,16 @@ paths:
         "200":
           description: "successful operation"
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/OperationSuccess"
+        "400":
+          description: "invalid request"
+          schema:
+            $ref: "#/definitions/OperationFailure"
   /file/delete:
     post:
       summary: "Delete file"
       description: "Delete a graph from gstore."
       operationId: "deleteFile"
-      consumes:
-        - "application/json"
       produces:
         - "application/json"
       parameters:
@@ -83,7 +86,11 @@ paths:
         "200":
           description: "successful operation"
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/OperationSuccess"
+        "404":
+          description: "file not found"
+          schema:
+            $ref: "#/definitions/OperationFailure"
   /file/read:
     get:
       summary: "Get file"
@@ -109,6 +116,10 @@ paths:
           schema:
             type: string
             format: binary
+        "404":
+          description: "Not found"
+          schema:
+            $ref: "#/definitions/OperationFailure"
   /shacl/validate:
     post:
       summary: "Validate dataid with shacl"
@@ -134,15 +145,15 @@ paths:
       responses:
         "200":
           description: "successful operation"
-          schema:
-            $ref: "#/definitions/ApiResponse"
+        "400":
+          description: "invalid data"
   /dataid/tractate:
     post:
       summary: "Returns a subgraph of dataid for signing"
       description: ""
       operationId: "dataidSubgraph"
       consumes:
-        - "application/json"
+        - "application/json-ld"
       produces:
         - "text/plain"
       parameters:
@@ -159,13 +170,16 @@ paths:
           schema:
             type: string
 definitions:
-  ApiResponse:
-    type: "object"
+  OperationSuccess:
     properties:
-      code:
-        type: "integer"
-        format: "int32"
-      type:
+      commit_hash:
         type: "string"
+    required:
+      - commit_hash
+  OperationFailure:
+    properties:
       message:
         type: "string"
+    required:
+      - message
+

@@ -48,6 +48,10 @@ class LocalGitTest extends FlatSpec with Matchers with BeforeAndAfter {
     re2.isSuccess should be(true)
     re.isSuccess should be(true)
 
+    val rer = cli.readFile(pn, "haha.txt")
+    rer.isSuccess should be(true)
+    val rer2 = cli.readFile(pn, "hahah.txt")
+    rer2.isSuccess should be(false)
 
     val files = Set(
       "haha.txt",

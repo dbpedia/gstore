@@ -1,18 +1,19 @@
 package org.dbpedia.databus
 
-import java.io.ByteArrayInputStream
-import java.nio.file.{Path, Paths}
+import java.io.{ByteArrayInputStream, FileNotFoundException}
+import java.nio.file.{NoSuchFileException, Path, Paths}
 
 import javax.servlet.ServletContext
 import javax.servlet.http.HttpServletRequest
-
 import org.apache.jena.rdf.model.ModelFactory
 import org.apache.jena.riot.RDFDataMgr
+import org.apache.jena.shared.JenaException
 import org.dbpedia.databus.ApiImpl.Config
 import org.dbpedia.databus.RdfConversions.{generateGraphId, mapContentType, mapFilenameToContentType, readModel}
 import org.dbpedia.databus.swagger.api.DatabusApi
-import org.dbpedia.databus.swagger.model.ApiResponse
+import org.dbpedia.databus.swagger.model.{OperationFailure, OperationSuccess}
 import sttp.model.Uri
+import virtuoso.jdbc4.VirtuosoException
 
 import scala.util.Try
 import scala.xml.Node
@@ -37,7 +38,7 @@ class ApiImpl(config: Config) extends DatabusApi {
       .flatMap(m => Tractate.extract(m.getGraph, TractateV1.Version))
       .map(_.stringForSigning)
 
-  override def deleteFile(username: String, path: String)(request: HttpServletRequest): Try[ApiResponse] =
+  override def deleteFile(username: String, path: String)(request: HttpServletRequest): Try[OperationSuccess] =
     deleteFileFromGit(username, path)(request)
 
   override def getFile(username: String, path: String)(request: HttpServletRequest): Try[String] =
@@ -46,7 +47,7 @@ class ApiImpl(config: Config) extends DatabusApi {
   override def saveFile(username: String,
                         path: String,
                         body: String)
-                       (request: HttpServletRequest): Try[ApiResponse] = {
+                       (request: HttpServletRequest): Try[OperationSuccess] = {
     val data = body.getBytes
     val pa = gitPath(path)
     saveToVirtuoso(data, path, username)(saveFiles(username, Map(
@@ -54,11 +55,32 @@ class ApiImpl(config: Config) extends DatabusApi {
     )))
   }
 
-  override def shaclValidate(dataid: String, shacl: String)(request: HttpServletRequest): Try[ApiResponse] =
+  override def shaclValidate(dataid: String, shacl: String)(request: HttpServletRequest): Try[Unit] =
     RdfConversions.validateWithShacl(
       dataid.getBytes,
       shacl.getBytes()
-    ).map(_ => ApiResponse(Some(200), None, None))
+    ).map(_ => ())
+
+  override def deleteFileMapException404(e: Throwable): Option[OperationFailure] = e match {
+    case _: FileNotFoundException => Some(OperationFailure(e.getMessage))
+    case _ => None
+  }
+
+  override def getFileMapException404(e: Throwable): Option[OperationFailure] = e match {
+    case _: FileNotFoundException => Some(OperationFailure(e.getMessage))
+    case _: NoSuchFileException => Some(OperationFailure(e.getMessage))
+    case _ => None
+  }
+
+  override def saveFileMapException400(e: Throwable): Option[OperationFailure] = e match {
+    case _ : JenaException => Some(OperationFailure(e.getMessage))
+    case _ : VirtuosoException if e.getMessage.contains("SQ200") => Some(OperationFailure(s"Wrong value for type. ${e.getMessage}"))
+    case _ => None
+  }
+
+  override def shaclValidateMapException400(e: Throwable): Option[String] = e match {
+    case _ => Some(e.getMessage)
+  }
 
   private def readFile(username: String, path: String)(request: HttpServletRequest): Try[String] = {
     val p = gitPath(path)
@@ -99,25 +121,25 @@ class ApiImpl(config: Config) extends DatabusApi {
     )(execInTransaction)
   }
 
-  private def saveFileToGit(username: String, path: String, data: Array[Byte]): Try[ApiResponse] =
+  private def saveFileToGit(username: String, path: String, data: Array[Byte]): Try[OperationSuccess] =
     saveFiles(username, Map(path -> data))
 
-  private def saveFiles(username: String, fullFilenamesAndData: Map[String, Array[Byte]]): Try[ApiResponse] = {
+  private def saveFiles(username: String, fullFilenamesAndData: Map[String, Array[Byte]]): Try[OperationSuccess] = {
     if (!client.projectExists(username)) {
       client.createProject(username)
     }
     client.commitSeveralFiles(username, fullFilenamesAndData)
-      .map(s => ApiResponse(Some(200), None, Some(s)))
+      .map(s => OperationSuccess(s))
   }
 
-  private def deleteFileFromGit(username: String, path: String)(request: HttpServletRequest): Try[ApiResponse] = {
+  private def deleteFileFromGit(username: String, path: String)(request: HttpServletRequest): Try[OperationSuccess] = {
     val p = gitPath(path)
     deleteFiles(username, Seq(p))(request)
   }
 
-  private def deleteFiles(username: String, paths: Seq[String])(request: HttpServletRequest): Try[ApiResponse] =
+  private def deleteFiles(username: String, paths: Seq[String])(request: HttpServletRequest): Try[OperationSuccess] =
     client.deleteSeveralFiles(username, paths)
-      .map(s => ApiResponse(Some(200), None, Some(s)))
+      .map(s => OperationSuccess(s))
 
   private def initGitClient(config: Config): GitClient = {
     import config._
