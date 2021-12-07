@@ -13,6 +13,8 @@ services:
       - "gstore-virtuoso"
   gstore-virtuoso:
     image: "openlink/virtuoso-opensource-7"
+    ports:
+      - "3003:8890"
     environment:
     # note:
     # these params only work first time to create ini
