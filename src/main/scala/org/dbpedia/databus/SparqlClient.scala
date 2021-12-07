@@ -144,13 +144,13 @@ object RdfConversions {
     }
   }
 
-  def processFile(path: String, fileData: Array[Byte], outpuLang: Option[Lang] = None): Array[Byte] = {
+  def processFile(path: String, fileData: Array[Byte], outpuLang: Lang): Array[Byte] = {
     val model = ModelFactory.createDefaultModel()
     val dataStream = new ByteArrayInputStream(fileData)
     val lang = mapContentType(mapFilenameToContentType(path))
     RDFDataMgr.read(model, dataStream, lang)
     val str = new ByteArrayOutputStream()
-    RDFDataMgr.write(str, model, outpuLang.getOrElse(Lang.TURTLE))
+    RDFDataMgr.write(str, model, outpuLang)
     str.toByteArray
   }
 

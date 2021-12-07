@@ -6,7 +6,7 @@ import java.nio.file.{NoSuchFileException, Path, Paths}
 import javax.servlet.ServletContext
 import javax.servlet.http.HttpServletRequest
 import org.apache.jena.rdf.model.ModelFactory
-import org.apache.jena.riot.RDFDataMgr
+import org.apache.jena.riot.{Lang, RDFDataMgr}
 import org.apache.jena.shared.JenaException
 import org.dbpedia.databus.ApiImpl.Config
 import org.dbpedia.databus.RdfConversions.{generateGraphId, mapContentType, mapFilenameToContentType, readModel}
@@ -61,35 +61,39 @@ class ApiImpl(config: Config) extends DatabusApi {
       shacl.getBytes()
     ).map(_ => ())
 
-  override def deleteFileMapException404(e: Throwable): Option[OperationFailure] = e match {
+  override def deleteFileMapException404(e: Throwable)(request: HttpServletRequest): Option[OperationFailure] = e match {
     case _: FileNotFoundException => Some(OperationFailure(e.getMessage))
     case _ => None
   }
 
-  override def getFileMapException404(e: Throwable): Option[OperationFailure] = e match {
+  override def getFileMapException404(e: Throwable)(request: HttpServletRequest): Option[OperationFailure] = e match {
     case _: FileNotFoundException => Some(OperationFailure(e.getMessage))
     case _: NoSuchFileException => Some(OperationFailure(e.getMessage))
     case _ => None
   }
 
-  override def saveFileMapException400(e: Throwable): Option[OperationFailure] = e match {
+  override def saveFileMapException400(e: Throwable)(request: HttpServletRequest): Option[OperationFailure] = e match {
     case _ : JenaException => Some(OperationFailure(e.getMessage))
     case _ : VirtuosoException if e.getMessage.contains("SQ200") => Some(OperationFailure(s"Wrong value for type. ${e.getMessage}"))
     case _ => None
   }
 
-  override def shaclValidateMapException400(e: Throwable): Option[String] = e match {
+  override def shaclValidateMapException400(e: Throwable)(request: HttpServletRequest): Option[String] = e match {
     case _ => Some(e.getMessage)
   }
 
   private def readFile(username: String, path: String)(request: HttpServletRequest): Try[String] = {
     val p = gitPath(path)
+    val contentType = Option(request.getHeader("Accept"))
+      .map(RdfConversions.mapContentType)
+      .getOrElse(Lang.JSONLD)
+    setResponseHeaders(Map("Content-Type"-> contentType.getContentType.toHeaderString))(request)
     client.readFile(username, p)
       .map(
         RdfConversions.processFile(
           p,
           _,
-          Option(request.getHeader("Accept")).map(RdfConversions.mapContentType)))
+          contentType))
       .map(new String(_))
   }
 

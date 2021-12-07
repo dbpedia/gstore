@@ -32,7 +32,7 @@ assert_eq "$check" "valid" "rapper: $check, valid turtle?"
 
 ## Content-Type
 code=$(get_contenttype "http://localhost:3002/file/read?repo=janni&path=testing/group.jsonld")
-assert_eq "$code" "text/turtle;charset=utf-8"  "Content-Type: $code, testing content type of no accept (default) TODO this might also be ld+json"
+assert_eq "$code" "application/ld+json;charset=utf-8"  "Content-Type: $code, testing content type of no accept (default)"
 
 code=$(get_contenttype_accept_applicationldjson "http://localhost:3002/file/read?repo=janni&path=testing/group.jsonld")
 assert_eq "$code" "application/ld+json;charset=utf-8"  "Content-Type: $code, testing content type of accept application/ld+json"

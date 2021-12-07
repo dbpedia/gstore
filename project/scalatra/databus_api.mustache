@@ -49,14 +49,15 @@ class {{classname}}(implicit val swagger: Swagger, apiImpl: DatabusApi) extends 
   {{/allParams}}
     val resp = apiImpl.{{nickname}}({{#allParams}}{{paramName}}{{#hasMore}}, {{/hasMore}}{{/allParams}})(request)
     resp match {
-        case Success(r) => Ok(r)
+        case Success(r) =>
+            Ok(r, apiImpl.getResponseHeaders(request))
         case Failure(e) =>
             log("Error processing request", e)
     {{#responses}}{{^isDefault}}{{^hasMore}}
-            apiImpl.{{nickname}}MapToResponse(e)
+            apiImpl.{{nickname}}MapExceptionToResponse(e)(request)
     {{/hasMore}}{{/isDefault}}{{/responses}}
     {{#responses}}{{#isDefault}}{{^hasMore}}
-            InternalServerError(e)
+            InternalServerError(e, apiImpl.getResponseHeaders(request))
     {{/hasMore}}{{/isDefault}}{{/responses}}
     }
   }
@@ -66,27 +67,39 @@ class {{classname}}(implicit val swagger: Swagger, apiImpl: DatabusApi) extends 
 }
 
 trait DatabusApi {
+
+    private val headerAttrName = "gstore.headers"
+
+    def setResponseHeaders(headers: Map[String, String])(request: HttpServletRequest) =
+        request.setAttribute(headerAttrName, headers)
+
+    def getResponseHeaders(request: HttpServletRequest): Map[String, String] =
+        Option(request.getAttribute(headerAttrName))
+            .flatMap(a => Try(a.asInstanceOf[Map[String, String]]).toOption)
+            .getOrElse(Map.empty)
+
 {{#operations}}
 {{#operation}}
 {{newline}}
   def {{nickname}}({{#allParams}}{{paramName}}: {{dataType}}{{#hasMore}}, {{/hasMore}}{{/allParams}})(request: HttpServletRequest): Try[{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}Unit{{/returnType}}]
+
 {{#responses}}
   {{^isDefault}}
-  def  {{nickname}}MapException{{code}}(e: Throwable): {{#dataType}}Option[{{.}}]{{/dataType}}{{^dataType}}Option[String]{{/dataType}}
+  def  {{nickname}}MapException{{code}}(e: Throwable)(request: HttpServletRequest): {{#dataType}}Option[{{.}}]{{/dataType}}{{^dataType}}Option[String]{{/dataType}}
   {{/isDefault}}
 {{/responses}}
 
 {{#responses}}{{^isDefault}}{{^hasMore}}
-  protected[api] def {{nickname}}MapToResponse(e: Throwable): ActionResult =
+  protected[api] def {{nickname}}MapExceptionToResponse(e: Throwable)(request: HttpServletRequest): ActionResult =
     List(
 {{/hasMore}}{{/isDefault}}{{/responses}}
     {{#responses}}
         {{^isDefault}}
-      {{nickname}}MapException{{code}}(e).map(r => ActionResult({{code}}, r, Map.empty)){{#hasMore}},{{/hasMore}}
+      {{nickname}}MapException{{code}}(e)(request).map(r => ActionResult({{code}}, r, getResponseHeaders(request))){{#hasMore}},{{/hasMore}}
         {{/isDefault}}
     {{/responses}}
 {{#responses}}{{^isDefault}}{{^hasMore}}
-    ).flatten.headOption.getOrElse(InternalServerError(e))
+    ).flatten.headOption.getOrElse(InternalServerError(e, getResponseHeaders(request)))
 {{/hasMore}}{{/isDefault}}{{/responses}}
 {{/operation}}
 {{/operations}}
