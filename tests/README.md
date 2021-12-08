@@ -8,6 +8,3 @@
 * **Benchmark** - High load testing
 * **Failing Inputs** - Submits a series of inputs that should fail
 
-## Other
-
-* Saving of `dataid_01.jsonld` failing with `virtuoso.jdbc4.VirtuosoException: SQ200: No column NaN.`

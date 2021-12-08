@@ -96,7 +96,7 @@ assert_not_eq() {
   fi
 
   if [ ! "$expected" == "$actual" ]; then
-    [ "${#msg}" -gt 0 ] && log_success "$expected == $actual :: $msg" 
+    [ "${#msg}" -gt 0 ] && log_success "$expected != $actual :: $msg" 
     return 0
   else
     [ "${#msg}" -gt 0 ] && log_failure "$expected != $actual :: $msg" || true
