@@ -10,9 +10,9 @@ assert_eq "$code" "200" "$code G-Store reachable"
 
 # GRAPH Viewer
 code=$(get_return_code "-L localhost:3002/graph")
-assert_eq "$code" "200" "/git viewer reachable"
+assert_eq "$code" "200" "/graph viewer reachable"
 code=$(get_return_code localhost:3002/graph/)
-assert_eq "$code" "200" "/git/ viewer reachable"
+assert_eq "$code" "200" "/graph/ viewer reachable"
 
 # Check SPARQL virtuoso availability
 code=$(get_return_code "localhost:3002/sparql?default-graph-uri=&query=ASK+%7B%3Fs+%3Fp+%3Fo%7D&format=text%2Fhtml" )
