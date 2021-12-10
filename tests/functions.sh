@@ -28,6 +28,10 @@ post_return_code_contenttype_applicationldjson() {
   echo $(curl -X POST -s -o /dev/null -w %{http_code} -H "Content-Type: application/ld+json" -d $2 $1 )
 }
 
+post_return_code_contenttype_textturtle() {
+  >&2 printf "Test ${BLUE}%s${NORMAL}\n" "curl -X POST -s -o /dev/null -w %{http_code} -H \"Content-Type: text/turtle\" -d $2 \"$1\" "
+  echo $(curl -X POST -s -o /dev/null -w %{http_code} -H "Content-Type: text/turtle" -d $2 $1 )
+}
 
 
 

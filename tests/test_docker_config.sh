@@ -8,10 +8,10 @@ assert_eq "$code" "200" "$code G-Store reachable / TODO might need -L"
 code=$(get_return_code localhost:3002/)
 assert_eq "$code" "200" "$code G-Store reachable"
 
-# GIT File Viewer
-code=$(get_return_code "-L localhost:3002/git")
+# GRAPH Viewer
+code=$(get_return_code "-L localhost:3002/graph")
 assert_eq "$code" "200" "/git viewer reachable"
-code=$(get_return_code localhost:3002/git/)
+code=$(get_return_code localhost:3002/graph/)
 assert_eq "$code" "200" "/git/ viewer reachable"
 
 # Check SPARQL virtuoso availability
