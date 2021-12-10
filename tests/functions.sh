@@ -18,6 +18,12 @@ get_return_code_accept_applicationldjson() {
   echo $(curl -s -o /dev/null -w %{http_code} -H "Accept: application/ld+json"  $1 )
 }
 
+
+get_return_code_accept_textturtle() {
+  >&2 printf "Test ${BLUE}%s${NORMAL}\n" "curl -s -o /dev/null -w %{http_code} -H \"Accept: text/turtle\" \"$1\" "
+  echo $(curl -s -o /dev/null -w %{http_code} -H "Accept: application/ld+json"  $1 )
+}
+
 post_return_code() {
   >&2 printf "Test ${BLUE}%s${NORMAL}\n" "curl -X POST -s -o /dev/null -w %{http_code}  \"$1\" "
   echo $(curl -X POST -s -o /dev/null -w %{http_code} $1 )

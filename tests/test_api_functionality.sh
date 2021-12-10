@@ -25,7 +25,8 @@ echo "#########
 Reading from /file/read
 #########"
 
-echo "## HTTP CODE"
+echo "
+## HTTP CODE"
 
 code=$(get_return_code_accept_applicationldjson "http://localhost:3002/file/read?repo=janni&path=testing/group")
 assert_eq "$code" "200" " http code: $code, read  janni/testing/group"
@@ -35,6 +36,24 @@ assert_eq "$code" "200" " http code: $code, read  janni/testing/group"
 
 code=$(get_return_code_accept_applicationldjson "http://localhost:3002/file/read?repo=XXX&path=XXX/XXX.jsonld")
 assert_eq "$code" "404" " http code: $code, read file that does not exist"
+
+
+echo "
+##Reading from /graph/"
+code=$(get_return_code_accept_applicationldjson "http://localhost:3002/graph/janni/testing/group")
+assert_eq "$code" "200" " http code: $code, read  graph/janni/testing/group"
+
+code=$(get_return_code_accept_textturtle "http://localhost:3002/graph/janni/testing/group")
+assert_eq "$code" "200" " http code: $code, read  graph/janni/testing/group"
+
+body=$(get_body "http://localhost:3002/graph/janni/testing/group")
+check=$(check_valid_json "$body")
+assert_eq "$check" "valid" "jq: $check, valid json for group? default no accept"
+
+body=$(get_body_accept_textturtle "http://localhost:3002/graph/janni/testing/group")
+check=$(check_valid_turtle "$body")
+assert_eq "$check" "valid" "rapper: $check, valid turtle? "
+exit
 
 
 echo "
