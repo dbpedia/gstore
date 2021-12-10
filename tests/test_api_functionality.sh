@@ -88,10 +88,10 @@ enc=$(rawurlencode "ASK { $body }")
 code=$(get_body "localhost:3002/sparql?default-graph-uri=&query=$enc" )
 assert_eq "$code" "true" "Virtuoso SPARQL ASK for content of janni/testing/group"
 
-enc=$(rawurlencode "ASK { GRAPH <http://localhost3002/graph	/janni/testing/group> {?s ?p ?o} }")
+enc=$(rawurlencode "ASK { GRAPH <http://localhost3002/graph/janni/testing/group> {?s ?p ?o} }")
 #echo $enc
 code=$(get_body "localhost:3002/sparql?default-graph-uri=&query=$enc" )
-assert_eq "$code" "true" "Virtuoso SPARQL ASK for GRAPH <http://localhost3002/graph	/janni/testing/group>"
+assert_eq "$code" "true" "Virtuoso SPARQL ASK for GRAPH <http://localhost3002/graph/janni/testing/group>"
 
 
 echo "
