@@ -53,7 +53,6 @@ assert_eq "$check" "valid" "jq: $check, valid json for group? default no accept"
 body=$(get_body_accept_textturtle "http://localhost:3002/graph/janni/testing/group")
 check=$(check_valid_turtle "$body")
 assert_eq "$check" "valid" "rapper: $check, valid turtle? "
-exit
 
 
 echo "
