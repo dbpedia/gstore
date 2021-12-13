@@ -7,7 +7,7 @@ basePath: "/"
 schemes:
   - "http"
 paths:
-  /file/save:
+  /graph/save:
     post:
       summary: "Save file"
       description: "Saving a graph to gstore"
@@ -64,7 +64,7 @@ paths:
           description: "invalid request"
           schema:
             $ref: "#/definitions/OperationFailure"
-  /file/delete:
+  /graph/delete:
     post:
       summary: "Delete file"
       description: "Delete a graph from gstore."
@@ -91,7 +91,7 @@ paths:
           description: "file not found"
           schema:
             $ref: "#/definitions/OperationFailure"
-  /file/read:
+  /graph/read:
     get:
       summary: "Get file"
       description: "Read rdf graph from gstore."
@@ -172,9 +172,12 @@ paths:
 definitions:
   OperationSuccess:
     properties:
+      graphid:
+        type: "string"
       commit_hash:
         type: "string"
     required:
+      - graphid
       - commit_hash
   OperationFailure:
     properties:

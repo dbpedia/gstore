@@ -23,6 +23,7 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
     1111,
     true,
     None,
+    None,
     Some("u"),
     Some("p"),
     Some("http"),
@@ -41,7 +42,7 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
     val file = "group.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
 
-    post("/databus/file/save?repo=kuckuck&path=pa/fl.jsonld", bytes){
+    post("/databus/graph/save?repo=kuckuck&path=pa/fl.jsonld", bytes){
       status should equal(200)
     }
   }
@@ -51,7 +52,7 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
     val file = "group.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
 
-    get("/databus/file/read?repo=kuckuck&path=pa/not_existing.jsonld"){
+    get("/databus/graph/read?repo=kuckuck&path=pa/not_existing.jsonld"){
       status should equal(500)
     }
   }

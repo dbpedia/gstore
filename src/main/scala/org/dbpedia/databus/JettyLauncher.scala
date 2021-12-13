@@ -67,7 +67,7 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
     log.info(
       s"""The service has been started.
         |api is available under: http://localhost:$port/
-        |git repo: http://localhost:$port/git
+        |git repo: http://localhost:$port/g
         |sparql endpoint: http://localhost:$port/sparql
         |""".stripMargin)
     server.join
@@ -105,7 +105,7 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
     resourceHandler.setResourceBase(fileRoot.toAbsolutePath.toString)
     resourceHandler.setDirectoriesListed(true)
 
-    val contextHandler = new ContextHandler("/git")
+    val contextHandler = new ContextHandler("/g")
     contextHandler.setHandler(resourceHandler)
     contextHandler
   }

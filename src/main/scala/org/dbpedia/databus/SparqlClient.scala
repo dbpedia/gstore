@@ -2,15 +2,16 @@ package org.dbpedia.databus
 
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+import java.net.URL
 import java.util.function.Consumer
 
 import com.mchange.v2.c3p0.ComboPooledDataSource
-import org.apache.jena.graph.Node
+import javax.servlet.http.HttpServletRequest
+import org.apache.jena.graph.{Graph, Node}
 import org.apache.jena.rdf.model.{Model, ModelFactory}
-import org.apache.jena.riot.{Lang, RDFDataMgr}
+import org.apache.jena.riot.{Lang, RDFDataMgr, RDFFormat, RDFLanguages, RDFWriterBuilder}
 import org.apache.jena.shacl.{ShaclValidator, Shapes}
 import org.apache.jena.shacl.validation.ReportEntry
-import org.apache.jena.sparql.graph.GraphFactory
 import sttp.client3.{DigestAuthenticationBackend, HttpURLConnectionBackend, basicRequest}
 import sttp.model.Uri
 
@@ -97,61 +98,64 @@ class JdbcCLient(host: String, port: Int, user: String, pass: String) extends Sp
 
 object RdfConversions {
 
-  def readModel(file: Array[Byte]) = Try {
+  private val DefaultShaclLang = Lang.TTL
+
+  def readModel(data: Array[Byte], lang: Lang): Try[Model] = Try {
     val model = ModelFactory.createDefaultModel()
-    val dataStream = new ByteArrayInputStream(file)
-    RDFDataMgr.read(model, dataStream, Lang.JSONLD)
+    val dataStream = new ByteArrayInputStream(data)
+    RDFDataMgr.read(model, dataStream, lang)
     model
   }
 
-  def validateWithShacl(file: Array[Byte], shaclData: Array[Byte]): Try[Model] = {
-    val shaclGra = GraphFactory.createDefaultGraph()
-    val shaDataStream = new ByteArrayInputStream(shaclData)
-    RDFDataMgr.read(shaclGra, shaDataStream, Lang.TTL)
-    readModel(file)
-      .flatMap(model => Try {
-        val shape = Shapes.parse(shaclGra)
-        val report = ShaclValidator.get().validate(shape, model.getGraph)
-        if (report.conforms()) {
-          model
-        } else {
-          val msg = new StringBuilder
-          report.getEntries.forEach(new Consumer[ReportEntry] {
-            override def accept(t: ReportEntry): Unit =
-              msg.append(t.message())
-          })
-          throw new RuntimeException(msg.toString())
-        }
-      })
-  }
-
-  def validateWithShacl(file: Array[Byte], shaclUri: String): Try[Model] = {
-    val graph = RDFDataMgr.loadGraph(shaclUri)
-    val model = ModelFactory.createDefaultModel()
-    val dataStream = new ByteArrayInputStream(file)
-    RDFDataMgr.read(model, dataStream, Lang.JSONLD)
-    val shape = Shapes.parse(graph)
+  def validateWithShacl(model: Model, shacl: Graph): Try[Model] = Try {
+    val shape = Shapes.parse(shacl)
     val report = ShaclValidator.get().validate(shape, model.getGraph)
     if (report.conforms()) {
-      Success(model)
+      model
     } else {
       val msg = new StringBuilder
       report.getEntries.forEach(new Consumer[ReportEntry] {
         override def accept(t: ReportEntry): Unit =
           msg.append(t.message())
       })
-      Failure(new RuntimeException(msg.toString()))
+      throw new RuntimeException(msg.toString())
     }
   }
 
-  def processFile(path: String, fileData: Array[Byte], outpuLang: Lang): Array[Byte] = {
-    val model = ModelFactory.createDefaultModel()
-    val dataStream = new ByteArrayInputStream(fileData)
-    val lang = mapContentType(mapFilenameToContentType(path))
-    RDFDataMgr.read(model, dataStream, lang)
+  def validateWithShacl(file: Array[Byte], shaclData: Array[Byte], modelLang: Lang): Try[Model] =
+    for {
+      shaclGra <- readModel(shaclData, DefaultShaclLang)
+      model <- readModel(file, modelLang)
+      re <- validateWithShacl(model, shaclGra.getGraph)
+    } yield re
+
+  def validateWithShacl(file: Array[Byte], shaclUri: String, modelLang: Lang): Try[Model] =
+    for {
+      shaclGra <- Try(RDFDataMgr.loadGraph(shaclUri))
+      model <- readModel(file, modelLang)
+      re <- validateWithShacl(model, shaclGra)
+    } yield re
+
+  def processFile(fileData: Array[Byte], inputLang: Lang, outputLang: Lang): Try[Array[Byte]] =
+    readModel(fileData, inputLang)
+      .flatMap(modelToBytes(_, outputLang))
+
+  def modelToBytes(model: Model, outputLang: Lang): Try[Array[Byte]] = Try {
     val str = new ByteArrayOutputStream()
-    RDFDataMgr.write(str, model, outpuLang)
+    RDFDataMgr.write(str, model, langToFormat(outputLang))
     str.toByteArray
+  }
+
+  def langToFormat(lang: Lang): RDFFormat = lang match {
+    case RDFLanguages.TURTLE => RDFFormat.TURTLE_PRETTY
+    case RDFLanguages.TTL => RDFFormat.TTL
+    case RDFLanguages.JSONLD => RDFFormat.JSONLD_PRETTY
+    case RDFLanguages.TRIG => RDFFormat.TRIG_PRETTY
+    case RDFLanguages.RDFXML => RDFFormat.RDFXML_PRETTY
+    case RDFLanguages.RDFTHRIFT => RDFFormat.RDF_THRIFT
+    case RDFLanguages.NTRIPLES => RDFFormat.NTRIPLES
+    case RDFLanguages.NQUADS => RDFFormat.NQUADS
+    case RDFLanguages.TRIX => RDFFormat.TRIX
   }
 
   def mapFilenameToContentType(fn: String): String =
@@ -167,7 +171,7 @@ object RdfConversions {
       case _ => "application/ld+json"
     }
 
-  def mapContentType(cn: String): Lang =
+  def mapContentType(cn: String, default: Lang): Lang =
     cn match {
       case "text/turtle" => Lang.TURTLE
       case "application/rdf+xml" => Lang.RDFXML
@@ -177,13 +181,18 @@ object RdfConversions {
       case "application/n-quads" => Lang.NQUADS
       case "application/trix+xml" => Lang.TRIX
       case "application/rdf+thrift" => Lang.RDFTHRIFT
-      case _ => Lang.JSONLD
+      case _ => default
     }
 
   import org.apache.jena.graph.Triple
 
-  def generateGraphId(user: String, path: String): String =
-    s"/$user/$path"
+  def getPrefix(request: HttpServletRequest): String = {
+    val url = new URL(request.getRequestURL.toString)
+    s"${url.getProtocol}://${url.getHost}:${url.getPort}/g"
+  }
+
+  def generateGraphId(prefix: String, user: String, path: String): String =
+    s"$prefix/$user/$path"
 
   def clearGraphSparqlQuery(graphId: String) =
     s"CLEAR SILENT GRAPH <$graphId>"
