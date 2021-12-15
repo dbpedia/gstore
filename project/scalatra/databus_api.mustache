@@ -81,7 +81,7 @@ trait DatabusApi {
 {{#operations}}
 {{#operation}}
 {{newline}}
-  def {{nickname}}({{#allParams}}{{paramName}}: {{dataType}}{{#hasMore}}, {{/hasMore}}{{/allParams}})(request: HttpServletRequest): Try[{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}Unit{{/returnType}}]
+  def {{nickname}}({{#allParams}}{{paramName}}: {{#required}}{{dataType}}{{/required}}{{^required}}Option[{{dataType}}]{{/required}}{{#hasMore}}, {{/hasMore}}{{/allParams}})(request: HttpServletRequest): Try[{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}Unit{{/returnType}}]
 
 {{#responses}}
   {{^isDefault}}

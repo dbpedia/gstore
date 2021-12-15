@@ -23,7 +23,6 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
     1111,
     true,
     None,
-    None,
     Some("u"),
     Some("p"),
     Some("http"),

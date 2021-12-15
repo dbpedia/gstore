@@ -41,17 +41,18 @@ class ApiImpl(config: Config) extends DatabusApi {
 
   override def deleteFile(username: String, path: String)(request: HttpServletRequest): Try[OperationSuccess] =
     deleteFileFromGit(username, path)(request)
-      .map(hash => OperationSuccess(generateGraphId(graphidPrefix.getOrElse(getPrefix(request)), username, path), hash))
+      .map(hash => OperationSuccess(None, hash))
 
   override def getFile(username: String, path: String)(request: HttpServletRequest): Try[String] =
     readFile(username, path)(request)
 
   override def saveFile(username: String,
                         path: String,
-                        body: String)
+                        body: String,
+                        prefix: Option[String])
                        (request: HttpServletRequest): Try[OperationSuccess] = {
     val pa = gitPath(path)
-    val graphId = generateGraphId(graphidPrefix.getOrElse(getPrefix(request)), username, pa)
+    val graphId = generateGraphId(prefix.getOrElse(getPrefix(request)), username, pa)
     val ct = Option(request.getContentType)
       .map(_.toLowerCase)
       .getOrElse("")
@@ -62,7 +63,7 @@ class ApiImpl(config: Config) extends DatabusApi {
           modelToBytes(model, defaultLang)
             .flatMap(a => saveFiles(username, Map(
               pa -> a
-            )).map(hash => OperationSuccess(graphId, hash)))
+            )).map(hash => OperationSuccess(Some(graphId), hash)))
         })
       })
   }
@@ -180,7 +181,6 @@ object ApiImpl {
                     virtuosoPass: String,
                     virtuosoJdbcPort: Int,
                     virtuosoOverHttp: Boolean,
-                    graphidPrefix: Option[String],
                     // that is for using local jgit git provider
                     gitLocalDir: Option[Path],
                     // props below are for using gitlab as a git provider
@@ -201,7 +201,6 @@ object ApiImpl {
 
     private def fromMapper(mapper: Mapper): Config = {
       implicit val mp = mapper
-      val graphidPrefix = getParam("graphidPrefix")
 
       val virtUri = getParam("virtuosoUri").get
       val vUri = if (virtUri.endsWith("/")) virtUri.dropRight(1) else virtUri
@@ -226,7 +225,6 @@ object ApiImpl {
         virtPass,
         virtuosoJdbcPort,
         virtuosoOverHttp,
-        graphidPrefix,
         gitLocalDir,
         gitApiUser,
         gitApiPass,

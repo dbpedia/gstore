@@ -28,6 +28,12 @@ paths:
           type: string
           required: true
           example: "testgroup/test.jsonld"
+        - in: query
+          name: prefix
+          description: prefix for graphid URL if it is not default. NOTE! should be without slash in the end
+          type: string
+          required: false
+          example: "http://foreighhost/api"
         - in: body
           name: body
           description: "Turtle or JSONLD."
@@ -177,7 +183,6 @@ definitions:
       commit_hash:
         type: "string"
     required:
-      - graphid
       - commit_hash
   OperationFailure:
     properties:

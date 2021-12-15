@@ -12,7 +12,7 @@ echo "#########
 code=$(post_return_code_contenttype_applicationldjson "http://localhost:3002/graph/save?repo=janni&path=testing/group" @./data/func_group.jsonld)
 assert_eq "$code" "200" " http code: $code, ct=jsonld upload ./data/func_group.jsonld to janni/testing/group"
 
-code=$(post_return_code_contenttype_applicationldjson "http://localhost:3002/graph/save?repo=janni&path=testing/groupprefix?prefix=http://example.org/" @./data/func_group.jsonld)
+code=$(post_return_code_contenttype_applicationldjson "http://localhost:3002/graph/save?repo=janni&path=testing/groupprefix&prefix=http://example.org" @./data/func_group.jsonld)
 assert_eq "$code" "200" " http code: $code, ct=jsonld upload ./data/func_group.jsonld to janni/testing/groupprefix prefix=http://example.org/"
 
 
