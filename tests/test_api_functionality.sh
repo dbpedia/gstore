@@ -111,8 +111,7 @@ code=$(get_body "localhost:3002/sparql?default-graph-uri=&query=$enc" )
 assert_eq "$code" "true" "Virtuoso SPARQL ASK for content of janni/testing/group"
 
 
-enc=$(rawurlencode "ASK { GRAPH <http://localhost:3002/graph/janni/testing/group> {?s ?p ?o} }")
-#echo $enc
+enc=$(rawurlencode "ASK { GRAPH <http://localhost:3002/g/janni/testing/group> {?s ?p ?o} }")
 code=$(get_body "localhost:3002/sparql?default-graph-uri=&query=$enc" )
 assert_eq "$code" "true" "Virtuoso SPARQL ASK { GRAPH <http://localhost:3002/graph/janni/testing/group> {?s ?p ?o} }"
 
