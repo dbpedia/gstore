@@ -9,80 +9,80 @@ echo "#########
 
 #TODO default with no accept?
 
-code=$(post_return_code_contenttype_applicationldjson "http://localhost:3002/file/save?repo=janni&path=testing/group" @./data/func_group.jsonld)
+code=$(post_return_code_contenttype_applicationldjson "http://localhost:3002/graph/save?repo=janni&path=testing/group" @./data/func_group.jsonld)
 assert_eq "$code" "200" " http code: $code, ct=jsonld upload ./data/func_group.jsonld to janni/testing/group"
 
-code=$(post_return_code_contenttype_applicationldjson "http://localhost:3002/file/save?repo=janni&path=testing/groupprefix?prefix=http://example.org/" @./data/func_group.jsonld)
+code=$(post_return_code_contenttype_applicationldjson "http://localhost:3002/graph/save?repo=janni&path=testing/groupprefix?prefix=http://example.org/" @./data/func_group.jsonld)
 assert_eq "$code" "200" " http code: $code, ct=jsonld upload ./data/func_group.jsonld to janni/testing/groupprefix prefix=http://example.org/"
 
 
-code=$(post_return_code_contenttype_textturtle "http://localhost:3002/file/save?repo=janni&path=testing/groupturtle" @./data/func_group.ttl)
+code=$(post_return_code_contenttype_textturtle "http://localhost:3002/graph/save?repo=janni&path=testing/groupturtle" @./data/func_group.ttl)
 assert_eq "$code" "200" " http code: $code, ct=turtle upload ./data/func_group.ttl to janni/testing/groupturtle"
 
-code=$(post_return_code_contenttype_textturtle "http://localhost:3002/file/save?repo=janni&path=testing/group" @./data/func_group.jsonld)
+code=$(post_return_code_contenttype_textturtle "http://localhost:3002/graph/save?repo=janni&path=testing/group" @./data/func_group.jsonld)
 assert_eq "$code" "400" " http code: $code, upload wrong content-type ./data/func_group.jsonld to janni/testing/group"
-code=$(post_return_code_contenttype_applicationldjson "http://localhost:3002/file/save?repo=janni&path=testing/groupturtle" @./data/func_group.ttl)
+code=$(post_return_code_contenttype_applicationldjson "http://localhost:3002/graph/save?repo=janni&path=testing/groupturtle" @./data/func_group.ttl)
 assert_eq "$code" "400" " http code: $code, uploading wrong content-type ./data/func_group.ttl to janni/testing/groupturtle "
 
 
 echo "#########
-Reading from /file/read
+Reading from /graph/read
 #########"
 
 echo "
 ## HTTP CODE"
 
-code=$(get_return_code_accept_applicationldjson "http://localhost:3002/file/read?repo=janni&path=testing/group")
+code=$(get_return_code_accept_applicationldjson "http://localhost:3002/graph/read?repo=janni&path=testing/group")
 assert_eq "$code" "200" " http code: $code, read  janni/testing/group"
 
-code=$(get_return_code_accept_applicationldjson "http://localhost:3002/file/read?repo=janni&path=testing/groupturtle")
+code=$(get_return_code_accept_applicationldjson "http://localhost:3002/graph/read?repo=janni&path=testing/groupturtle")
 assert_eq "$code" "200" " http code: $code, read  janni/testing/groupturtle"
 
-code=$(get_return_code_accept_applicationldjson "http://localhost:3002/file/read?repo=XXX&path=XXX/XXX.jsonld")
+code=$(get_return_code_accept_applicationldjson "http://localhost:3002/graph/read?repo=XXX&path=XXX/XXX.jsonld")
 assert_eq "$code" "404" " http code: $code, read file that does not exist"
 
 
 echo "
-##Reading from /graph/"
-code=$(get_return_code_accept_applicationldjson "http://localhost:3002/graph/janni/testing/group")
+##Reading from /g/"
+code=$(get_return_code_accept_applicationldjson "http://localhost:3002/g/janni/testing/group")
 assert_eq "$code" "200" " http code: $code, read  graph/janni/testing/group"
 
-code=$(get_return_code_accept_textturtle "http://localhost:3002/graph/janni/testing/group")
+code=$(get_return_code_accept_textturtle "http://localhost:3002/g/janni/testing/group")
 assert_eq "$code" "200" " http code: $code, read  graph/janni/testing/group"
 
-body=$(get_body "http://localhost:3002/graph/janni/testing/group")
+body=$(get_body "http://localhost:3002/g/janni/testing/group")
 check=$(check_valid_json "$body")
 assert_eq "$check" "valid" "jq: $check, valid json for group? default no accept"
 
-body=$(get_body_accept_textturtle "http://localhost:3002/graph/janni/testing/group")
+body=$(get_body_accept_textturtle "http://localhost:3002/g/janni/testing/group")
 check=$(check_valid_turtle "$body")
 assert_eq "$check" "valid" "rapper: $check, valid turtle? "
 
 
 echo "
 ## Syntax of body"
-body=$(get_body "http://localhost:3002/file/read?repo=janni&path=testing/group")
+body=$(get_body "http://localhost:3002/graph/read?repo=janni&path=testing/group")
 check=$(check_valid_json "$body")
 assert_eq "$check" "valid" "jq: $check, valid json for group? default no accept"
 
-body=$(get_body "http://localhost:3002/file/read?repo=janni&path=testing/groupturtle")
+body=$(get_body "http://localhost:3002/graph/read?repo=janni&path=testing/groupturtle")
 check=$(check_valid_json "$body")
 assert_eq "$check" "valid" "jq: $check, valid json for groupturtle? default no accept"
 
 
-body=$(get_body "http://localhost:3002/file/read?repo=janni&path=testing/group")
+body=$(get_body "http://localhost:3002/graph/read?repo=janni&path=testing/group")
 check=$(echo "$body" | wc -l)
 assert_not_eq "$check" "1" "group number of lines: $check, 1 indicates that json is minified"
 
-body=$(get_body "http://localhost:3002/file/read?repo=janni&path=testing/groupturtle")
+body=$(get_body "http://localhost:3002/graph/read?repo=janni&path=testing/groupturtle")
 check=$(echo "$body" | wc -l)
 assert_not_eq "$check" "1" "groupturtle number of lines: $check, 1 indicates that json is minified"
 
-body=$(get_body_accept_applicationldjson "http://localhost:3002/file/read?repo=janni&path=testing/group")
+body=$(get_body_accept_applicationldjson "http://localhost:3002/graph/read?repo=janni&path=testing/group")
 check=$(check_valid_json "$body")
 assert_eq "$check" "valid" "jq: $check, valid json?"
 
-body=$(get_body_accept_textturtle "http://localhost:3002/file/read?repo=janni&path=testing/group")
+body=$(get_body_accept_textturtle "http://localhost:3002/graph/read?repo=janni&path=testing/group")
 #rapper -i turtle -c  -O - - file <<< "$body"
 #check="$?"
 check=$(check_valid_turtle "$body")
@@ -92,19 +92,19 @@ assert_eq "$check" "valid" "rapper: $check, valid turtle? "
 
 echo "
 ## Content-Type"
-code=$(get_contenttype "http://localhost:3002/file/read?repo=janni&path=testing/group")
+code=$(get_contenttype "http://localhost:3002/graph/read?repo=janni&path=testing/group")
 assert_eq "$code" "application/ld+json;charset=utf-8"  "Content-Type: $code, testing content type of no accept (default)"
 
-code=$(get_contenttype_accept_applicationldjson "http://localhost:3002/file/read?repo=janni&path=testing/group")
+code=$(get_contenttype_accept_applicationldjson "http://localhost:3002/graph/read?repo=janni&path=testing/group")
 assert_eq "$code" "application/ld+json;charset=utf-8"  "Content-Type: $code, testing content type of accept application/ld+json"
 
-code=$(get_contenttype_accept_textturtle "http://localhost:3002/file/read?repo=janni&path=testing/group")
+code=$(get_contenttype_accept_textturtle "http://localhost:3002/graph/read?repo=janni&path=testing/group")
 assert_eq "$code" "text/turtle;charset=utf-8"  "Content-Type: $code, testing content type of accept text/turtle"
 
 
 echo "
 ## Virtuoso saving in DB"
-body=$(get_body_accept_textturtle "http://localhost:3002/file/read?repo=janni&path=testing/group")
+body=$(get_body_accept_textturtle "http://localhost:3002/graph/read?repo=janni&path=testing/group")
 enc=$(rawurlencode "ASK { $body }")
 #echo $enc
 code=$(get_body "localhost:3002/sparql?default-graph-uri=&query=$enc" )
@@ -131,19 +131,19 @@ assert_eq "$VAR" "valid" "equivalence (jq normalization) of initial group.jsonld
 echo "
 # DELETE"
 
-code=$(get_return_code "http://localhost:3002/file/delete?repo=janni&path=testing/group")
+code=$(get_return_code "http://localhost:3002/graph/delete?repo=janni&path=testing/group")
 assert_eq "$code" "405" "delete GET not allowed"
 
-code=$(post_return_code "http://localhost:3002/file/delete?repo=janni&path=testing/group")
+code=$(post_return_code "http://localhost:3002/graph/delete?repo=janni&path=testing/group")
 assert_eq "$code" "200" "delete"
 
-code=$(post_return_code "http://localhost:3002/file/delete?repo=janni&path=testing/group")
+code=$(post_return_code "http://localhost:3002/graph/delete?repo=janni&path=testing/group")
 assert_eq "$code" "200" "delete again"
 
-code=$(get_return_code_accept_applicationldjson "http://localhost:3002/file/read?repo=janni&path=testing/group")
+code=$(get_return_code_accept_applicationldjson "http://localhost:3002/graph/read?repo=janni&path=testing/group")
 assert_eq "$code" "404" " http code: $code, read file that was deleted"
 
-code=$(post_return_code "http://localhost:3002/file/delete?repo=janni&path=testing/groupturtle")
+code=$(post_return_code "http://localhost:3002/graph/delete?repo=janni&path=testing/groupturtle")
 assert_eq "$code" "200" "delete groupturtle"
 
 
