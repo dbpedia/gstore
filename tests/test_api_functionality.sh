@@ -138,7 +138,7 @@ code=$(post_return_code "http://localhost:3002/graph/delete?repo=janni&path=test
 assert_eq "$code" "200" "delete"
 
 code=$(post_return_code "http://localhost:3002/graph/delete?repo=janni&path=testing/group")
-assert_eq "$code" "200" "delete again"
+assert_eq "$code" "400" "delete again"
 
 code=$(get_return_code_accept_applicationldjson "http://localhost:3002/graph/read?repo=janni&path=testing/group")
 assert_eq "$code" "404" " http code: $code, read file that was deleted"

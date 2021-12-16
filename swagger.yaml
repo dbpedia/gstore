@@ -88,13 +88,19 @@ paths:
           type: string
           required: true
           example: "testgroup/test.jsonld"
+        - in: query
+          name: prefix
+          description: prefix for graphid URL if it is not default. NOTE! should be without slash in the end
+          type: string
+          required: false
+          example: "http://foreighhost/api"
       responses:
         "200":
           description: "successful operation"
           schema:
             $ref: "#/definitions/OperationSuccess"
-        "404":
-          description: "file not found"
+        "400":
+          description: "graph does not exist"
           schema:
             $ref: "#/definitions/OperationFailure"
   /graph/read:

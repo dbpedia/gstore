@@ -15,7 +15,7 @@ import org.dbpedia.databus.swagger.model.{OperationFailure, OperationSuccess}
 import sttp.model.Uri
 import virtuoso.jdbc4.VirtuosoException
 
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 import scala.xml.Node
 import collection.JavaConverters._
 
@@ -39,9 +39,19 @@ class ApiImpl(config: Config) extends DatabusApi {
       .flatMap(m => Tractate.extract(m.getGraph, TractateV1.Version))
       .map(_.stringForSigning)
 
-  override def deleteFile(username: String, path: String)(request: HttpServletRequest): Try[OperationSuccess] =
-    deleteFileFromGit(username, path)(request)
-      .map(hash => OperationSuccess(None, hash))
+  override def deleteFile(username: String, path: String, prefix: Option[String])(request: HttpServletRequest): Try[OperationSuccess] = {
+    val gid = generateGraphId(prefix.getOrElse(getPrefix(request)), username, path)
+    sparqlClient.executeUpdates(
+      RdfConversions.dropGraphSparqlQuery(gid)
+    )(m => {
+      if (m.map(_._2).sum > 0) {
+        deleteFileFromGit(username, path)(request)
+          .map(hash => OperationSuccess(None, hash))
+      } else {
+        Failure(new GraphDoesNotExistException(gid))
+      }
+    })
+  }
 
   override def getFile(username: String, path: String)(request: HttpServletRequest): Try[String] =
     readFile(username, path)(request)
@@ -75,8 +85,8 @@ class ApiImpl(config: Config) extends DatabusApi {
       defaultLang
     ).map(_ => ())
 
-  override def deleteFileMapException404(e: Throwable)(request: HttpServletRequest): Option[OperationFailure] = e match {
-    case _: FileNotFoundException => Some(OperationFailure(e.getMessage))
+  override def deleteFileMapException400(e: Throwable)(request: HttpServletRequest): Option[OperationFailure] = e match {
+    case _: GraphDoesNotExistException => Some(OperationFailure(e.getMessage))
     case _ => None
   }
 
@@ -135,7 +145,7 @@ class ApiImpl(config: Config) extends DatabusApi {
     sparqlClient.executeUpdates(
       RdfConversions.clearGraphSparqlQuery(graphId),
       fRs: _*
-    )(execInTransaction)
+    )(_ => execInTransaction)
   }
 
   private def saveFileToGit(username: String, path: String, data: Array[Byte]): Try[String] =
@@ -175,6 +185,8 @@ class ApiImpl(config: Config) extends DatabusApi {
 
 
 object ApiImpl {
+
+  class GraphDoesNotExistException(id: String) extends Exception(s"Graph $id does not exist")
 
   case class Config(virtuosoUri: Uri,
                     virtuosoUser: String,

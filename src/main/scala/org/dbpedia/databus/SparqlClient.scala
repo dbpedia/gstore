@@ -9,7 +9,7 @@ import com.mchange.v2.c3p0.ComboPooledDataSource
 import javax.servlet.http.HttpServletRequest
 import org.apache.jena.graph.{Graph, Node}
 import org.apache.jena.rdf.model.{Model, ModelFactory}
-import org.apache.jena.riot.{Lang, RDFDataMgr, RDFFormat, RDFLanguages, RDFWriterBuilder}
+import org.apache.jena.riot.{Lang, RDFDataMgr, RDFFormat, RDFLanguages}
 import org.apache.jena.shacl.{ShaclValidator, Shapes}
 import org.apache.jena.shacl.validation.ReportEntry
 import sttp.client3.{DigestAuthenticationBackend, HttpURLConnectionBackend, basicRequest}
@@ -20,7 +20,7 @@ import scala.util.{Failure, Success, Try}
 
 trait SparqlClient {
 
-  def executeUpdates[T](q1: String, qX: String*)(execInTransaction: => Try[T]): Try[T]
+  def executeUpdates[T](q1: String, qX: String*)(execInTransaction: Map[String, Int] => Try[T]): Try[T]
 
 }
 
@@ -30,7 +30,8 @@ class HttpVirtClient(virtUri: Uri, virtUser: String, virtPass: String) extends S
 
   private lazy val backend = new DigestAuthenticationBackend(HttpURLConnectionBackend())
 
-  def executeUpdates[T](q: String, qX: String*)(trans: => Try[T]): Try[T] = {
+  //todo this wont work for now, because the number of lines processed is not returned
+  def executeUpdates[T](q: String, qX: String*)(trans: Map[String, Int] => Try[T]): Try[T] = {
     val fq = qX.foldLeft(q)((l, r) => l + ";\n" + r)
     val vr = virtuosoRequest(
       fq,
@@ -44,7 +45,7 @@ class HttpVirtClient(virtUri: Uri, virtUser: String, virtPass: String) extends S
       case Right(s) =>
         Success(s)
     }
-    re.flatMap(_ => trans)
+    re.flatMap(_ => trans(Map.empty))
   }
 
 }
@@ -72,15 +73,17 @@ class JdbcCLient(host: String, port: Int, user: String, pass: String) extends Sp
     cpds
   }
 
-  def executeUpdates[T](q: String, qX: String*)(trans: => Try[T]): Try[T] = {
+  def executeUpdates[T](q: String, qX: String*)(trans: Map[String, Int] => Try[T]): Try[T] = {
     val conn = ds.getConnection
     val upds = Seq(q) ++ qX
     Try {
-      val stms = upds.map(s => conn.prepareStatement("sparql\n" + s))
       conn.setAutoCommit(false)
-      stms.foreach(s => s.executeUpdate())
+      val stms = upds.map(s => (s, conn.prepareStatement("sparql\n" + s)))
+      stms.map(s => {
+        (s._1, s._2.executeUpdate())
+      }).toMap
     }
-      .flatMap(_ => trans)
+      .flatMap(r => trans(r))
       .flatMap(r => Try {
         conn.commit()
         conn.close()
