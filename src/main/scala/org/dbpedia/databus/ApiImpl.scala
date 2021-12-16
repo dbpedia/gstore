@@ -46,7 +46,7 @@ class ApiImpl(config: Config) extends DatabusApi {
     )(m => {
       if (m.map(_._2).sum > 0) {
         deleteFileFromGit(username, path)(request)
-          .map(hash => OperationSuccess(None, hash))
+          .map(hash => OperationSuccess(gid, hash))
       } else {
         Failure(new GraphDoesNotExistException(gid))
       }
@@ -73,7 +73,7 @@ class ApiImpl(config: Config) extends DatabusApi {
           modelToBytes(model, defaultLang)
             .flatMap(a => saveFiles(username, Map(
               pa -> a
-            )).map(hash => OperationSuccess(Some(graphId), hash)))
+            )).map(hash => OperationSuccess(graphId, hash)))
         })
       })
   }
