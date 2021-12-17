@@ -9,9 +9,9 @@ code=$(get_return_code localhost:3002/)
 assert_eq "$code" "200" "$code G-Store reachable"
 
 # GRAPH Viewer
-code=$(get_return_code "-L localhost:3002/graph")
+code=$(get_return_code "-L localhost:3002/g")
 assert_eq "$code" "200" "/graph viewer reachable"
-code=$(get_return_code localhost:3002/graph/)
+code=$(get_return_code localhost:3002/g/)
 assert_eq "$code" "200" "/graph/ viewer reachable"
 
 # Check SPARQL virtuoso availability
@@ -25,7 +25,7 @@ code=$(get_return_code "-X POST localhost:3003/sparql?default-graph-uri=&query=A
 assert_eq "$code" "200" "Virtuoso SPARQL reachable via GET port 3003"
 
 # Check dav
-code=$(get_return_code "localhost:3003/dav" )
+code=$(get_return_code "localhost:3003/DAV" )
 assert_eq "$code" "200" "Virtuoso DAV reachable via GET port 3003 / TODO untested since port not working"
 
 

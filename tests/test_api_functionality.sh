@@ -25,6 +25,7 @@ code=$(post_return_code_contenttype_applicationldjson "http://localhost:3002/gra
 assert_eq "$code" "400" " http code: $code, uploading wrong content-type ./data/func_group.ttl to janni/testing/groupturtle "
 
 
+
 echo "#########
 Reading from /graph/read
 #########"
@@ -89,7 +90,6 @@ check=$(check_valid_turtle "$body")
 assert_eq "$check" "valid" "rapper: $check, valid turtle? "
 
 
-
 echo "
 ## Content-Type"
 code=$(get_contenttype "http://localhost:3002/graph/read?repo=janni&path=testing/group")
@@ -113,13 +113,12 @@ assert_eq "$code" "true" "Virtuoso SPARQL ASK for content of janni/testing/group
 
 enc=$(rawurlencode "ASK { GRAPH <http://localhost:3002/g/janni/testing/group> {?s ?p ?o} }")
 code=$(get_body "localhost:3002/sparql?default-graph-uri=&query=$enc" )
-assert_eq "$code" "true" "Virtuoso SPARQL ASK { GRAPH <http://localhost:3002/graph/janni/testing/group> {?s ?p ?o} }"
+assert_eq "$code" "true" "Virtuoso SPARQL ASK { GRAPH <http://localhost:3002/g/janni/testing/group> {?s ?p ?o} }"
 
 enc=$(rawurlencode "ASK { GRAPH <http://example.org/janni/testing/groupprefix> {?s ?p ?o} }")
 #echo $enc
 code=$(get_body "localhost:3002/sparql?default-graph-uri=&query=$enc" )
 assert_eq "$code" "true" "Virtuoso SPARQL ASK { GRAPH <http://example.org/janni/testing/groupprefix> {?s ?p ?o} }"
-
 
 echo "
 ## GIT"
@@ -127,6 +126,8 @@ DIFF=$(diff <(cat ../databus/git/janni/testing/group | jq) <(cat ./data/func_gro
 >&2 printf "Test ${BLUE}%s${NORMAL}\n" "diff <(cat ../databus/git/janni/testing/group | jq) <(cat ./data/func_group.jsonld | jq) "
 VAR=$(if [ "$DIFF" == "" ]; then echo "valid" ; else echo "invalid"; fi)
 assert_eq "$VAR" "valid" "equivalence (jq normalization) of initial group.jsonld file to file saved in git"
+
+
 
 echo "
 # DELETE"

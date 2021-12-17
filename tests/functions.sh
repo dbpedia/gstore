@@ -47,7 +47,7 @@ post_return_code_contenttype_textturtle() {
 
 get_body() {
   >&2 printf "Test ${BLUE}%s${NORMAL}\n" "curl -s \"$1\" "
-  echo $(curl -s  $1 )
+  echo "$(curl -s  $1 )"
 }
 
 get_body_accept_applicationldjson() {
