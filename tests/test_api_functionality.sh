@@ -2,23 +2,26 @@
 source ./custom-assert.sh
 source ./functions.sh
 
+clear 
+
 echo "#########
  Writing
 #########"
 ## Group
 
-#TODO default with no accept?
-
+code=$(post_return_code_no_contenttype "http://localhost:3002/graph/save?repo=janni&path=testing/group" @./data/func_group.jsonld)
+assert_eq "$code" "200" " http code: $code, ct=none upload ./data/func_group.jsonld to janni/testing/group"
 code=$(post_return_code_contenttype_applicationldjson "http://localhost:3002/graph/save?repo=janni&path=testing/group" @./data/func_group.jsonld)
 assert_eq "$code" "200" " http code: $code, ct=jsonld upload ./data/func_group.jsonld to janni/testing/group"
-
-code=$(post_return_code_contenttype_applicationldjson "http://localhost:3002/graph/save?repo=janni&path=testing/groupprefix&prefix=http://example.org" @./data/func_group.jsonld)
-assert_eq "$code" "200" " http code: $code, ct=jsonld upload ./data/func_group.jsonld to janni/testing/groupprefix prefix=http://example.org/"
-
-
+code=$(post_return_code_contenttype_applicationldjson "http://localhost:3002/graph/save?repo=janni&path=testing/groupprefix&prefix=http://example.org/" @./data/func_group.jsonld)
+assert_eq "$code" "200" " TODO #7 '/' http code: $code, ct=jsonld upload ./data/func_group.jsonld to janni/testing/groupprefix prefix=http://example.org/"
+code=$(post_return_code_contenttype_applicationldjson "http://localhost:3002/graph/save?repo=janni&path=testing/groupcirillic&prefix=http://ехампле.org/" @./data/func_group_cirillic.jsonld)
+assert_eq "$code" "200" " TODO #7 '/' http code: $code, ct=jsonld upload ./data/func_group_cirillic.jsonld to janni/testing/groupcirillic prefix=http://ехампле.org/"
 code=$(post_return_code_contenttype_textturtle "http://localhost:3002/graph/save?repo=janni&path=testing/groupturtle" @./data/func_group.ttl)
 assert_eq "$code" "200" " http code: $code, ct=turtle upload ./data/func_group.ttl to janni/testing/groupturtle"
 
+code=$(post_return_code_no_contenttype "http://localhost:3002/graph/save?repo=janni&path=testing/group" @./data/func_group.ttl)
+assert_eq "$code" "400" " http code: $code, ct=none upload ./data/func_group.ttl to janni/testing/group"
 code=$(post_return_code_contenttype_textturtle "http://localhost:3002/graph/save?repo=janni&path=testing/group" @./data/func_group.jsonld)
 assert_eq "$code" "400" " http code: $code, upload wrong content-type ./data/func_group.jsonld to janni/testing/group"
 code=$(post_return_code_contenttype_applicationldjson "http://localhost:3002/graph/save?repo=janni&path=testing/groupturtle" @./data/func_group.ttl)
@@ -70,6 +73,10 @@ body=$(get_body "http://localhost:3002/graph/read?repo=janni&path=testing/groupt
 check=$(check_valid_json "$body")
 assert_eq "$check" "valid" "jq: $check, valid json for groupturtle? default no accept"
 
+body=$(get_body "http://localhost:3002/graph/read?repo=janni&path=testing/groupcirillic")
+check=$(check_valid_json "$body")
+assert_eq "$check" "valid" "cirillic jq: $check, valid json for group? default no accept"
+
 
 body=$(get_body "http://localhost:3002/graph/read?repo=janni&path=testing/group")
 check=$(echo "$body" | wc -l)
@@ -120,12 +127,24 @@ enc=$(rawurlencode "ASK { GRAPH <http://example.org/janni/testing/groupprefix> {
 code=$(get_body "localhost:3002/sparql?default-graph-uri=&query=$enc" )
 assert_eq "$code" "true" "Virtuoso SPARQL ASK { GRAPH <http://example.org/janni/testing/groupprefix> {?s ?p ?o} }"
 
+query="ASK { GRAPH <http://ехампле.org/janni/testing/groupcirillic> {?s ?p ?o} }"
+code=`curl -s "localhost:3002/sparql?default-graph-uri=" --data-urlencode query="$query"`
+assert_eq "$code" "true" "Virtuoso SPARQL $query"
+
+
+body=$(get_body_accept_textturtle "http://localhost:3002/graph/read?repo=janni&path=testing/groupcirillic")
+query="ASK { GRAPH <http://ехампле.org/janni/testing/groupcirillic> { $body } }"
+code=`curl -s "localhost:3002/sparql?default-graph-uri=" --data-urlencode query="$query"`
+assert_eq "$code" "true" "Virtuoso SPARQL ASK for content of janni/testing/groupcirillic"
+
+
+
 echo "
 ## GIT"
 DIFF=$(diff <(cat ../databus/git/janni/testing/group | jq) <(cat ./data/func_group.jsonld | jq) )
 >&2 printf "Test ${BLUE}%s${NORMAL}\n" "diff <(cat ../databus/git/janni/testing/group | jq) <(cat ./data/func_group.jsonld | jq) "
 VAR=$(if [ "$DIFF" == "" ]; then echo "valid" ; else echo "invalid"; fi)
-assert_eq "$VAR" "valid" "equivalence (jq normalization) of initial group.jsonld file to file saved in git"
+assert_eq "$VAR" "valid" "IGNORE FOR NOW, SEE https://github.com/dbpedia/gstore/issues/8 equivalence (jq normalization) of initial group.jsonld file to file saved in git"
 
 
 
@@ -141,8 +160,20 @@ assert_eq "$code" "200" "delete"
 code=$(post_return_code "http://localhost:3002/graph/delete?repo=janni&path=testing/group")
 assert_eq "$code" "400" "delete again"
 
+code=$(post_return_code "http://localhost:3002/graph/delete?repo=janni&path=testing/groupprefix&prefix=http://example.org/")
+assert_eq "$code" "200" "delete with prefix"
+
 code=$(get_return_code_accept_applicationldjson "http://localhost:3002/graph/read?repo=janni&path=testing/group")
 assert_eq "$code" "404" " http code: $code, read file that was deleted"
+
+enc=$(rawurlencode "ASK { GRAPH <http://example.org/janni/testing/groupprefix> {?s ?p ?o} }")
+#echo $enc
+code=$(get_body "localhost:3002/sparql?default-graph-uri=&query=$enc" )
+assert_eq "$code" "false" "Virtuoso SPARQL ASK { GRAPH <http://example.org/janni/testing/groupprefix> {?s ?p ?o} }"
+
+code=$(post_return_code "http://localhost:3002/graph/delete?repo=janni&path=testing/groupcirillic&prefix=http://ехампле.org/")
+assert_eq "$code" "200" "cirillic delete with prefix"
+
 
 code=$(post_return_code "http://localhost:3002/graph/delete?repo=janni&path=testing/groupturtle")
 assert_eq "$code" "200" "delete groupturtle"
