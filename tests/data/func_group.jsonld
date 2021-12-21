@@ -1,8 +1,17 @@
 {
-  "@context":"http://downloads.dbpedia.org/databus/context.jsonld",	
   "@id": "https://dev.databus.dbpedia.org/janni/test",
-  "@type": "dataid:Group",
-  "title": "Example Group" ,
-  "abstract": "This is an example group for API testing.",
-  "description": "This is an example group for API testing."
-}
+  "@type": "http://dataid.dbpedia.org/ns/core#Group",
+  "http://purl.org/dc/terms/title": {
+    "@value": "Test Group",
+    "@language": "en"
+  },
+  "http://purl.org/dc/terms/abstract": {
+    "@value": "Lorem ipsum dolor sit amet. The test has been successful.",
+    "@language": "en"
+  },
+  "http://purl.org/dc/terms/description": {
+    "@value": "Lorem ipsum dolor sit amet. The test has been successful.",
+    "@language": "en"
+  }
+} 
+
