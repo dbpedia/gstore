@@ -1,10 +1,8 @@
 {{#isFormParam}}
-    {{#required}}
-        val {{paramName}} = fileMultiParams("{{paramName}}").headOption
+        val {{paramName}} = Try(fileMultiParams("{{paramName}}").head).toOption
             .map(a => new String(a.get()))
+            .orElse(multiParams("{{paramName}}").headOption)
+        {{#required}}
             .getOrElse(halt(400, "Form parameter {{paramName}} not specified."))
-    {{/required}}
-    {{^required}}
-        val {{paramName}} = fileMultiParams("{{paramName}}").headOption.map(_.get()).map(a => new String(a))
-    {{/required}}
+        {{/required}}
 {{/isFormParam}}

@@ -42,24 +42,12 @@ paths:
             type: string
             format: binary
             example: '{
-                      	"@context" : "https://raw.githubusercontent.com/dbpedia/databus-git-mockup/main/dev/context.jsonld",
-                      	"@id": "http://databus.dbpedia.org/kuckuck/nest",
-                      	"@type": "dataid:Group",
-                      	"title": {
-                                          "@value": "Test Title",
-                                          "@language": "en"
-                                      },
-                                      "comment": {
-                                          "@value": "This is a short comment about the test."
-                                      },
-                                      "abstract": {
-                                          "@value": "This a short abstract for the dataset. Since this is only a test it is quite insignificant.",
-                                          "@language": "en"
-                                      },
-                                      "description": {
-                                          "@value": "This is a descriptionIt is in markdown sytax. It can be much longer and detailed.",
-                                          "@language": "en"
-                                      }
+                        "@context": "http://schema.org/",
+                        "@type": "Person",
+                        "name": "Jane Doe",
+                        "jobTitle": "Professor",
+                        "telephone": "(425) 123-4567",
+                        "url": "http://www.janedoe.com"
                       }'
       responses:
         "200":
