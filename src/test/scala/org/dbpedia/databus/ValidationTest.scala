@@ -19,7 +19,7 @@ class ValidationTest extends FlatSpec with Matchers {
     val file = "version.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
     val re = RdfConversions.validateWithShacl(bytes, shacl, lang)
-    re shouldBe a[Success[Model]]
+    re.get.conforms() should be(true)
   }
 
   "SHACL validation" should "not work for wrong version" in {
@@ -27,7 +27,7 @@ class ValidationTest extends FlatSpec with Matchers {
     val file = "version_wrong.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
     val re = RdfConversions.validateWithShacl(bytes, shacl, lang)
-    re shouldBe a[Failure[Model]]
+    re.get.conforms() should be(false)
   }
 
   "SHACL validation" should "work for group" in {
@@ -35,7 +35,7 @@ class ValidationTest extends FlatSpec with Matchers {
     val file = "group.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
     val re = RdfConversions.validateWithShacl(bytes, shacl, lang)
-    re shouldBe a[Success[Model]]
+    re.get.conforms() should be(true)
   }
 
   "Validation" should "work" in {
@@ -43,7 +43,7 @@ class ValidationTest extends FlatSpec with Matchers {
     val file = "version.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
     val re = RdfConversions.validateWithShacl(bytes, shacl, lang)
-    re shouldBe a[Success[Model]]
+    re.get.conforms() should be(true)
   }
 
   "Shacl validation" should "work with both files" in {
@@ -52,7 +52,7 @@ class ValidationTest extends FlatSpec with Matchers {
     val file = "version.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
     val re = RdfConversions.validateWithShacl(bytes, shacl, lang)
-    re shouldBe a[Success[Model]]
+    re.get.conforms() should be(true)
   }
 
 }

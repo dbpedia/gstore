@@ -3,16 +3,19 @@ package org.dbpedia.databus
 import java.io.FileNotFoundException
 import java.net.URL
 import java.nio.file.{NoSuchFileException, Path, Paths}
+import java.util.function.Consumer
 
 import javax.servlet.ServletContext
 import javax.servlet.http.HttpServletRequest
 import org.apache.jena.rdf.model.Model
 import org.apache.jena.riot.Lang
+import org.apache.jena.shacl.ValidationReport
+import org.apache.jena.shacl.validation.ReportEntry
 import org.apache.jena.shared.JenaException
 import org.dbpedia.databus.ApiImpl.Config
 import org.dbpedia.databus.RdfConversions.{generateGraphId, mapContentType, modelToBytes, readModel}
 import org.dbpedia.databus.swagger.api.DatabusApi
-import org.dbpedia.databus.swagger.model.{OperationFailure, OperationSuccess}
+import org.dbpedia.databus.swagger.model.{OperationFailure, OperationSuccess, ValidationResult}
 import sttp.model.Uri
 import virtuoso.jdbc4.VirtuosoException
 
@@ -79,12 +82,12 @@ class ApiImpl(config: Config) extends DatabusApi {
       })
   }
 
-  override def shaclValidate(dataid: String, shacl: String)(request: HttpServletRequest): Try[Unit] =
+  override def shaclValidate(dataid: String, shacl: String)(request: HttpServletRequest): Try[ValidationResult] =
     RdfConversions.validateWithShacl(
       dataid.getBytes,
       shacl.getBytes(),
       defaultLang
-    ).map(_ => ())
+    ).map(toValidationResult)
 
   override def deleteFileMapException400(e: Throwable)(request: HttpServletRequest): Option[OperationFailure] = e match {
     case _: GraphDoesNotExistException => Some(OperationFailure(e.getMessage))
@@ -105,6 +108,15 @@ class ApiImpl(config: Config) extends DatabusApi {
 
   override def shaclValidateMapException400(e: Throwable)(request: HttpServletRequest): Option[String] = e match {
     case _ => Some(e.getMessage)
+  }
+
+  private def toValidationResult(report: ValidationReport) = {
+    val msg = new StringBuilder
+    report.getEntries.forEach(new Consumer[ReportEntry] {
+      override def accept(t: ReportEntry): Unit =
+        msg.append(t.message())
+    })
+    ValidationResult(report.conforms(), msg.toString())
   }
 
   private def getPrefix(request: HttpServletRequest): String = {

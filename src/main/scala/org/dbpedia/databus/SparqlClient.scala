@@ -2,14 +2,12 @@ package org.dbpedia.databus
 
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
-import java.util.function.Consumer
 
 import com.mchange.v2.c3p0.ComboPooledDataSource
 import org.apache.jena.graph.{Graph, Node}
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.riot.{Lang, RDFDataMgr, RDFFormat, RDFLanguages}
-import org.apache.jena.shacl.{ShaclValidator, Shapes}
-import org.apache.jena.shacl.validation.ReportEntry
+import org.apache.jena.shacl.{ShaclValidator, Shapes, ValidationReport}
 import sttp.client3.{DigestAuthenticationBackend, HttpURLConnectionBackend, basicRequest}
 import sttp.model.Uri
 
@@ -108,29 +106,20 @@ object RdfConversions {
     model
   }
 
-  def validateWithShacl(model: Model, shacl: Graph): Try[Model] = Try {
-    val shape = Shapes.parse(shacl)
-    val report = ShaclValidator.get().validate(shape, model.getGraph)
-    if (report.conforms()) {
-      model
-    } else {
-      val msg = new StringBuilder
-      report.getEntries.forEach(new Consumer[ReportEntry] {
-        override def accept(t: ReportEntry): Unit =
-          msg.append(t.message())
-      })
-      throw new RuntimeException(msg.toString())
-    }
-  }
+  def validateWithShacl(model: Model, shacl: Graph): Try[ValidationReport] =
+    Try(
+      ShaclValidator.get()
+        .validate(Shapes.parse(shacl), model.getGraph)
+    )
 
-  def validateWithShacl(file: Array[Byte], shaclData: Array[Byte], modelLang: Lang): Try[Model] =
+  def validateWithShacl(file: Array[Byte], shaclData: Array[Byte], modelLang: Lang): Try[ValidationReport] =
     for {
       shaclGra <- readModel(shaclData, DefaultShaclLang)
       model <- readModel(file, modelLang)
       re <- validateWithShacl(model, shaclGra.getGraph)
     } yield re
 
-  def validateWithShacl(file: Array[Byte], shaclUri: String, modelLang: Lang): Try[Model] =
+  def validateWithShacl(file: Array[Byte], shaclUri: String, modelLang: Lang): Try[ValidationReport] =
     for {
       shaclGra <- Try(RDFDataMgr.loadGraph(shaclUri))
       model <- readModel(file, modelLang)

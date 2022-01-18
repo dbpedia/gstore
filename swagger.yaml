@@ -144,9 +144,11 @@ paths:
           description: "Contents of a shacl file"
       responses:
         "200":
-          description: "successful operation"
+          description: "validation result"
+          schema:
+            $ref: "#/definitions/ValidationResult"
         "400":
-          description: "invalid data"
+          description: "invalid input"
   /dataid/tractate:
     post:
       summary: "Returns a subgraph of dataid for signing"
@@ -170,6 +172,15 @@ paths:
           schema:
             type: string
 definitions:
+  ValidationResult:
+    properties:
+      success:
+        type: boolean
+      message:
+        type: "string"
+    required:
+      - success
+      - message
   OperationSuccess:
     properties:
       graphid:
