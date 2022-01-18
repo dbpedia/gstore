@@ -24,6 +24,8 @@ libraryDependencies ++= Seq(
   "org.eclipse.jgit" % "org.eclipse.jgit" % "5.12.0.202106070339-r",
 
   "org.eclipse.jetty" % "jetty-webapp" % jettyVersion % "compile",
+  // below are additional jetty handlers for rewrites and proxying
+  "org.eclipse.jetty" % "jetty-rewrite" % jettyVersion % "compile",
   "org.eclipse.jetty" % "jetty-proxy" % jettyVersion % "compile",
 
   "ch.qos.logback" % "logback-classic" % "1.2.3",

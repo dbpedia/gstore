@@ -22,6 +22,7 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
     "p",
     1111,
     true,
+    "/g",
     None,
     Some("u"),
     Some("p"),

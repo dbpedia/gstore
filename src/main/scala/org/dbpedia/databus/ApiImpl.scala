@@ -1,6 +1,7 @@
 package org.dbpedia.databus
 
 import java.io.FileNotFoundException
+import java.net.URL
 import java.nio.file.{NoSuchFileException, Path, Paths}
 
 import javax.servlet.ServletContext
@@ -9,7 +10,7 @@ import org.apache.jena.rdf.model.Model
 import org.apache.jena.riot.Lang
 import org.apache.jena.shared.JenaException
 import org.dbpedia.databus.ApiImpl.Config
-import org.dbpedia.databus.RdfConversions.{generateGraphId, getPrefix, mapContentType, modelToBytes, readModel}
+import org.dbpedia.databus.RdfConversions.{generateGraphId, mapContentType, modelToBytes, readModel}
 import org.dbpedia.databus.swagger.api.DatabusApi
 import org.dbpedia.databus.swagger.model.{OperationFailure, OperationSuccess}
 import sttp.model.Uri
@@ -106,6 +107,11 @@ class ApiImpl(config: Config) extends DatabusApi {
     case _ => Some(e.getMessage)
   }
 
+  private def getPrefix(request: HttpServletRequest): String = {
+    val url = new URL(request.getRequestURL.toString)
+    s"${url.getProtocol}://${url.getHost}:${url.getPort}${config.defaultGraphIdPrefix}/"
+  }
+
   private def readFile(username: String, path: String)(request: HttpServletRequest): Try[String] = {
     val p = gitPath(path)
     val contentType = Option(request.getHeader("Accept"))
@@ -193,6 +199,7 @@ object ApiImpl {
                     virtuosoPass: String,
                     virtuosoJdbcPort: Int,
                     virtuosoOverHttp: Boolean,
+                    defaultGraphIdPrefix: String,
                     // that is for using local jgit git provider
                     gitLocalDir: Option[Path],
                     // props below are for using gitlab as a git provider
@@ -213,6 +220,8 @@ object ApiImpl {
 
     private def fromMapper(mapper: Mapper): Config = {
       implicit val mp = mapper
+
+      val defaultGraphIdPrefix = getParam("defaultGraphIdPrefix").get
 
       val virtUri = getParam("virtuosoUri").get
       val vUri = if (virtUri.endsWith("/")) virtUri.dropRight(1) else virtUri
@@ -237,6 +246,7 @@ object ApiImpl {
         virtPass,
         virtuosoJdbcPort,
         virtuosoOverHttp,
+        defaultGraphIdPrefix,
         gitLocalDir,
         gitApiUser,
         gitApiPass,

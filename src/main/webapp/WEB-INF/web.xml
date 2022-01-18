@@ -60,4 +60,9 @@
         <param-value>password</param-value>
     </context-param>
 
+    <context-param>
+        <param-name>defaultGraphIdPrefix</param-name>
+        <param-value>/g</param-value>
+    </context-param>
+
 </web-app>

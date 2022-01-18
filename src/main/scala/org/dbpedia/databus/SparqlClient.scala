@@ -2,11 +2,9 @@ package org.dbpedia.databus
 
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
-import java.net.URL
 import java.util.function.Consumer
 
 import com.mchange.v2.c3p0.ComboPooledDataSource
-import javax.servlet.http.HttpServletRequest
 import org.apache.jena.graph.{Graph, Node}
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.riot.{Lang, RDFDataMgr, RDFFormat, RDFLanguages}
@@ -189,13 +187,8 @@ object RdfConversions {
 
   import org.apache.jena.graph.Triple
 
-  def getPrefix(request: HttpServletRequest): String = {
-    val url = new URL(request.getRequestURL.toString)
-    s"${url.getProtocol}://${url.getHost}:${url.getPort}/g"
-  }
-
   def generateGraphId(prefix: String, user: String, path: String): String =
-    s"$prefix/$user/$path"
+    s"$prefix$user/$path"
 
   def clearGraphSparqlQuery(graphId: String) =
     s"CLEAR SILENT GRAPH <$graphId>"

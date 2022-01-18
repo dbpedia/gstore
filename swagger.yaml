@@ -59,7 +59,7 @@ paths:
           schema:
             $ref: "#/definitions/OperationFailure"
   /graph/delete:
-    post:
+    delete:
       summary: "Delete file"
       description: "Delete a graph from gstore."
       operationId: "deleteFile"
