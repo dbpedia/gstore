@@ -114,7 +114,7 @@ class ApiImpl(config: Config) extends DatabusApi {
     val msg = new StringBuilder
     report.getEntries.forEach(new Consumer[ReportEntry] {
       override def accept(t: ReportEntry): Unit =
-        msg.append(t.message())
+        msg.append(t.message() + "\n")
     })
     ValidationResult(report.conforms(), msg.toString())
   }
