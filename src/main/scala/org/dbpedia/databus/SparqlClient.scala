@@ -139,7 +139,7 @@ object RdfConversions {
   def langToFormat(lang: Lang): RDFFormat = lang match {
     case RDFLanguages.TURTLE => RDFFormat.TURTLE_PRETTY
     case RDFLanguages.TTL => RDFFormat.TTL
-    case RDFLanguages.JSONLD => RDFFormat.JSONLD_PRETTY
+    case RDFLanguages.JSONLD => RDFFormat.JSONLD_FLATTEN_PRETTY
     case RDFLanguages.TRIG => RDFFormat.TRIG_PRETTY
     case RDFLanguages.RDFXML => RDFFormat.RDFXML_PRETTY
     case RDFLanguages.RDFTHRIFT => RDFFormat.RDF_THRIFT
