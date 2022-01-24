@@ -7,3 +7,6 @@ A web service for retrieving, validating and storing rdf data (jsonld) in
 The G is an ORcronym for (git|graph).
 
 You can find the documentation under: https://dbpedia.gitbook.io/databus/v/gstore/
+
+## Overview
+TODO architecture diagram showing the three components, maybe include a centralized and a de-centralized architecture view
