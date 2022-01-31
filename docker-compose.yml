@@ -23,22 +23,8 @@ services:
       DEFAULT_GRAPH: "http://www.example.com/my-graph"
     volumes:
       - ./databus/virtuoso:/database
-    healthcheck:
-      test: echo 'select 1;' | isql 1111 dba $$DBA_PASSWORD
-      interval: 5s
-      retries: 10
-      timeout: 10s
-  after-virtouso-startup:
-    image: "openlink/virtuoso-opensource-7"
-    environment:
-      DBA_PASS: "everyoneknows"
-    depends_on:
-      gstore-virtuoso:
-        condition: service_healthy
-    entrypoint: /bin/bash
-    command: >
-      -c "
-        echo 'grant SPARQL_LOAD_SERVICE_DATA to \"SPARQL\";' | isql gstore-virtuoso:1111 dba $$DBA_PASS &&
-        echo 'grant SPARQL_SPONGE to \"SPARQL\";' | isql gstore-virtuoso:1111 dba $$DBA_PASS &&
-        echo success
+    entrypoint: /bin/bash -c "
+        echo 'grant SPARQL_LOAD_SERVICE_DATA to \"SPARQL\";' > /opt/virtuoso-opensource/initdb.d/ini.sql &&
+        echo 'grant SPARQL_SPONGE to \"SPARQL\";' >> /opt/virtuoso-opensource/initdb.d/ini.sql &&
+        /virtuoso-entrypoint.sh
       "
