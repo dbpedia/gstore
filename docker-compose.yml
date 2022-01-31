@@ -9,9 +9,6 @@ services:
     volumes:
       - ./databus/git:/gstore/git
       - ./databus/logs:/gstore/logs
-    depends_on:
-      after-virtouso-startup:
-        condition: service_completed_successfully
   gstore-virtuoso:
     image: "openlink/virtuoso-opensource-7"
     # todo remove this port exposure for production
@@ -30,7 +27,6 @@ services:
       test: echo 'select 1;' | isql 1111 dba $$DBA_PASSWORD
       interval: 5s
       retries: 10
-      start_period: 10s
       timeout: 10s
   after-virtouso-startup:
     image: "openlink/virtuoso-opensource-7"
