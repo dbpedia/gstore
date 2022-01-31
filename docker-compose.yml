@@ -9,9 +9,6 @@ services:
     volumes:
       - ./databus/git:/gstore/git
       - ./databus/logs:/gstore/logs
-    depends_on:
-      after-virtouso-startup:
-        condition: service_completed_successfully
   gstore-virtuoso:
     image: "openlink/virtuoso-opensource-7"
     # todo remove this port exposure for production
@@ -25,24 +22,6 @@ services:
       DBA_PASSWORD: "everyoneknows"
       DEFAULT_GRAPH: "http://www.example.com/my-graph"
     volumes:
+      - ./scripts:/opt/virtuoso-opensource/initdb.d
       - ./databus/virtuoso:/database
-    healthcheck:
-      test: echo 'select 1;' | isql 1111 dba $$DBA_PASSWORD
-      interval: 5s
-      retries: 10
-      start_period: 10s
-      timeout: 10s
-  after-virtouso-startup:
-    image: "openlink/virtuoso-opensource-7"
-    environment:
-      DBA_PASS: "everyoneknows"
-    depends_on:
-      gstore-virtuoso:
-        condition: service_healthy
-    entrypoint: /bin/bash
-    command: >
-      -c "
-        echo 'grant SPARQL_LOAD_SERVICE_DATA to \"SPARQL\";' | isql gstore-virtuoso:1111 dba $$DBA_PASS &&
-        echo 'grant SPARQL_SPONGE to \"SPARQL\";' | isql gstore-virtuoso:1111 dba $$DBA_PASS &&
-        echo success
-      "
+    
