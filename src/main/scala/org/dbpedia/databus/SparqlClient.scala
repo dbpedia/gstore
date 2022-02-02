@@ -8,6 +8,7 @@ import org.apache.jena.graph.{Graph, Node}
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.riot.{Lang, RDFDataMgr, RDFFormat, RDFLanguages}
 import org.apache.jena.shacl.{ShaclValidator, Shapes, ValidationReport}
+import org.slf4j.LoggerFactory
 import sttp.client3.{DigestAuthenticationBackend, HttpURLConnectionBackend, basicRequest}
 import sttp.model.Uri
 
@@ -58,6 +59,8 @@ object HttpVirtClient {
 
 class JdbcCLient(host: String, port: Int, user: String, pass: String) extends SparqlClient {
 
+  private lazy val log = LoggerFactory.getLogger(this.getClass)
+
   private lazy val ds = {
     val cpds = new ComboPooledDataSource()
     cpds.setJdbcUrl(s"jdbc:virtuoso://$host:$port/charset=UTF-8");
@@ -73,7 +76,9 @@ class JdbcCLient(host: String, port: Int, user: String, pass: String) extends Sp
     val conn = ds.getConnection
     val upds = Seq(q) ++ qX
     Try {
-      conn.setAutoCommit(false)
+      if (log.isDebugEnabled){
+        upds.foreach(s => log.debug(s"Preparing to execute:\n$s"))
+      }
       val stms = upds.map(s => (s, conn.prepareStatement("sparql\n" + s)))
       stms.map(s => {
         (s._1, s._2.executeUpdate())
