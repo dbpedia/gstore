@@ -8,9 +8,8 @@ WORKDIR /tests
 ENV TERM=xterm-256color
 ENV HOST=host.docker.internal
 
-RUN apt-get update
-RUN apt-get upgrade
-RUN apt-get install -y curl
+RUN apt-get update && apt-get upgrade
+RUN apt-get install -y libcurl4 curl
 RUN apt-get install -y raptor2-utils
 RUN apt-get install -y jq
 
