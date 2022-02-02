@@ -29,6 +29,11 @@ post_return_code() {
   echo $(curl -X POST -s -o /dev/null -w %{http_code} $1 )
 }
 
+delete_return_code() {
+  >&2 printf "Test ${BLUE}%s${NORMAL}\n" "curl -X DELETE -s -o /dev/null -w %{http_code}  \"$1\" "
+  echo $(curl -X DELETE -s -o /dev/null -w %{http_code} $1 )
+}
+
 
 post_return_code_no_contenttype() {
   >&2 printf "Test ${BLUE}%s${NORMAL}\n" "curl -X POST -s -o /dev/null -w %{http_code} -d $2 \"$1\" "
