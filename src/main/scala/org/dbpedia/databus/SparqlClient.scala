@@ -133,9 +133,9 @@ object RdfConversions {
 
   def processFile(fileData: Array[Byte], inputLang: Lang, outputLang: Lang): Try[Array[Byte]] =
     readModel(fileData, inputLang)
-      .flatMap(modelToBytes(_, outputLang))
+      .flatMap(m => graphToBytes(m.getGraph, outputLang))
 
-  def modelToBytes(model: Model, outputLang: Lang): Try[Array[Byte]] = Try {
+  def graphToBytes(model: Graph, outputLang: Lang): Try[Array[Byte]] = Try {
     val str = new ByteArrayOutputStream()
     RDFDataMgr.write(str, model, langToFormat(outputLang))
     str.toByteArray

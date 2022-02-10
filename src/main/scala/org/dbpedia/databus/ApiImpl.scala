@@ -3,19 +3,16 @@ package org.dbpedia.databus
 import java.io.FileNotFoundException
 import java.net.URL
 import java.nio.file.{NoSuchFileException, Path, Paths}
-import java.util.function.Consumer
 
 import javax.servlet.ServletContext
 import javax.servlet.http.HttpServletRequest
 import org.apache.jena.rdf.model.Model
 import org.apache.jena.riot.Lang
-import org.apache.jena.shacl.ValidationReport
-import org.apache.jena.shacl.validation.ReportEntry
 import org.apache.jena.shared.JenaException
 import org.dbpedia.databus.ApiImpl.Config
-import org.dbpedia.databus.RdfConversions.{generateGraphId, mapContentType, modelToBytes, readModel}
+import org.dbpedia.databus.RdfConversions.{generateGraphId, mapContentType, graphToBytes, readModel}
 import org.dbpedia.databus.swagger.api.DatabusApi
-import org.dbpedia.databus.swagger.model.{OperationFailure, OperationSuccess, ValidationResult}
+import org.dbpedia.databus.swagger.model.{OperationFailure, OperationSuccess}
 import sttp.model.Uri
 import virtuoso.jdbc4.VirtuosoException
 
@@ -74,7 +71,7 @@ class ApiImpl(config: Config) extends DatabusApi {
     readModel(body.getBytes, lang)
       .flatMap(model => {
         saveToVirtuoso(model, graphId)({
-          modelToBytes(model, defaultLang)
+          graphToBytes(model.getGraph, defaultLang)
             .flatMap(a => saveFiles(username, Map(
               pa -> a
             )).map(hash => OperationSuccess(graphId, hash)))
@@ -82,12 +79,16 @@ class ApiImpl(config: Config) extends DatabusApi {
       })
   }
 
-  override def shaclValidate(dataid: String, shacl: String)(request: HttpServletRequest): Try[ValidationResult] =
+  override def shaclValidate(dataid: String, shacl: String)(request: HttpServletRequest): Try[String] = {
+    val lang = getLangFromAcceptHeader(request)
+    setResponseHeaders(Map("Content-Type" -> lang.getContentType.toHeaderString))(request)
     RdfConversions.validateWithShacl(
       dataid.getBytes,
-      shacl.getBytes(),
+      shacl.getBytes,
       defaultLang
-    ).map(toValidationResult)
+    ).flatMap(r => RdfConversions.graphToBytes(r.getGraph, lang))
+      .map(new String(_))
+  }
 
   override def deleteFileMapException400(e: Throwable)(request: HttpServletRequest): Option[OperationFailure] = e match {
     case _: GraphDoesNotExistException => Some(OperationFailure(e.getMessage))
@@ -110,15 +111,6 @@ class ApiImpl(config: Config) extends DatabusApi {
     case _ => Some(e.getMessage)
   }
 
-  private def toValidationResult(report: ValidationReport) = {
-    val msg = new StringBuilder
-    report.getEntries.forEach(new Consumer[ReportEntry] {
-      override def accept(t: ReportEntry): Unit =
-        msg.append(t.message() + "\n")
-    })
-    ValidationResult(report.conforms(), msg.toString())
-  }
-
   private def getPrefix(request: HttpServletRequest): String = {
     val url = new URL(request.getRequestURL.toString)
     s"${url.getProtocol}://${url.getHost}:${url.getPort}${config.defaultGraphIdPrefix}/"
@@ -126,18 +118,21 @@ class ApiImpl(config: Config) extends DatabusApi {
 
   private def readFile(username: String, path: String)(request: HttpServletRequest): Try[String] = {
     val p = gitPath(path)
-    val contentType = Option(request.getHeader("Accept"))
-      .map(RdfConversions.mapContentType(_, defaultLang))
-      .getOrElse(defaultLang)
-    setResponseHeaders(Map("Content-Type" -> contentType.getContentType.toHeaderString))(request)
+    val lang = getLangFromAcceptHeader(request)
+    setResponseHeaders(Map("Content-Type" -> lang.getContentType.toHeaderString))(request)
     client.readFile(username, p)
       .flatMap(
         RdfConversions.processFile(
           _,
           defaultLang,
-          contentType))
+          lang))
       .map(new String(_))
   }
+
+  private def getLangFromAcceptHeader(request: HttpServletRequest) =
+    Option(request.getHeader("Accept"))
+      .map(RdfConversions.mapContentType(_, defaultLang))
+      .getOrElse(defaultLang)
 
   private def gitPath(path: String): String = {
     val pa = Paths.get(path)

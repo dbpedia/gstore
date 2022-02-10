@@ -68,12 +68,12 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
 
     post("/databus/shacl/validate", Map.empty, Map("shacl" -> shacl, "graph" -> bytes)){
       status should equal(200)
-      body should include("\"success\":true")
+      body should include("\"sh:conforms\" : true")
     }
 
     post("/databus/shacl/validate", Map.empty, Map("shacl" -> shacl, "graph" -> err)){
       status should equal(200)
-      body should include("\"success\":false")
+      body should include("\"sh:conforms\" : false")
     }
   }
 

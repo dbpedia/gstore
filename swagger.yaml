@@ -128,7 +128,8 @@ paths:
       consumes:
         - "multipart/form-data"
       produces:
-        - "application/json"
+        - "application/ld+json"
+        - "text/turtle"
       parameters:
         - in: formData
           name: graph
@@ -144,9 +145,10 @@ paths:
           description: "Contents of a shacl file"
       responses:
         "200":
-          description: "validation result"
+          description: "validation result in jsonld or turtle form"
           schema:
-            $ref: "#/definitions/ValidationResult"
+            type: string
+            format: binary
         "400":
           description: "invalid input"
   /dataid/tractate:
@@ -155,7 +157,7 @@ paths:
       description: ""
       operationId: "dataidSubgraph"
       consumes:
-        - "application/json-ld"
+        - "application/ld+json"
       produces:
         - "text/plain"
       parameters:
@@ -172,15 +174,6 @@ paths:
           schema:
             type: string
 definitions:
-  ValidationResult:
-    properties:
-      success:
-        type: boolean
-      message:
-        type: "string"
-    required:
-      - success
-      - message
   OperationSuccess:
     properties:
       graphid:
