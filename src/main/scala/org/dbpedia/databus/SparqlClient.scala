@@ -75,14 +75,18 @@ class JdbcCLient(host: String, port: Int, user: String, pass: String) extends Sp
   def executeUpdates[T](q: String, qX: String*)(trans: Map[String, Int] => Try[T]): Try[T] = {
     val conn = ds.getConnection
     val upds = Seq(q) ++ qX
+    val batch_size = upds.length
     Try {
-      if (log.isDebugEnabled){
-        upds.foreach(s => log.debug(s"Preparing to execute:\n$s"))
-      }
-      val stms = upds.map(s => (s, conn.prepareStatement("sparql\n" + s)))
-      stms.map(s => {
-        (s._1, s._2.executeUpdate())
-      }).toMap
+      upds
+        .map(s => (s, conn.prepareStatement("sparql\n" + s)))
+        .zipWithIndex
+        .map {
+          case ((str, stmt), index) =>
+            if (log.isDebugEnabled) {
+              log.debug(s"Preparing to execute in transaction query ${index + 1} of ${batch_size}:\n${str}")
+            }
+            (str, stmt.executeUpdate())
+        }.toMap
     }
       .flatMap(r => trans(r))
       .flatMap(r => Try {
