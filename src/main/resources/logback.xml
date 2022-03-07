@@ -29,6 +29,6 @@
     <appender-ref ref="FILE" />
   </root>
 
-  <logger name="org.dbpedia.databus" level="info" />
+  <logger name="org.dbpedia.databus" level="${gstore.log.level:-INFO}" />
 
 </configuration>
