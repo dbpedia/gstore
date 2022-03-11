@@ -8,6 +8,7 @@ import org.apache.jena.graph.{Graph, Node}
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.riot.{Lang, RDFDataMgr, RDFFormat, RDFLanguages}
 import org.apache.jena.shacl.{ShaclValidator, Shapes, ValidationReport}
+import org.dbpedia.databus.ApiImpl.Config
 import org.slf4j.LoggerFactory
 import sttp.client3.{DigestAuthenticationBackend, HttpURLConnectionBackend, basicRequest}
 import sttp.model.Uri
@@ -18,6 +19,35 @@ import scala.util.{Failure, Success, Try}
 trait SparqlClient {
 
   def executeUpdates[T](q1: String, qX: String*)(execInTransaction: Map[String, Int] => Try[T]): Try[T]
+
+}
+
+
+object SparqlClient {
+
+  // todo not a perfect solution (names of classes hardcoded as strings), needs improvement
+  def get(config: Config): SparqlClient = config.storageClass match {
+    case "org.dbpedia.databus.HttpVirtClient" =>
+      new HttpVirtClient(
+        config.storageSparqlEndpointUri,
+        config.storageUser,
+        config.storagePass)
+    case "org.dbpedia.databus.VirtuosoJDBCClient" =>
+      new VirtuosoJDBCClient(
+        config.storageSparqlEndpointUri.host,
+        config.storageJdbcPort.get,
+        config.storageUser,
+        config.storagePass
+      )
+    case "org.dbpedia.databus.FusekiJDBCClient" =>
+      new FusekiJDBCClient(
+        config.storageSparqlEndpointUri.host,
+        config.storageJdbcPort.get,
+        config.storageUser,
+        config.storagePass,
+        config.storageDbName.get
+      )
+  }
 
 }
 
@@ -57,13 +87,14 @@ object HttpVirtClient {
 
 }
 
-class JdbcCLient(host: String, port: Int, user: String, pass: String) extends SparqlClient {
+
+abstract class JdbcCLient(connectionString: String, user: String, pass: String) extends SparqlClient {
 
   private lazy val log = LoggerFactory.getLogger(this.getClass)
 
   private lazy val ds = {
     val cpds = new ComboPooledDataSource()
-    cpds.setJdbcUrl(s"jdbc:virtuoso://$host:$port/charset=UTF-8");
+    cpds.setJdbcUrl(connectionString)
     cpds.setUser(user)
     cpds.setPassword(pass)
     cpds.setMinPoolSize(5)
@@ -72,13 +103,15 @@ class JdbcCLient(host: String, port: Int, user: String, pass: String) extends Sp
     cpds
   }
 
+  def preprocessQuery(query: String): String
+
   def executeUpdates[T](q: String, qX: String*)(trans: Map[String, Int] => Try[T]): Try[T] = {
     val conn = ds.getConnection
     val upds = Seq(q) ++ qX
     val batch_size = upds.length
     Try {
       upds
-        .map(s => (s, conn.prepareStatement("sparql\n" + s)))
+        .map(s => (s, conn.prepareStatement(preprocessQuery(s))))
         .zipWithIndex
         .map {
           case ((str, stmt), index) =>
@@ -102,6 +135,14 @@ class JdbcCLient(host: String, port: Int, user: String, pass: String) extends Sp
       }
   }
 
+}
+
+class VirtuosoJDBCClient(host: String, port: Int, user: String, pass: String) extends JdbcCLient(s"jdbc:virtuoso://$host:$port/charset=UTF-8", user, pass) {
+  override def preprocessQuery(query: String): String = "sparql\n" + query
+}
+
+class FusekiJDBCClient(host: String, port: Int, user: String, pass: String, dataset: String) extends JdbcCLient(s"jdbc:jena:remote:query=http://$host:$port/$dataset/query&update=http://$host:$port/$dataset/update", user, pass) {
+  override def preprocessQuery(query: String): String = query
 }
 
 object RdfConversions {
@@ -196,11 +237,11 @@ object RdfConversions {
 
   def makeInsertSparqlQuery(triples: Seq[Triple], graphId: String): String = {
     val bld = StringBuilder.newBuilder
-    bld.append("INSERT IN GRAPH ")
+    bld.append("INSERT DATA { GRAPH ")
     wrapWithAngleBracketsQuote(bld, graphId)
     bld.append(" {\n")
     generateQueryTriples(bld, triples)
-    bld.append("}").toString()
+    bld.append("}").append("}").toString()
   }
 
   def generateQueryTriples(bld: StringBuilder, triples: Seq[Triple]): StringBuilder = {

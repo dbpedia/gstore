@@ -24,16 +24,11 @@ import collection.JavaConverters._
 class ApiImpl(config: Config) extends DatabusApi {
 
   import ApiImpl._
-  import config._
 
   private val client: GitClient = initGitClient(config)
-  private lazy val writeVirtUri = Uri.unsafeParse(s"$virtuosoUri/sparql-auth")
   private val defaultLang = Lang.JSONLD
-  private lazy val sparqlClient: SparqlClient =
-    if (virtuosoOverHttp)
-      new HttpVirtClient(writeVirtUri, virtuosoUser, virtuosoPass)
-    else
-      new JdbcCLient(writeVirtUri.host, virtuosoJdbcPort, virtuosoUser, virtuosoPass)
+  private lazy val sparqlClient: SparqlClient = SparqlClient.get(config)
+
 
   override def dataidSubgraph(body: String)(request: HttpServletRequest): Try[String] =
     readModel(body.getBytes, defaultLang)
@@ -201,11 +196,12 @@ object ApiImpl {
 
   class GraphDoesNotExistException(id: String) extends Exception(s"Graph $id does not exist")
 
-  case class Config(virtuosoUri: Uri,
-                    virtuosoUser: String,
-                    virtuosoPass: String,
-                    virtuosoJdbcPort: Int,
-                    virtuosoOverHttp: Boolean,
+  case class Config(storageSparqlEndpointUri: Uri,
+                    storageUser: String,
+                    storagePass: String,
+                    storageJdbcPort: Option[Int],
+                    storageClass: String,
+                    storageDbName: Option[String],
                     defaultGraphIdPrefix: String,
                     // that is for using local jgit git provider
                     gitLocalDir: Option[Path],
@@ -230,12 +226,13 @@ object ApiImpl {
 
       val defaultGraphIdPrefix = getParam("defaultGraphIdPrefix").get
 
-      val virtUri = getParam("virtuosoUri").get
-      val vUri = if (virtUri.endsWith("/")) virtUri.dropRight(1) else virtUri
-      val virtUser = getParam("virtuosoUser").get
-      val virtPass = getParam("virtuosoPass").get
-      val virtuosoJdbcPort = getParam("virtuosoJdbcPort").map(_.toInt).get
-      val virtuosoOverHttp = getParam("virtuosoOverHttp").map(_.toBoolean).get
+      val storageSparqlEndpointUri = getParam("storageSparqlEndpointUri").get
+      val stUri = if (storageSparqlEndpointUri.endsWith("/")) storageSparqlEndpointUri.dropRight(1) else storageSparqlEndpointUri
+      val storageUser = getParam("storageUser").get
+      val storagePass = getParam("storagePass").get
+      val storageJdbcPort = getParam("storageJdbcPort").map(_.toInt)
+      val storageClass = getParam("storageClass").get
+      val storageDbName = getParam("storageDbName")
 
       val gitLocalDir: Option[Path] = getParam("gitLocalDir").map(Paths.get(_))
 
@@ -248,11 +245,12 @@ object ApiImpl {
       val gitApiPort = getParam("gitApiPort").map(_.toInt)
 
       ApiImpl.Config(
-        Uri.parse(vUri).right.get,
-        virtUser,
-        virtPass,
-        virtuosoJdbcPort,
-        virtuosoOverHttp,
+        Uri.parse(stUri).right.get,
+        storageUser,
+        storagePass,
+        storageJdbcPort,
+        storageClass,
+        storageDbName,
         defaultGraphIdPrefix,
         gitLocalDir,
         gitApiUser,

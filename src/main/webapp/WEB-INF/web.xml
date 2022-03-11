@@ -16,24 +16,28 @@
     </listener>
 
     <context-param>
-        <param-name>virtuosoUri</param-name>
+        <param-name>storageSparqlEndpointUri</param-name>
         <param-value>http://virtuoso:8890</param-value>
     </context-param>
     <context-param>
-        <param-name>virtuosoJdbcPort</param-name>
+        <param-name>storageJdbcPort</param-name>
         <param-value>1111</param-value>
     </context-param>
     <context-param>
-        <param-name>virtuosoUser</param-name>
+        <param-name>storageUser</param-name>
         <param-value>dba</param-value>
     </context-param>
     <context-param>
-        <param-name>virtuosoPass</param-name>
+        <param-name>storagePass</param-name>
         <param-value>everyoneknows</param-value>
     </context-param>
     <context-param>
-        <param-name>virtuosoOverHttp</param-name>
-        <param-value>false</param-value>
+        <param-name>storageClass</param-name>
+        <param-value>org.dbpedia.databus.VirtuosoJDBCClient</param-value>
+    </context-param>
+    <context-param>
+        <param-name>storageDbName</param-name>
+        <param-value>ds</param-value>
     </context-param>
 
     <!--    Comment this out to enable remote git with gitlab -->

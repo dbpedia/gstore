@@ -20,8 +20,9 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
     Uri.parse(s"http://localhost:${port}/virtu/oso").right.get,
     "u",
     "p",
-    1111,
-    true,
+    Some(1111),
+    "org.dbpedia.databus.HttpVirtClient",
+    Some("sdcsdc"),
     "/g",
     None,
     Some("u"),
@@ -29,7 +30,7 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
     Some("http"),
     Some("localhost"),
     Some(port)
-)
+  )
 
   implicit val sw = new DatabusSwagger
   implicit val impl = new ApiImpl(config)
@@ -42,7 +43,7 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
     val file = "group.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
 
-    post("/databus/graph/save?repo=kuckuck&path=pa/fl.jsonld", bytes){
+    post("/databus/graph/save?repo=kuckuck&path=pa/fl.jsonld", bytes) {
       status should equal(200)
     }
   }
@@ -52,7 +53,7 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
     val file = "group.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
 
-    get("/databus/graph/read?repo=kuckuck&path=pa/not_existing.jsonld"){
+    get("/databus/graph/read?repo=kuckuck&path=pa/not_existing.jsonld") {
       status should equal(500)
     }
   }
@@ -66,12 +67,12 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
     val errFl = "version_wrong.jsonld"
     val err = Paths.get(getClass.getClassLoader.getResource(errFl).getFile).toFile
 
-    post("/databus/shacl/validate", Map.empty, Map("shacl" -> shacl, "graph" -> bytes)){
+    post("/databus/shacl/validate", Map.empty, Map("shacl" -> shacl, "graph" -> bytes)) {
       status should equal(200)
       body should include("\"sh:conforms\" : true")
     }
 
-    post("/databus/shacl/validate", Map.empty, Map("shacl" -> shacl, "graph" -> err)){
+    post("/databus/shacl/validate", Map.empty, Map("shacl" -> shacl, "graph" -> err)) {
       status should equal(200)
       body should include("\"sh:conforms\" : false")
     }
@@ -81,15 +82,16 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
     val fl = "version_wrong.jsonld"
     val version = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(fl).getFile))
 
-    post("/databus/dataid/tractate", version){
+    post("/databus/dataid/tractate", version) {
       status should equal(200)
-      body should equal("""Databus Tractate V1
-                          |https://webid.dbpedia.org/webid.ttl#this
-                          |http://databus.dbpedia.org/kuckuck/nest/eier/2020.10.10
-                          |http://purl.oclc.org/NET/rdflicense/cc-0
-                          |2020-12-06T00:00:00Z
-                          |1be509fb64371dcf5fc7df334964753da4f2d33ba2d86b8e10150dbf64beef27
-                          |""".stripMargin)
+      body should equal(
+        """Databus Tractate V1
+          |https://webid.dbpedia.org/webid.ttl#this
+          |http://databus.dbpedia.org/kuckuck/nest/eier/2020.10.10
+          |http://purl.oclc.org/NET/rdflicense/cc-0
+          |2020-12-06T00:00:00Z
+          |1be509fb64371dcf5fc7df334964753da4f2d33ba2d86b8e10150dbf64beef27
+          |""".stripMargin)
 
       val model = ModelFactory.createDefaultModel()
       val dataStream = new ByteArrayInputStream(version)
@@ -98,7 +100,6 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
       body should equal(tr.get.stringForSigning)
     }
   }
-
 
 
 }

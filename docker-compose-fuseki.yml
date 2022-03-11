@@ -1,0 +1,26 @@
+version: "3.0"
+services:
+  gstore:
+    build: .
+    ports:
+      - "3002:3002"
+    environment:
+      GSTORE_JETTY_PORT: 3002
+      STORAGE_SPARQL_ENDPOINT_URI: http://gstore-fuseki:3030
+      STORAGE_USER: admin
+      STORAGE_PASS: 123456
+      STORAGE_CLIENT_CLASS: org.dbpedia.databus.FusekiJDBCClient
+      STORAGE_JDBC_PORT: 3030
+    volumes:
+      - ./databus/git:/gstore/git
+      - ./databus/logs:/gstore/logs
+  gstore-fuseki:
+    image: "stain/jena-fuseki"
+    # todo remove this port exposure for production
+    ports:
+      - "3003:3030"
+    environment:
+      ADMIN_PASSWORD: 123456
+      FUSEKI_DATASET_1: ds
+    volumes:
+      - ./databus/fuseki:/fuseki

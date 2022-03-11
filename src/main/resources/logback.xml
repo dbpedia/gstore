@@ -29,6 +29,7 @@
     <appender-ref ref="FILE" />
   </root>
 
+  <logger name="org.apache.jena.jdbc" level="OFF"/>
   <logger name="org.dbpedia.databus" level="${gstore.log.level:-INFO}" />
 
 </configuration>

@@ -16,7 +16,7 @@ object JettyHelpers {
     val proxyContext = new ServletContextHandler(parent, contextPath, ServletContextHandler.SESSIONS)
     val handler = new ServletHandler
     val holder = handler.addServletWithMapping(classOf[ProxyServlet.Transparent], "/*")
-    holder.setInitParameter("proxyTo", s"$virtUri$contextPath")
+    holder.setInitParameter("proxyTo", s"$virtUri")
     proxyContext.setServletHandler(handler)
     proxyContext.setAllowNullPathInfo(true)
     proxyContext

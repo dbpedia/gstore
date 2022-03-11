@@ -1,6 +1,6 @@
 version: "3.9"
 services:
-  databus:
+  gstore:
     depends_on:
       - "gitlab"
       - "gstore-virtuoso"
