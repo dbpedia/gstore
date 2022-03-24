@@ -7,6 +7,8 @@ git clone https://github.com/dbpedia/gstore.git
 cd gstore
 # create folder (writable by all services)
 mkdir databus
-# run docker-compose (builds new image from the sources)
+# run docker-compose (builds new image from the sources), this will start virtuoso
 docker-compose up --build
+# or (for running gstore with Jena Fuseki)
+docker-compose -f docker-compose-fuseki.yml up --build
 ```

@@ -3,11 +3,11 @@
 After the containers are up, the following services will be available:
 
 * GIT File Browser http://localhost:3002/file
-* Virtuoso SPARQL http://localhost:3003/sparql
+* SPARQL endpoint http://localhost:3002/sparql
 * GSTORE http://localhost:3002/ with swagger documentation
     * GET /graph/read
-    * POST /graph/delete
-    * DELETE /graph/save
+    * DELETE /graph/delete
+    * POST /graph/save
     * POST /dataid/tractate
     * POST /shacl/validate
 

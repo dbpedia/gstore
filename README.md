@@ -8,5 +8,7 @@ The G is an ORcronym for (git|graph).
 
 You can find the documentation under: https://dbpedia.gitbook.io/databus/v/gstore/
 
+You can find a test instance to try queries on your own under: http://gstore-playground.tools.dbpedia.org/
+  
 ## Overview
-TODO architecture diagram showing the three components, maybe include a centralized and a de-centralized architecture view
+![Gstore architecture](./documentation/gstore_dia.svg)
