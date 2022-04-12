@@ -4,13 +4,15 @@ import java.io.FileNotFoundException
 import java.net.URL
 import java.nio.file.{NoSuchFileException, Path, Paths}
 
+import com.github.jsonldjava.core.JsonLdConsts
+import com.github.jsonldjava.utils.JsonUtils
 import javax.servlet.ServletContext
 import javax.servlet.http.HttpServletRequest
 import org.apache.jena.rdf.model.Model
 import org.apache.jena.riot.Lang
 import org.apache.jena.shared.JenaException
 import org.dbpedia.databus.ApiImpl.Config
-import org.dbpedia.databus.RdfConversions.{generateGraphId, mapContentType, graphToBytes, readModel}
+import org.dbpedia.databus.RdfConversions.{generateGraphId, graphToBytes, jsonLdContextUriString, mapContentType, readModel}
 import org.dbpedia.databus.swagger.api.DatabusApi
 import org.dbpedia.databus.swagger.model.{OperationFailure, OperationSuccess}
 import sttp.model.Uri
@@ -66,7 +68,15 @@ class ApiImpl(config: Config) extends DatabusApi {
     readModel(body.getBytes, lang)
       .flatMap(model => {
         saveToVirtuoso(model, graphId)({
-          graphToBytes(model.getGraph, defaultLang)
+          val ctxUriString = {
+            // TODO maybe extract it somehow from reader (custom reader needed)
+            if (lang.getName == Lang.JSONLD.getName) {
+              jsonLdContextUriString(body)
+            } else {
+              None
+            }
+          }
+          graphToBytes(model.getGraph, defaultLang, ctxUriString)
             .flatMap(a => saveFiles(username, Map(
               pa -> a
             )).map(hash => OperationSuccess(graphId, hash)))
@@ -81,7 +91,7 @@ class ApiImpl(config: Config) extends DatabusApi {
       dataid.getBytes,
       shacl.getBytes,
       defaultLang
-    ).flatMap(r => RdfConversions.graphToBytes(r.getGraph, lang))
+    ).flatMap(r => RdfConversions.graphToBytes(r.getGraph, lang, None))
       .map(new String(_))
   }
 
@@ -116,11 +126,19 @@ class ApiImpl(config: Config) extends DatabusApi {
     val lang = getLangFromAcceptHeader(request)
     setResponseHeaders(Map("Content-Type" -> lang.getContentType.toHeaderString))(request)
     client.readFile(username, p)
-      .flatMap(
-        RdfConversions.processFile(
-          _,
-          defaultLang,
-          lang))
+      .flatMap(body =>
+        readModel(body, defaultLang)
+          .flatMap(m => {
+            val ctxUriString = {
+              // TODO maybe extract it somehow from reader (custom reader needed)
+              if (lang.getName == Lang.JSONLD.getName) {
+                jsonLdContextUriString(new String(body))
+              } else {
+                None
+              }
+            }
+            graphToBytes(m.getGraph, lang, ctxUriString)
+          }))
       .map(new String(_))
   }
 

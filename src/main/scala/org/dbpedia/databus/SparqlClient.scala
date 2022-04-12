@@ -3,10 +3,14 @@ package org.dbpedia.databus
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 
+import com.github.jsonldjava.core.JsonLdConsts
+import com.github.jsonldjava.utils.JsonUtils
 import com.mchange.v2.c3p0.ComboPooledDataSource
+import org.apache.jena.atlas.json.JsonString
 import org.apache.jena.graph.{Graph, Node}
 import org.apache.jena.rdf.model.{Model, ModelFactory}
-import org.apache.jena.riot.{Lang, RDFDataMgr, RDFFormat, RDFLanguages}
+import org.apache.jena.riot.writer.JsonLDWriter
+import org.apache.jena.riot.{Lang, RDFDataMgr, RDFFormat, RDFLanguages, RDFWriter}
 import org.apache.jena.shacl.{ShaclValidator, Shapes, ValidationReport}
 import org.dbpedia.databus.ApiImpl.Config
 import org.slf4j.LoggerFactory
@@ -176,13 +180,14 @@ object RdfConversions {
       re <- validateWithShacl(model, shaclGra)
     } yield re
 
-  def processFile(fileData: Array[Byte], inputLang: Lang, outputLang: Lang): Try[Array[Byte]] =
-    readModel(fileData, inputLang)
-      .flatMap(m => graphToBytes(m.getGraph, outputLang))
-
-  def graphToBytes(model: Graph, outputLang: Lang): Try[Array[Byte]] = Try {
+  def graphToBytes(model: Graph, outputLang: Lang, context: Option[String]): Try[Array[Byte]] = Try {
     val str = new ByteArrayOutputStream()
-    RDFDataMgr.write(str, model, langToFormat(outputLang))
+    val builder = RDFWriter.create.format(langToFormat(outputLang))
+      .source(model)
+    context.foreach(ctx => builder.set(JsonLDWriter.JSONLD_CONTEXT_SUBSTITUTION, new JsonString(ctx)))
+    builder
+      .build()
+      .output(str)
     str.toByteArray
   }
 
@@ -196,6 +201,20 @@ object RdfConversions {
     case RDFLanguages.NTRIPLES => RDFFormat.NTRIPLES
     case RDFLanguages.NQUADS => RDFFormat.NQUADS
     case RDFLanguages.TRIX => RDFFormat.TRIX
+  }
+
+  def jsonLdContextUriString(data: String): Option[String] = {
+    val jsonObject = JsonUtils.fromString(new String(data))
+    Option(
+      jsonObject
+        .asInstanceOf[java.util.Map[String, Object]]
+        .get(JsonLdConsts.CONTEXT)
+    )
+      .map(_.toString)
+      .flatMap(ctx => Uri.parse(ctx) match {
+        case Left(_) => None
+        case Right(uri) => Some(uri.toString())
+      })
   }
 
   def mapFilenameToContentType(fn: String): String =
