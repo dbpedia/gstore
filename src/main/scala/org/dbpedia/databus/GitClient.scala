@@ -7,7 +7,10 @@ import java.util.concurrent.ConcurrentHashMap
 
 import org.dbpedia.databus.RemoteGitlabHttpClient.{CreateFile, DeleteFile, FileAction, UpdateFile}
 import org.eclipse.jgit.api.Git
-import org.eclipse.jgit.lib.Repository
+import org.eclipse.jgit.lib.{Constants, Repository}
+import org.eclipse.jgit.revwalk.RevWalk
+import org.eclipse.jgit.treewalk.TreeWalk
+import org.eclipse.jgit.treewalk.filter.PathFilter
 import sttp.client3._
 import sttp.model.Uri
 import org.json4s._
@@ -56,7 +59,24 @@ class LocalGitClient(rootPath: Path) extends GitClient {
 
   override def readFile(projectName: String, name: String): Try[Array[Byte]] =
     wrapWithSync(projectName) {
-      Try(Files.readAllBytes(getFilePath(projectName, name)))
+      Try {
+        val repository = Git.open(getRepoPathFromUsername(projectName).toFile).getRepository
+        // find the HEAD
+        val lastCommitId = repository.resolve(Constants.HEAD)
+        // now we have to get the commit
+        val revWalk = new RevWalk(repository)
+        val commit = revWalk.parseCommit(lastCommitId)
+        // and using commit's tree find the path
+        val tree = commit.getTree
+        val treeWalk = new TreeWalk(repository)
+        treeWalk.addTree(tree)
+        treeWalk.setRecursive(true)
+        treeWalk.setFilter(PathFilter.create(getRelativeFilePath(name).toString))
+        treeWalk.next()
+        val objectId = treeWalk.getObjectId(0)
+        val loader = repository.open(objectId)
+        loader.getBytes
+      }
     }
 
   override def commitSeveralFiles(projectName: String, filenameAndData: Map[String, Array[Byte]]): Try[String] =
@@ -75,12 +95,11 @@ class LocalGitClient(rootPath: Path) extends GitClient {
         }
         add.call()
 
-        val commit = git.commit()
-        val ref = commit
+        git.commit()
           .setCommitter("databus", "databus@infai.org")
           .setMessage(s"$projectName: committed ${filenameAndData.keys}")
           .call()
-        ref.getName
+          .getName
       })
     }
 
