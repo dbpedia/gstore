@@ -22,7 +22,10 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
     val port = if (System.getenv("GSTORE_JETTY_PORT") != null) System.getenv("GSTORE_JETTY_PORT").toInt else 8080
     val logBaseProp = "logsFolder"
     val logBase = Paths.get(Option(System.getProperty(logBaseProp))
-      .getOrElse(System.setProperty(logBaseProp, "./logs/")))
+      .getOrElse({
+        System.setProperty(logBaseProp, "./logs/")
+        System.getProperty(logBaseProp)
+      }))
       .normalize()
       .toAbsolutePath
     if (!logBase.toFile.exists()) Files.createDirectories(logBase)
@@ -30,14 +33,15 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
     log.info(s"Starting the service on port $port")
 
     val server = new Server(port)
-    val webXml = getClass.getResource("/WEB-INF/web.xml")
 
-    val scalatraCtx = scalatraContext(webXml)
+    val webXml = getClass.getResource("/WEB-INF/web.xml")
 
     val config = Option(webXml)
       .map(XML.load)
       .map(ApiImpl.Config.fromWebXml)
       .getOrElse(ApiImpl.Config.default)
+
+    val scalatraCtx = scalatraContext(webXml, config.restrictEditsToLocalhost)
 
     val browserPath = "/file"
     val fileListHandler = config.gitLocalDir
@@ -47,7 +51,7 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
     val contexts = new ContextHandlerCollection
     val proxyCtx = proxyContext(contexts, config.storageSparqlEndpointUri.toString(), sparqlPath)
     val fhdl: List[Handler] = fileListHandler.map(List(_)).getOrElse(List.empty)
-    val handlers: List[Handler] = List[Handler](scalatraCtx, proxyCtx) ++ fhdl
+    val handlers: List[Handler] = fhdl ++ List[Handler](proxyCtx, scalatraCtx)
 
     contexts.setHandlers(handlers.toArray)
 
@@ -73,7 +77,7 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
     server.join
   }
 
-  def scalatraContext(webXml: URL) = {
+  def scalatraContext(webXml: URL, restrictLocalhost: Boolean) = {
     val context = new WebAppContext()
     val webappDirLocation =
       if (webXml != null) {
@@ -81,6 +85,17 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
       } else {
         "src/main/webapp/"
       }
+
+    //TODO may be a better solution, but works for now
+    if (restrictLocalhost){
+      import org.eclipse.jetty.server.handler.IPAccessHandler
+      val ipaccess = new IPAccessHandler()
+      ipaccess.setWhiteListByPath(true)
+      ipaccess.addWhite("127.0.0.1|/graph/save")
+      ipaccess.addWhite("127.0.0.1|/graph/delete")
+      ipaccess.setHandler(context.getHandler)
+      context.setHandler(ipaccess)
+    }
 
     context.setContextPath("/")
     context.setResourceBase(webappDirLocation)

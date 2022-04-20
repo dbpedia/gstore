@@ -229,7 +229,8 @@ object ApiImpl {
                     // TODO isn't URI enough here
                     gitApiSchema: Option[String],
                     gitApiHost: Option[String],
-                    gitApiPort: Option[Int])
+                    gitApiPort: Option[Int],
+                    restrictEditsToLocalhost: Boolean)
 
   object Config {
 
@@ -261,6 +262,9 @@ object ApiImpl {
       val gitApiSchema = getParam("gitApiSchema").orElse(Some("http"))
       val gitApiHost = getParam("gitApiHost").orElse(Some("localhost"))
       val gitApiPort = getParam("gitApiPort").map(_.toInt)
+      val restrictEditsToLocalhost = getParam("restrictEditsToLocalhost")
+        .map(_.toBoolean)
+        .getOrElse(false)
 
       ApiImpl.Config(
         Uri.parse(stUri).right.get,
@@ -276,7 +280,8 @@ object ApiImpl {
         // TODO isn't URI enough here
         gitApiSchema,
         gitApiHost,
-        gitApiPort
+        gitApiPort,
+        restrictEditsToLocalhost
       )
     }
 
