@@ -29,7 +29,8 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
     Some("p"),
     Some("http"),
     Some("localhost"),
-    Some(port)
+    Some(port),
+    false
   )
 
   implicit val sw = new DatabusSwagger
