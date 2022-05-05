@@ -60,6 +60,9 @@ lazy val genApiDocsSources = taskKey[Unit]("Generates API docs sources")
 
 // this task copies swagger.yaml to Jetty root and dowloads and copies swagger UI to Jetty root as well.
 genApiDocsSources := {
+  //here we use swagger-ui https://github.com/swagger-api/swagger-ui
+  //todo: the line below can be used for api docs generation, but the swagger-ui is much better
+  //Codegen.docs(target.value)
   val fn = "swagger.yaml"
   val swVersion = "4.1.0"
   val swaggerUIDist = url(s"https://github.com/swagger-api/swagger-ui/archive/refs/tags/v$swVersion.zip")
