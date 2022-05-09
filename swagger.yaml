@@ -1,16 +1,16 @@
 swagger: "2.0"
 info:
-  description: "This is the DbPedia GStore web-api documentation."
-  version: "1.0.0"
-  title: "GStore API"
+  title: "DBpedia GStore API"
+  version: "0.2.0-SNAPSHOT"
+  description: "This is the DBpedia GStore web-api documentation."
 basePath: "/"
 schemes:
   - "http"
 paths:
   /graph/save:
     post:
-      summary: "Save file"
-      description: "Saving a graph to gstore"
+      summary: "Save graph."
+      description: "Saving a graph to GStore."
       operationId: "saveFile"
       consumes:
         - "application/ld+json"
@@ -21,22 +21,24 @@ paths:
         - in: query
           name: repo
           type: string
+          description: "Repository name in which the graph is saved."
           required: true
           example: "testuser"
         - in: query
           name: path
           type: string
+          description: "A path at which the graph will be saved."
           required: true
           example: "testgroup/test.jsonld"
         - in: query
           name: prefix
-          description: prefix for graphid URL if it is not default. NOTE! should be without slash in the end
+          description: "Prefix for graphid URL if it is not default. NOTE! should be without slash in the end."
           type: string
           required: false
           example: "http://foreighhost/api"
         - in: body
           name: body
-          description: "Turtle or JSONLD."
+          description: "Graph data in Turtle or JSONLD."
           required: true
           schema:
             type: string
@@ -51,50 +53,52 @@ paths:
                       }'
       responses:
         "200":
-          description: "successful operation"
+          description: "Successful operation."
           schema:
             $ref: "#/definitions/OperationSuccess"
         "400":
-          description: "invalid request"
+          description: "Returns a description of an error."
           schema:
             $ref: "#/definitions/OperationFailure"
   /graph/delete:
     delete:
-      summary: "Delete file"
-      description: "Delete a graph from gstore."
+      summary: "Delete graph."
+      description: "Delete a graph from GStore."
       operationId: "deleteFile"
       produces:
         - "application/json"
       parameters:
         - in: query
           name: repo
+          description: "Repository name in which the graph is stored."
           type: string
           required: true
           example: "testuser"
         - in: query
           name: path
+          description: "A path at which the graph is stored."
           type: string
           required: true
           example: "testgroup/test.jsonld"
         - in: query
           name: prefix
-          description: prefix for graphid URL if it is not default. NOTE! should be without slash in the end
+          description: "Prefix for graphid URL if it is not default. NOTE! should be without slash in the end."
           type: string
           required: false
           example: "http://foreighhost/api"
       responses:
         "200":
-          description: "successful operation"
+          description: "Successful operation."
           schema:
             $ref: "#/definitions/OperationSuccess"
         "400":
-          description: "graph does not exist"
+          description: "Returns a description of an error."
           schema:
             $ref: "#/definitions/OperationFailure"
   /graph/read:
     get:
-      summary: "Get file"
-      description: "Read rdf graph from gstore."
+      summary: "Read a graph from GStore."
+      description: "Read rdf graph from GStore."
       operationId: "getFile"
       produces:
         - "application/ld+json"
@@ -102,28 +106,30 @@ paths:
       parameters:
         - in: query
           name: repo
+          description: "Repository name in which the graph is stored."
           type: string
           required: true
           example: "testuser"
         - in: query
           name: path
+          description: "A path at which the graph is stored."
           type: string
           required: true
           example: "testgroup/test.jsonld"
       responses:
         "200":
-          description: "A file"
+          description: "A file data."
           schema:
             type: string
             format: binary
         "404":
-          description: "Not found"
+          description: "Not found."
           schema:
             $ref: "#/definitions/OperationFailure"
   /shacl/validate:
     post:
-      summary: "Validate dataid with shacl"
-      description: ""
+      summary: "Validate a graph with SHACL."
+      description: "Validates an RDF graph with SHACL shapes."
       operationId: "shaclValidate"
       consumes:
         - "multipart/form-data"
@@ -136,25 +142,25 @@ paths:
           type: string
           required: true
           format: binary
-          description: "RDF graph contents (jsonld expected)"
+          description: "RDF graph contents (jsonld expected)."
         - in: formData
           name: shacl
           type: string
           required: true
           format: binary
-          description: "Contents of a shacl file"
+          description: "Contents of a SHACL file in ttl format."
       responses:
         "200":
-          description: "validation result in jsonld or turtle form"
+          description: "Validation result in jsonld or turtle form."
           schema:
             type: string
             format: binary
         "400":
-          description: "invalid input"
+          description: "Invalid input."
   /dataid/tractate:
     post:
-      summary: "Returns a subgraph of dataid for signing"
-      description: ""
+      summary: "DataID tractate."
+      description: "Returns a subgraph of DataID for signing."
       operationId: "dataidSubgraph"
       consumes:
         - "application/ld+json"
@@ -163,22 +169,24 @@ paths:
       parameters:
         - in: "body"
           name: "body"
-          description: "Returns dataid file tractate"
+          description: "DataID graph in json-ld format."
           required: true
           schema:
             type: string
             format: binary
       responses:
         "200":
-          description: "successful operation, here we can just use Base64 encoded body"
+          description: "Returns DataID file tractate."
           schema:
             type: string
 definitions:
   OperationSuccess:
     properties:
       graphid:
+        description: "Graph id at which the graph is saved."
         type: "string"
       commit_hash:
+        description: "A git commit hash of the operation."
         type: "string"
     required:
       - graphid
