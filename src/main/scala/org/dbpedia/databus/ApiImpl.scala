@@ -4,8 +4,6 @@ import java.io.FileNotFoundException
 import java.net.URL
 import java.nio.file.{NoSuchFileException, Path, Paths}
 
-import com.github.jsonldjava.core.JsonLdConsts
-import com.github.jsonldjava.utils.JsonUtils
 import javax.servlet.ServletContext
 import javax.servlet.http.HttpServletRequest
 import org.apache.jena.rdf.model.Model
