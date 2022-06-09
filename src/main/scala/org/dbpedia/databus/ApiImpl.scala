@@ -10,7 +10,7 @@ import org.apache.jena.rdf.model.Model
 import org.apache.jena.riot.Lang
 import org.apache.jena.shared.JenaException
 import org.dbpedia.databus.ApiImpl.Config
-import org.dbpedia.databus.RdfConversions.{generateGraphId, graphToBytes, jsonLdContextUriString, mapContentType, readModel}
+import org.dbpedia.databus.RdfConversions.{contextUri, generateGraphId, graphToBytes, mapContentType, readModel}
 import org.dbpedia.databus.swagger.api.DatabusApi
 import org.dbpedia.databus.swagger.model.{OperationFailure, OperationSuccess}
 import sttp.model.Uri
@@ -31,7 +31,7 @@ class ApiImpl(config: Config) extends DatabusApi {
 
 
   override def dataidSubgraph(body: String)(request: HttpServletRequest): Try[String] =
-    readModel(body.getBytes, defaultLang)
+    readModel(body.getBytes, defaultLang, contextUri(body.getBytes, defaultLang))
       .flatMap(m => Tractate.extract(m.getGraph, TractateV1.Version))
       .map(_.stringForSigning)
 
@@ -63,18 +63,11 @@ class ApiImpl(config: Config) extends DatabusApi {
       .map(_.toLowerCase)
       .getOrElse("")
     val lang = mapContentType(ct, defaultLang)
-    readModel(body.getBytes, lang)
+    val ctxUri = contextUri(body.getBytes, lang)
+    readModel(body.getBytes, lang, ctxUri)
       .flatMap(model => {
         saveToVirtuoso(model, graphId)({
-          val ctxUriString = {
-            // TODO maybe extract it somehow from reader (custom reader needed)
-            if (lang.getName == Lang.JSONLD.getName) {
-              jsonLdContextUriString(body)
-            } else {
-              None
-            }
-          }
-          graphToBytes(model.getGraph, defaultLang, ctxUriString)
+          graphToBytes(model.getGraph, defaultLang, ctxUri)
             .flatMap(a => saveFiles(username, Map(
               pa -> a
             )).map(hash => OperationSuccess(graphId, hash)))
@@ -124,19 +117,13 @@ class ApiImpl(config: Config) extends DatabusApi {
     val lang = getLangFromAcceptHeader(request)
     setResponseHeaders(Map("Content-Type" -> lang.getContentType.toHeaderString))(request)
     client.readFile(username, p)
-      .flatMap(body =>
-        readModel(body, defaultLang)
-          .flatMap(m => {
-            val ctxUriString = {
-              // TODO maybe extract it somehow from reader (custom reader needed)
-              if (lang.getName == Lang.JSONLD.getName) {
-                jsonLdContextUriString(new String(body))
-              } else {
-                None
-              }
-            }
-            graphToBytes(m.getGraph, lang, ctxUriString)
-          }))
+      .flatMap(body => {
+        val ctxUri = contextUri(body, defaultLang)
+        readModel(body, defaultLang, ctxUri)
+          .flatMap(m =>
+            graphToBytes(m.getGraph, lang, ctxUri)
+          )
+      })
       .map(new String(_))
   }
 
@@ -155,7 +142,7 @@ class ApiImpl(config: Config) extends DatabusApi {
   }
 
   private[databus] def saveToVirtuoso[T](data: Array[Byte], lang: Lang, graphId: String)(execInTransaction: => Try[T]): Try[T] =
-    readModel(data, lang)
+    readModel(data, lang, contextUri(data, lang))
       .flatMap(saveToVirtuoso(_, graphId)(execInTransaction))
 
   private[databus] def saveToVirtuoso[T](model: Model, graphId: String)(execInTransaction: => Try[T]): Try[T] = {

@@ -49,10 +49,7 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
     }
   }
 
-  "File read" should "work" in {
-
-    val file = "group.jsonld"
-    val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
+  "File read" should "return 500" in {
 
     get("/databus/graph/read?repo=kuckuck&path=pa/not_existing.jsonld") {
       status should equal(500)

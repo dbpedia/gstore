@@ -3,15 +3,18 @@ package org.dbpedia.databus
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 
-import com.github.jsonldjava.core.JsonLdConsts
+import com.github.jsonldjava.core.{JsonLdConsts, JsonLdOptions}
 import com.github.jsonldjava.utils.JsonUtils
 import com.mchange.v2.c3p0.ComboPooledDataSource
 import org.apache.jena.atlas.json.JsonString
 import org.apache.jena.graph.{Graph, Node}
 import org.apache.jena.rdf.model.{Model, ModelFactory}
+import org.apache.jena.riot.lang.JsonLDReader
+import org.apache.jena.riot.system.StreamRDFLib
 import org.apache.jena.riot.writer.JsonLDWriter
-import org.apache.jena.riot.{Lang, RDFDataMgr, RDFFormat, RDFLanguages, RDFWriter}
+import org.apache.jena.riot.{Lang, RDFDataMgr, RDFFormat, RDFLanguages, RDFParserBuilder, RDFWriter, RIOT}
 import org.apache.jena.shacl.{ShaclValidator, Shapes, ValidationReport}
+import org.apache.jena.sparql.util
 import org.dbpedia.databus.ApiImpl.Config
 import org.slf4j.LoggerFactory
 import sttp.client3.{DigestAuthenticationBackend, HttpURLConnectionBackend, basicRequest}
@@ -151,13 +154,44 @@ class FusekiJDBCClient(host: String, port: Int, user: String, pass: String, data
 
 object RdfConversions {
 
+  private lazy val CachingContext = initCachingContext()
+
   private val DefaultShaclLang = Lang.TTL
 
-  def readModel(data: Array[Byte], lang: Lang): Try[Model] = Try {
+  def readModel(data: Array[Byte], lang: Lang, context: Option[String]): Try[Model] = Try {
     val model = ModelFactory.createDefaultModel()
     val dataStream = new ByteArrayInputStream(data)
-    RDFDataMgr.read(model, dataStream, lang)
+    val dest = StreamRDFLib.graph(model.getGraph)
+    val parser = RDFParserBuilder.create()
+      .source(dataStream)
+      .base(null)
+      .lang(lang)
+
+    context.foreach(cs =>
+      parser.context(
+        jenaContext(CachingContext.parse(cs))
+      )
+    )
+
+    parser.parse(dest)
     model
+  }
+
+  def graphToBytes(model: Graph, outputLang: Lang, context: Option[String]): Try[Array[Byte]] = Try {
+    val str = new ByteArrayOutputStream()
+    val builder = RDFWriter.create.format(langToFormat(outputLang))
+      .source(model)
+
+    context.foreach(ctx => {
+      val jctx = jenaContext(CachingContext.parse(ctx))
+      builder.context(jctx)
+      builder.set(JsonLDWriter.JSONLD_CONTEXT_SUBSTITUTION, new JsonString(ctx))
+    })
+
+    builder
+      .build()
+      .output(str)
+    str.toByteArray
   }
 
   def validateWithShacl(model: Model, shacl: Graph): Try[ValidationReport] =
@@ -168,28 +202,19 @@ object RdfConversions {
 
   def validateWithShacl(file: Array[Byte], shaclData: Array[Byte], modelLang: Lang): Try[ValidationReport] =
     for {
-      shaclGra <- readModel(shaclData, DefaultShaclLang)
-      model <- readModel(file, modelLang)
+      shaclGra <- readModel(shaclData, DefaultShaclLang, contextUri(shaclData, DefaultShaclLang))
+      ctxUri = contextUri(file, modelLang)
+      model <- readModel(file, modelLang, ctxUri)
       re <- validateWithShacl(model, shaclGra.getGraph)
     } yield re
 
   def validateWithShacl(file: Array[Byte], shaclUri: String, modelLang: Lang): Try[ValidationReport] =
     for {
       shaclGra <- Try(RDFDataMgr.loadGraph(shaclUri))
-      model <- readModel(file, modelLang)
+      ctxUri = contextUri(file, modelLang)
+      model <- readModel(file, modelLang, ctxUri)
       re <- validateWithShacl(model, shaclGra)
     } yield re
-
-  def graphToBytes(model: Graph, outputLang: Lang, context: Option[String]): Try[Array[Byte]] = Try {
-    val str = new ByteArrayOutputStream()
-    val builder = RDFWriter.create.format(langToFormat(outputLang))
-      .source(model)
-    context.foreach(ctx => builder.set(JsonLDWriter.JSONLD_CONTEXT_SUBSTITUTION, new JsonString(ctx)))
-    builder
-      .build()
-      .output(str)
-    str.toByteArray
-  }
 
   def langToFormat(lang: Lang): RDFFormat = lang match {
     case RDFLanguages.TURTLE => RDFFormat.TURTLE_PRETTY
@@ -201,20 +226,6 @@ object RdfConversions {
     case RDFLanguages.NTRIPLES => RDFFormat.NTRIPLES
     case RDFLanguages.NQUADS => RDFFormat.NQUADS
     case RDFLanguages.TRIX => RDFFormat.TRIX
-  }
-
-  def jsonLdContextUriString(data: String): Option[String] = {
-    val jsonObject = JsonUtils.fromString(new String(data))
-    Option(
-      jsonObject
-        .asInstanceOf[java.util.Map[String, Object]]
-        .get(JsonLdConsts.CONTEXT)
-    )
-      .map(_.toString)
-      .flatMap(ctx => Uri.parse(ctx) match {
-        case Left(_) => None
-        case Right(uri) => Some(uri.toString())
-      })
   }
 
   def mapFilenameToContentType(fn: String): String =
@@ -285,6 +296,40 @@ object RdfConversions {
     bld.append("<")
     bld.append(s)
     bld.append(">")
+  }
+
+  // TODO implement extraction of context as an object and then setting it directly
+  def contextUri(data: Array[Byte], lang: Lang): Option[String] =
+    if (lang.getName == Lang.JSONLD.getName) jsonLdContextUriString(new String(data)) else None
+
+  private def jsonLdContextUriString(data: String): Option[String] = {
+    val jsonObject = JsonUtils.fromString(new String(data))
+    Option(
+      jsonObject
+        .asInstanceOf[java.util.Map[String, Object]]
+        .get(JsonLdConsts.CONTEXT)
+    )
+      .map(_.toString)
+      .flatMap(ctx => Uri.parse(ctx) match {
+        case Left(_) => None
+        case Right(uri) => Some(uri.toString())
+      })
+  }
+
+  import com.github.jsonldjava.core.Context
+
+  private def initCachingContext() = {
+    val opts = new JsonLdOptions(null)
+    opts.useNamespaces = true
+    new CachingJsonldContext(30, opts)
+  }
+
+  private def jenaContext(jsonLdCtx: Context) = {
+    val context: util.Context = RIOT.getContext.copy()
+    jsonLdCtx.putAll(jsonLdCtx.getPrefixes(true))
+    context.put(JsonLDWriter.JSONLD_CONTEXT, jsonLdCtx)
+    context.put(JsonLDReader.JSONLD_CONTEXT, jsonLdCtx)
+    context
   }
 
   private def escapeString(s: String) = {
