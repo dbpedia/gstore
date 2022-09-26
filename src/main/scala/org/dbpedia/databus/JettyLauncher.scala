@@ -3,7 +3,7 @@ package org.dbpedia.databus // remember this package in the sbt project definiti
 import java.net.URL
 import java.nio.file.{Files, Paths}
 
-import org.eclipse.jetty.server.{Handler, NCSARequestLog, Server}
+import org.eclipse.jetty.server.{Handler, NCSARequestLog, Server, ServerConnector}
 import org.eclipse.jetty.servlet.DefaultServlet
 import org.eclipse.jetty.webapp.WebAppContext
 import org.scalatra.servlet.ScalatraListener
@@ -66,7 +66,10 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
     requestLog.setLogLatency(true)
     requestLog.setRetainDays(90)
     server.setRequestLog(requestLog)
-
+    server.getConnectors.foreach(_ match {
+      case sc : ServerConnector => sc.setIdleTimeout(JettyHelpers.DefaultTimeout.toMillis)
+      case _ =>
+    })
     server.start
     log.info(
       s"""The service has been started.

@@ -10,13 +10,18 @@ import org.eclipse.jetty.server.{HandlerContainer, Request}
 import org.eclipse.jetty.server.handler.{ContextHandler, ResourceHandler}
 import org.eclipse.jetty.servlet.{ServletContextHandler, ServletHandler}
 
+import scala.concurrent.duration._
+
 object JettyHelpers {
+
+  val DefaultTimeout = 1 hour
 
   def proxyContext(parent: HandlerContainer, virtUri: String, contextPath: String) = {
     val proxyContext = new ServletContextHandler(parent, contextPath, ServletContextHandler.SESSIONS)
     val handler = new ServletHandler
     val holder = handler.addServletWithMapping(classOf[ProxyServlet.Transparent], "/*")
     holder.setInitParameter("proxyTo", s"$virtUri")
+    holder.setInitParameter("idleTimeout", DefaultTimeout.toMillis.toString)
     proxyContext.setServletHandler(handler)
     proxyContext.setAllowNullPathInfo(true)
     proxyContext
