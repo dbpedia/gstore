@@ -305,11 +305,12 @@ object RdfConversions {
 
   private def jsonLdContextUriString(data: String): Option[String] = {
     val jsonObject = JsonUtils.fromString(new String(data))
-    Option(
+    Try(
       jsonObject
         .asInstanceOf[java.util.Map[String, Object]]
         .get(JsonLdConsts.CONTEXT)
     )
+      .toOption
       .map(_.toString)
       .flatMap(ctx => Try(new URL(ctx)) match {
         case Failure(_) => None
