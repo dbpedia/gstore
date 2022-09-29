@@ -22,6 +22,7 @@ object JettyHelpers {
     val holder = handler.addServletWithMapping(classOf[ProxyServlet.Transparent], "/*")
     holder.setInitParameter("proxyTo", s"$virtUri")
     holder.setInitParameter("idleTimeout", DefaultTimeout.toMillis.toString)
+    holder.setInitParameter("timeout", DefaultTimeout.toMillis.toString)
     proxyContext.setServletHandler(handler)
     proxyContext.setAllowNullPathInfo(true)
     proxyContext
