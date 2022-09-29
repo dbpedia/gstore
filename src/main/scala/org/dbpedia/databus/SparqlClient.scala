@@ -2,6 +2,7 @@ package org.dbpedia.databus
 
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+import java.net.URL
 
 import com.github.jsonldjava.core.{JsonLdConsts, JsonLdOptions}
 import com.github.jsonldjava.utils.JsonUtils
@@ -310,9 +311,9 @@ object RdfConversions {
         .get(JsonLdConsts.CONTEXT)
     )
       .map(_.toString)
-      .flatMap(ctx => Uri.parse(ctx) match {
-        case Left(_) => None
-        case Right(uri) => Some(uri.toString())
+      .flatMap(ctx => Try(new URL(ctx)) match {
+        case Failure(_) => None
+        case Success(uri) => Some(uri.toString())
       })
   }
 
