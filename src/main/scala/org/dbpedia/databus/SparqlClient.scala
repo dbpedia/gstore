@@ -311,7 +311,7 @@ object RdfConversions {
         .get(JsonLdConsts.CONTEXT)
     )
       .toOption
-      .map(_.toString)
+      .flatMap(Option(_).map(_.toString))
       .flatMap(ctx => Try(new URL(ctx)) match {
         case Failure(_) => None
         case Success(uri) => Some(uri.toString())
