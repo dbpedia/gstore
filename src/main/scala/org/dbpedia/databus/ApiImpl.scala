@@ -13,6 +13,7 @@ import org.dbpedia.databus.ApiImpl.Config
 import org.dbpedia.databus.RdfConversions.{contextUri, generateGraphId, graphToBytes, mapContentType, readModel}
 import org.dbpedia.databus.swagger.api.DatabusApi
 import org.dbpedia.databus.swagger.model.{OperationFailure, OperationSuccess}
+import org.eclipse.jgit.errors.RepositoryNotFoundException
 import sttp.model.Uri
 import virtuoso.jdbc4.VirtuosoException
 
@@ -94,6 +95,7 @@ class ApiImpl(config: Config) extends DatabusApi {
   override def getFileMapException404(e: Throwable)(request: HttpServletRequest): Option[OperationFailure] = e match {
     case _: FileNotFoundException => Some(OperationFailure(e.getMessage))
     case _: NoSuchFileException => Some(OperationFailure(e.getMessage))
+    case _: RepositoryNotFoundException => Some(OperationFailure(e.getMessage))
     case _ => None
   }
 
