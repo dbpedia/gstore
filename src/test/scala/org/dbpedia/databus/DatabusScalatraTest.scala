@@ -3,18 +3,29 @@ package org.dbpedia.databus
 
 import java.io.ByteArrayInputStream
 import java.nio.file.{Files, Paths}
-
 import org.apache.jena.rdf.model.ModelFactory
 import org.apache.jena.riot.{Lang, RDFDataMgr}
 import org.dbpedia.databus.ApiImpl.Config
 import org.dbpedia.databus.swagger.DatabusSwagger
 import org.dbpedia.databus.swagger.api.DefaultApi
+import org.scalatest.BeforeAndAfter
 import org.scalatra.test.scalatest.ScalatraFlatSpec
 import sttp.model.Uri
 
-class DatabusScalatraTest extends ScalatraFlatSpec {
+import scala.reflect.io.{Directory, Path}
+
+class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
 
   override def port = 55388
+
+  val dir = Files.createDirectories(Paths.get("target", "test_dir-git"))
+
+  before {
+    Files.createDirectories(Paths.get("target", "test_dir-git"))
+  }
+  after {
+    Directory(Path.jfile2path(dir.toFile)).deleteRecursively()
+  }
 
   val config = Config(
     Uri.parse(s"http://localhost:${port}/virtu/oso").right.get,
@@ -24,7 +35,7 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
     "org.dbpedia.databus.HttpVirtClient",
     Some("sdcsdc"),
     "/g",
-    None,
+    Some(dir.toAbsolutePath),
     Some("u"),
     Some("p"),
     Some("http"),
@@ -39,7 +50,9 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
   addServlet(new DefaultApi(), "/databus/*")
   addServlet(new ExternalApiEmul, "/*")
 
+
   "File save" should "work" in {
+
 
     val file = "group.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
@@ -47,12 +60,20 @@ class DatabusScalatraTest extends ScalatraFlatSpec {
     post("/databus/graph/save?repo=kuckuck&path=pa/fl.jsonld", bytes) {
       status should equal(200)
     }
+
+    get("/databus/graph/read?repo=kuckuck&path=pa/fl.jsonld") {
+      status should equal(200)
+      val respCtx = RdfConversions.contextUrl(bodyBytes, Lang.JSONLD)
+      respCtx should equal(RdfConversions.contextUrl(bytes, Lang.JSONLD))
+      respCtx.get.toString.nonEmpty should equal(true)
+    }
+
   }
 
-  "File read" should "return 500" in {
+  "File read" should "return 404" in {
 
     get("/databus/graph/read?repo=kuckuck&path=pa/not_existing.jsonld") {
-      status should equal(500)
+      status should equal(404)
     }
   }
 

@@ -3,14 +3,13 @@ package org.dbpedia.databus
 import java.io.FileNotFoundException
 import java.net.URL
 import java.nio.file.{NoSuchFileException, Path, Paths}
-
 import javax.servlet.ServletContext
 import javax.servlet.http.HttpServletRequest
 import org.apache.jena.rdf.model.Model
 import org.apache.jena.riot.Lang
 import org.apache.jena.shared.JenaException
 import org.dbpedia.databus.ApiImpl.Config
-import org.dbpedia.databus.RdfConversions.{contextUri, generateGraphId, graphToBytes, mapContentType, readModel}
+import org.dbpedia.databus.RdfConversions.{contextUrl, generateGraphId, graphToBytes, jenaJsonLdContextWithFallbackForLocalhost, mapContentType, readModel}
 import org.dbpedia.databus.swagger.api.DatabusApi
 import org.dbpedia.databus.swagger.model.{OperationFailure, OperationSuccess}
 import org.eclipse.jgit.errors.{MissingObjectException, RepositoryNotFoundException}
@@ -32,7 +31,12 @@ class ApiImpl(config: Config) extends DatabusApi {
 
 
   override def dataidSubgraph(body: String)(request: HttpServletRequest): Try[String] =
-    readModel(body.getBytes, defaultLang, contextUri(body.getBytes, defaultLang))
+    readModel(
+      body.getBytes,
+      defaultLang,
+      contextUrl(body.getBytes, defaultLang)
+        .map(jenaJsonLdContextWithFallbackForLocalhost(_, request.getRemoteHost).get)
+    )
       .flatMap(m => Tractate.extract(m.getGraph, TractateV1.Version))
       .map(_.stringForSigning)
 
@@ -64,11 +68,12 @@ class ApiImpl(config: Config) extends DatabusApi {
       .map(_.toLowerCase)
       .getOrElse("")
     val lang = mapContentType(ct, defaultLang)
-    val ctxUri = contextUri(body.getBytes, lang)
-    readModel(body.getBytes, lang, ctxUri)
+    val ctxU = contextUrl(body.getBytes, lang)
+    val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, request.getRemoteHost).get)
+    readModel(body.getBytes, lang, ctx)
       .flatMap(model => {
         saveToVirtuoso(model, graphId)({
-          graphToBytes(model.getGraph, defaultLang, ctxUri)
+          graphToBytes(model.getGraph, defaultLang, ctxU)
             .flatMap(a => saveFiles(username, Map(
               pa -> a
             )).map(hash => OperationSuccess(graphId, hash)))
@@ -79,9 +84,17 @@ class ApiImpl(config: Config) extends DatabusApi {
   override def shaclValidate(dataid: String, shacl: String)(request: HttpServletRequest): Try[String] = {
     val lang = getLangFromAcceptHeader(request)
     setResponseHeaders(Map("Content-Type" -> lang.getContentType.toHeaderString))(request)
+    val ctxU = contextUrl(dataid.getBytes, lang)
+    val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, request.getRemoteHost).get)
+
+    val shaclU = contextUrl(shacl.getBytes, RdfConversions.DefaultShaclLang)
+    val shaclCtx = shaclU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, request.getRemoteHost).get)
+
     RdfConversions.validateWithShacl(
       dataid.getBytes,
       shacl.getBytes,
+      ctx,
+      shaclCtx,
       defaultLang
     ).flatMap(r => RdfConversions.graphToBytes(r.getGraph, lang, None))
       .map(new String(_))
@@ -121,8 +134,13 @@ class ApiImpl(config: Config) extends DatabusApi {
     setResponseHeaders(Map("Content-Type" -> lang.getContentType.toHeaderString))(request)
     client.readFile(username, p)
       .flatMap(body => {
-        val ctxUri = contextUri(body, defaultLang)
-        readModel(body, defaultLang, ctxUri)
+        val ctxUri = contextUrl(body, defaultLang)
+        readModel(
+          body,
+          defaultLang,
+          contextUrl(body, defaultLang)
+            .map(jenaJsonLdContextWithFallbackForLocalhost(_, request.getRemoteHost).get)
+        )
           .flatMap(m =>
             graphToBytes(m.getGraph, lang, ctxUri)
           )
@@ -143,10 +161,6 @@ class ApiImpl(config: Config) extends DatabusApi {
       path
     }
   }
-
-  private[databus] def saveToVirtuoso[T](data: Array[Byte], lang: Lang, graphId: String)(execInTransaction: => Try[T]): Try[T] =
-    readModel(data, lang, contextUri(data, lang))
-      .flatMap(saveToVirtuoso(_, graphId)(execInTransaction))
 
   private[databus] def saveToVirtuoso[T](model: Model, graphId: String)(execInTransaction: => Try[T]): Try[T] = {
     val rqsts = model.getGraph.find().asScala

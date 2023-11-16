@@ -23,8 +23,8 @@ class CachingJsonldContext(sizeLimit: Int, opts: JsonLdOptions) extends Context(
           })
       case _ => super.parse(ctx)
     }
-
-
+  def putInCache(contextUri: String, ctx: Context) =
+    cache.put(contextUri, ctx)
 
 }
 

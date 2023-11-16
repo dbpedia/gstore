@@ -2,8 +2,8 @@ package org.dbpedia.databus
 
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
-import java.net.URL
-
+import java.net.{InetAddress, URL}
+import com.github.jsonldjava.core
 import com.github.jsonldjava.core.{JsonLdConsts, JsonLdOptions}
 import com.github.jsonldjava.utils.JsonUtils
 import com.mchange.v2.c3p0.ComboPooledDataSource
@@ -157,9 +157,9 @@ object RdfConversions {
 
   private lazy val CachingContext = initCachingContext()
 
-  private val DefaultShaclLang = Lang.TTL
+  val DefaultShaclLang = Lang.TTL
 
-  def readModel(data: Array[Byte], lang: Lang, context: Option[String]): Try[Model] = Try {
+  def readModel(data: Array[Byte], lang: Lang, context: Option[util.Context]): Try[Model] = Try {
     val model = ModelFactory.createDefaultModel()
     val dataStream = new ByteArrayInputStream(data)
     val dest = StreamRDFLib.graph(model.getGraph)
@@ -169,24 +169,21 @@ object RdfConversions {
       .lang(lang)
 
     context.foreach(cs =>
-      parser.context(
-        jenaContext(CachingContext.parse(cs))
-      )
-    )
+      parser.context(cs))
 
     parser.parse(dest)
     model
   }
 
-  def graphToBytes(model: Graph, outputLang: Lang, context: Option[String]): Try[Array[Byte]] = Try {
+  def graphToBytes(model: Graph, outputLang: Lang, context: Option[URL]): Try[Array[Byte]] = Try {
     val str = new ByteArrayOutputStream()
     val builder = RDFWriter.create.format(langToFormat(outputLang))
       .source(model)
 
     context.foreach(ctx => {
-      val jctx = jenaContext(CachingContext.parse(ctx))
+      val jctx = jenaContext(CachingContext.parse(ctx.toString))
       builder.context(jctx)
-      builder.set(JsonLDWriter.JSONLD_CONTEXT_SUBSTITUTION, new JsonString(ctx))
+      builder.set(JsonLDWriter.JSONLD_CONTEXT_SUBSTITUTION, new JsonString(ctx.toString))
     })
 
     builder
@@ -201,19 +198,17 @@ object RdfConversions {
         .validate(Shapes.parse(shacl), model.getGraph)
     )
 
-  def validateWithShacl(file: Array[Byte], shaclData: Array[Byte], modelLang: Lang): Try[ValidationReport] =
+  def validateWithShacl(file: Array[Byte], shaclData: Array[Byte], fileCtx: Option[util.Context], shaclCtx: Option[util.Context], modelLang: Lang): Try[ValidationReport] =
     for {
-      shaclGra <- readModel(shaclData, DefaultShaclLang, contextUri(shaclData, DefaultShaclLang))
-      ctxUri = contextUri(file, modelLang)
-      model <- readModel(file, modelLang, ctxUri)
+      shaclGra <- readModel(shaclData, DefaultShaclLang, shaclCtx)
+      model <- readModel(file, modelLang, fileCtx)
       re <- validateWithShacl(model, shaclGra.getGraph)
     } yield re
 
-  def validateWithShacl(file: Array[Byte], shaclUri: String, modelLang: Lang): Try[ValidationReport] =
+  def validateWithShacl(file: Array[Byte], fileCtx: Option[util.Context], shaclUri: String, modelLang: Lang): Try[ValidationReport] =
     for {
       shaclGra <- Try(RDFDataMgr.loadGraph(shaclUri))
-      ctxUri = contextUri(file, modelLang)
-      model <- readModel(file, modelLang, ctxUri)
+      model <- readModel(file, modelLang, fileCtx)
       re <- validateWithShacl(model, shaclGra)
     } yield re
 
@@ -299,39 +294,64 @@ object RdfConversions {
     bld.append(">")
   }
 
-  // TODO implement extraction of context as an object and then setting it directly
-  def contextUri(data: Array[Byte], lang: Lang): Option[String] =
-    if (lang.getName == Lang.JSONLD.getName) jsonLdContextUriString(new String(data)) else None
+  def contextUrl(data: Array[Byte], lang: Lang): Option[URL] =
+    if (lang == Lang.JSONLD) {
+      jsonLdContextUrl(data)
+        .get
+    } else {
+      None
+    }
 
-  private def jsonLdContextUriString(data: String): Option[String] = {
-    val jsonObject = JsonUtils.fromString(new String(data))
+  def jenaJsonLdContextWithFallbackForLocalhost(jsonLdContextUrl: URL, requestHost: String): Try[util.Context] =
+    jsonLdContextWithFallbackForLocalhost(jsonLdContextUrl, requestHost)
+      .map(jenaContext)
+
+  private def jsonLdContextUrl(data: Array[Byte]): Try[Option[URL]] =
     Try(
-      jsonObject
-        .asInstanceOf[java.util.Map[String, Object]]
-        .get(JsonLdConsts.CONTEXT)
-        .toString
+      JsonUtils.fromString(new String(data))
     )
-      .toOption
-      .flatMap(ctx => Try(new URL(ctx)) match {
-        case Failure(_) => None
-        case Success(uri) => Some(uri.toString())
-      })
-  }
+      .map(j =>
+        Try(j.asInstanceOf[java.util.Map[String, Object]]).toOption)
+      .map(_.flatMap(c =>
+        Option(c.get(JsonLdConsts.CONTEXT))
+          .map(_.toString)
+          .flatMap(ctx =>
+            Try(new URL(ctx)) match {
+              case Failure(_) => None
+              case Success(uri) => Some(uri)
+            })))
 
-  import com.github.jsonldjava.core.Context
+  private def jsonLdContextWithFallbackForLocalhost(jsonLdContextUrl: URL, requestHost: String): Try[core.Context] =
+    Try(CachingContext.parse(jsonLdContextUrl.toString))
+      .recoverWith {
+        case e =>
+          if (InetAddress.getByName(jsonLdContextUrl.getHost).isLoopbackAddress) {
+            preloadLocalhostContextFromRequestHost(jsonLdContextUrl.toString, requestHost)
+          } else {
+            Failure(e)
+          }
+      }
 
-  private def initCachingContext() = {
-    val opts = new JsonLdOptions(null)
-    opts.useNamespaces = true
-    new CachingJsonldContext(30, opts)
-  }
-
-  private def jenaContext(jsonLdCtx: Context) = {
+  private def jenaContext(jsonLdCtx: core.Context) = {
     val context: util.Context = RIOT.getContext.copy()
     jsonLdCtx.putAll(jsonLdCtx.getPrefixes(true))
     context.put(JsonLDWriter.JSONLD_CONTEXT, jsonLdCtx)
     context.put(JsonLDReader.JSONLD_CONTEXT, jsonLdCtx)
     context
+  }
+
+  private def preloadLocalhostContextFromRequestHost(localhostCtxUri: String, requestHost: String): Try[core.Context] = Try {
+    val ctxUrl = new URL(localhostCtxUri)
+    val addressWithIp = localhostCtxUri.replace(ctxUrl.getHost, requestHost)
+    val ctx = CachingContext.parse(addressWithIp)
+    CachingContext.putInCache(localhostCtxUri, ctx)
+    ctx
+  }
+
+  private def initCachingContext() = {
+    val opts = new JsonLdOptions(null)
+    opts.useNamespaces = true
+    new CachingJsonldContext(30, opts)
   }
 
   private def escapeString(s: String) = {
