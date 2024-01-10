@@ -125,10 +125,10 @@ class ApiImpl(config: Config) extends DatabusApi {
   override def saveFileMapException400(e: Throwable)(request: HttpServletRequest): Option[OperationFailure] = e match {
     case _: JenaException => Some(OperationFailure(e.getMessage))
     case _: VirtuosoException if e.getMessage.contains("SQ200") => Some(OperationFailure(s"Wrong value for type. ${e.getMessage}"))
-    case _: RuntimeException if e.getCause.isInstanceOf[VirtuosoException] && e.getMessage.contains("SQ200") =>
-      Some(OperationFailure(s"Wrong value for type. ${e.getMessage}"))
-    case _: RuntimeException if e.getCause.isInstanceOf[VirtuosoException] && e.getMessage.contains("SQ074") =>
-      Some(OperationFailure(s"Wrong input data. ${e.getMessage}"))
+    case _: RuntimeException if e.getCause.isInstanceOf[VirtuosoException] && e.getCause.getMessage.contains("SQ200") =>
+      Some(OperationFailure(s"Wrong value for type. ${e.getCause.getMessage}. ${e.getMessage}"))
+    case _: RuntimeException if e.getCause.isInstanceOf[VirtuosoException] && e.getCause.getMessage.contains("SQ074") =>
+      Some(OperationFailure(s"Wrong input data. ${e.getCause.getMessage}. ${e.getMessage}"))
     case _ => None
   }
 
