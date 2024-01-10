@@ -137,6 +137,7 @@ abstract class JdbcCLient(connectionString: String, user: String, pass: String) 
       })
       .recoverWith {
         case err =>
+          log.error(s"Failed SPARQL request batch:\n${upds.fold("")((l, r) => l + "\n" + r)}")
           Try(conn.rollback())
             .flatMap(_ => Try(conn.close()))
             .flatMap(_ => Failure(err))
@@ -418,6 +419,7 @@ object RdfConversions {
   }
 
   case class Warning(message: String)
+
   private class ErrorHandlerWithWarnings extends ErrorHandler {
     private val defaultEH = ErrorHandlerFactory.getDefaultErrorHandler
 
