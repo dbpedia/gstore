@@ -37,7 +37,7 @@ class ApiImpl(config: Config) extends DatabusApi {
       contextUrl(body.getBytes, defaultLang)
         .map(jenaJsonLdContextWithFallbackForLocalhost(_, request.getRemoteHost).get)
     )
-      .flatMap(m => Tractate.extract(m.getGraph, TractateV1.Version))
+      .flatMap(m => Tractate.extract(m._1.getGraph, TractateV1.Version))
       .map(_.stringForSigning)
 
   override def deleteFile(username: String, path: String, prefix: Option[String])(request: HttpServletRequest): Try[OperationSuccess] = {
@@ -72,12 +72,21 @@ class ApiImpl(config: Config) extends DatabusApi {
     val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, request.getRemoteHost).get)
     readModel(body.getBytes, lang, ctx)
       .flatMap(model => {
-        saveToVirtuoso(model, graphId)({
-          graphToBytes(model.getGraph, defaultLang, ctxU)
+        saveToVirtuoso(model._1, graphId)({
+          graphToBytes(model._1.getGraph, defaultLang, ctxU)
             .flatMap(a => saveFiles(username, Map(
               pa -> a
             )).map(hash => OperationSuccess(graphId, hash)))
-        })
+        }).transform(Success(_), e =>
+          if (model._2.isEmpty) {
+            Failure(e)
+          } else {
+            val ee = new RuntimeException(
+              s"Error saving data, potentially caused by: ${model._2.map(_.message).fold("")((l, r) => l + '\n' + r)}",
+              e)
+            ee.setStackTrace(Array.empty)
+            Failure(ee)
+          })
       })
   }
 
@@ -116,6 +125,10 @@ class ApiImpl(config: Config) extends DatabusApi {
   override def saveFileMapException400(e: Throwable)(request: HttpServletRequest): Option[OperationFailure] = e match {
     case _: JenaException => Some(OperationFailure(e.getMessage))
     case _: VirtuosoException if e.getMessage.contains("SQ200") => Some(OperationFailure(s"Wrong value for type. ${e.getMessage}"))
+    case _: RuntimeException if e.getCause.isInstanceOf[VirtuosoException] && e.getMessage.contains("SQ200") =>
+      Some(OperationFailure(s"Wrong value for type. ${e.getMessage}"))
+    case _: RuntimeException if e.getCause.isInstanceOf[VirtuosoException] && e.getMessage.contains("SQ074") =>
+      Some(OperationFailure(s"Wrong input data. ${e.getMessage}"))
     case _ => None
   }
 
@@ -142,7 +155,7 @@ class ApiImpl(config: Config) extends DatabusApi {
             .map(jenaJsonLdContextWithFallbackForLocalhost(_, request.getRemoteHost).get)
         )
           .flatMap(m =>
-            graphToBytes(m.getGraph, lang, ctxUri)
+            graphToBytes(m._1.getGraph, lang, ctxUri)
           )
       })
       .map(new String(_))

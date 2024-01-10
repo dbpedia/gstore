@@ -1,0 +1,39 @@
+{
+  "@context": "https://raw.githubusercontent.com/dbpedia/databus/master/server/app/common/res/context.jsonld",
+  "@graph": [
+    {
+      "@id": "https://databus.coypu.org/narndt/coypu",
+      "@type": "Group",
+      "title": "CoyPu"
+    },
+    {
+      "@id": "https://databus.coypu.org/narndt/coypu/countries",
+      "@type": "Artifact",
+      "title": "Raise VirtuosoException",
+      "abstract": "Counties and regions",
+      "description": "Counties and regions"
+    },
+    {
+      "@type": [
+        "Version",
+        "Dataset"
+      ],
+      "@id": "https://databus.coypu.org/narndt/coypu/countries/2023-09-18T122214Z",
+      "hasVersion": "2023-09-18T122214Z",
+      "title": "Countries",
+      "abstract": "Countries\n2023-09-18T12:22:14Z",
+      "description": "Countries\n2023-09-18T12:22:14Z",
+      "license": "https://dalicc.net/licenselibrary/Cc010Universal",
+      "wasDerivedFrom": "https://metadata.coypu.org/dataset/wikidata-distribution\nWikidata Query Service\nhttps://query.wikidata.org/",
+      "distribution": [
+        {
+          "@type": "Part",
+          "formatExtension": "ttl",
+          "compression": "none",
+          "downloadURL": "https://databus.coypu.org/dav/narndt/coypu/countries/2023-09-18T122214Z/countries_freqency=static.ttl",
+          "dcv:frequency": "static"
+        }
+      ]
+    }
+  ]
+}

@@ -70,6 +70,19 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
 
   }
 
+  "File save" should "report problems in input" in {
+
+
+    val file = "report_syntax_err.jsonld"
+    val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
+
+    post("/databus/graph/save?repo=kuckuck&path=pa/syntax_err.jsonld", bytes) {
+      (status >= 400) should  equal(true)
+      response.body.contains("Spaces are not legal in URIs/IRIs") should equal(true)
+    }
+
+  }
+
   "File read" should "return 404" in {
 
     get("/databus/graph/read?repo=kuckuck&path=pa/not_existing.jsonld") {

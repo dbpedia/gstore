@@ -11,7 +11,7 @@ import org.apache.jena.atlas.json.JsonString
 import org.apache.jena.graph.{Graph, Node}
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.riot.lang.JsonLDReader
-import org.apache.jena.riot.system.StreamRDFLib
+import org.apache.jena.riot.system.{ErrorHandler, ErrorHandlerFactory, StreamRDFLib}
 import org.apache.jena.riot.writer.JsonLDWriter
 import org.apache.jena.riot.{Lang, RDFDataMgr, RDFFormat, RDFLanguages, RDFParserBuilder, RDFWriter, RIOT}
 import org.apache.jena.shacl.{ShaclValidator, Shapes, ValidationReport}
@@ -159,7 +159,7 @@ object RdfConversions {
 
   val DefaultShaclLang = Lang.TTL
 
-  def readModel(data: Array[Byte], lang: Lang, context: Option[util.Context]): Try[Model] = Try {
+  def readModel(data: Array[Byte], lang: Lang, context: Option[util.Context]): Try[(Model, List[Warning])] = Try {
     val model = ModelFactory.createDefaultModel()
     val dataStream = new ByteArrayInputStream(data)
     val dest = StreamRDFLib.graph(model.getGraph)
@@ -168,11 +168,14 @@ object RdfConversions {
       .base(null)
       .lang(lang)
 
+    val eh = newErrorHandlerWithWarnings
+    parser.errorHandler(eh)
+
     context.foreach(cs =>
       parser.context(cs))
 
     parser.parse(dest)
-    model
+    (model, eh.warningsList)
   }
 
   def graphToBytes(model: Graph, outputLang: Lang, context: Option[URL]): Try[Array[Byte]] = Try {
@@ -200,15 +203,15 @@ object RdfConversions {
 
   def validateWithShacl(file: Array[Byte], shaclData: Array[Byte], fileCtx: Option[util.Context], shaclCtx: Option[util.Context], modelLang: Lang): Try[ValidationReport] =
     for {
-      shaclGra <- readModel(shaclData, DefaultShaclLang, shaclCtx)
-      model <- readModel(file, modelLang, fileCtx)
+      (shaclGra, _) <- readModel(shaclData, DefaultShaclLang, shaclCtx)
+      (model, _) <- readModel(file, modelLang, fileCtx)
       re <- validateWithShacl(model, shaclGra.getGraph)
     } yield re
 
   def validateWithShacl(file: Array[Byte], fileCtx: Option[util.Context], shaclUri: String, modelLang: Lang): Try[ValidationReport] =
     for {
       shaclGra <- Try(RDFDataMgr.loadGraph(shaclUri))
-      model <- readModel(file, modelLang, fileCtx)
+      (model, _) <- readModel(file, modelLang, fileCtx)
       re <- validateWithShacl(model, shaclGra)
     } yield re
 
@@ -413,6 +416,31 @@ object RdfConversions {
     sb.append(hexVal)
     sb.toString()
   }
+
+  case class Warning(message: String)
+  private class ErrorHandlerWithWarnings extends ErrorHandler {
+    private val defaultEH = ErrorHandlerFactory.getDefaultErrorHandler
+
+    private var warnings: List[Warning] = List.empty
+
+    import org.apache.jena.riot.SysRIOT.fmtMessage
+
+    override def warning(message: String, line: Long, col: Long): Unit = {
+      warnings = warnings :+ Warning(fmtMessage(message, line, col))
+      defaultEH.warning(message, line, col)
+    }
+
+    override def error(message: String, line: Long, col: Long): Unit =
+      defaultEH.error(message, line, col)
+
+    override def fatal(message: String, line: Long, col: Long): Unit =
+      defaultEH.fatal(message, line, col)
+
+    def warningsList: List[Warning] = warnings
+  }
+
+  private def newErrorHandlerWithWarnings: ErrorHandlerWithWarnings =
+    new ErrorHandlerWithWarnings
 
 }
 
