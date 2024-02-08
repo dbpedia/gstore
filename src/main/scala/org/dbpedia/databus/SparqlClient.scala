@@ -201,19 +201,22 @@ object RdfConversions {
       ShaclValidator.get()
         .validate(Shapes.parse(shacl), model.getGraph)
     )
+  def validateWithShacl(file: Array[Byte], modelLang: Lang, shaclGraph: Graph, fileCtx: Option[util.Context]): Try[ValidationReport] =
+    for {
+      (model, _) <- readModel(file, modelLang, fileCtx)
+      re <- validateWithShacl(model, shaclGraph)
+    } yield re
 
   def validateWithShacl(file: Array[Byte], shaclData: Array[Byte], fileCtx: Option[util.Context], shaclCtx: Option[util.Context], modelLang: Lang): Try[ValidationReport] =
     for {
       (shaclGra, _) <- readModel(shaclData, DefaultShaclLang, shaclCtx)
-      (model, _) <- readModel(file, modelLang, fileCtx)
-      re <- validateWithShacl(model, shaclGra.getGraph)
+      re <- validateWithShacl(file, modelLang, shaclGra.getGraph, fileCtx)
     } yield re
 
   def validateWithShacl(file: Array[Byte], fileCtx: Option[util.Context], shaclUri: String, modelLang: Lang): Try[ValidationReport] =
     for {
       shaclGra <- Try(RDFDataMgr.loadGraph(shaclUri))
-      (model, _) <- readModel(file, modelLang, fileCtx)
-      re <- validateWithShacl(model, shaclGra)
+      re <- validateWithShacl(file, modelLang, shaclGra, fileCtx)
     } yield re
 
   def langToFormat(lang: Lang): RDFFormat = lang match {
@@ -427,10 +430,14 @@ object RdfConversions {
 
     import org.apache.jena.riot.SysRIOT.fmtMessage
 
-    override def warning(message: String, line: Long, col: Long): Unit = {
-      warnings = warnings :+ Warning(fmtMessage(message, line, col))
-      defaultEH.warning(message, line, col)
-    }
+    override def warning(message: String, line: Long, col: Long): Unit =
+    // Fix for https://github.com/dbpedia/databus/issues/156, need to convert this to error
+      if (message.contains("Spaces are not legal in URIs/IRIs")) {
+        error(message, line, col)
+      } else {
+        warnings = warnings :+ Warning(fmtMessage(message, line, col))
+        defaultEH.warning(message, line, col)
+      }
 
     override def error(message: String, line: Long, col: Long): Unit =
       defaultEH.error(message, line, col)

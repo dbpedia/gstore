@@ -83,6 +83,20 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
 
   }
 
+  "Shacl validation" should "report problems in input" in {
+
+    val file = "report_syntax_err.jsonld"
+    val sha = "test.shacl"
+    val bytes = Paths.get(getClass.getClassLoader.getResource(file).getFile).toFile
+    val shacl = Paths.get(getClass.getClassLoader.getResource(sha).getFile).toFile
+
+    post("/databus/shacl/validate", Map.empty, Map("shacl" -> shacl, "graph" -> bytes)) {
+      status should equal(400)
+      body should include("Bad IRI")
+    }
+
+  }
+
   "File read" should "return 404" in {
 
     get("/databus/graph/read?repo=kuckuck&path=pa/not_existing.jsonld") {
