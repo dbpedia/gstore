@@ -15,6 +15,9 @@ import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 
 import scala.util.{Failure, Success, Try}
+import org.eclipse.jgit.api.AddCommand
+import org.eclipse.jgit.api.CommitCommand
+import org.eclipse.jgit.lib.Repository
 
 trait GitClient {
 
@@ -59,30 +62,33 @@ class LocalGitClient(rootPath: Path) extends GitClient {
       Try(Files.readAllBytes(getFilePath(projectName, name)))
     }
 
-  override def commitSeveralFiles(projectName: String, filenameAndData: Map[String, Array[Byte]]): Try[String] =
-    wrapWithSync(projectName) {
-      Try({
-        val git = Git.open(getRepoPathFromUsername(projectName).toFile)
-        val add = git.add()
+ override def commitSeveralFiles(projectName: String, filenameAndData: Map[String, Array[Byte]]): Try[String] =
+  wrapWithSync(projectName) {
+    Try {
+      val git = Git.open(getRepoPathFromUsername(projectName).toFile)
 
-        filenameAndData.foreach {
-          case (fp, data) =>
-            val pa = getRelativeFilePath(fp)
-            val apa = getFilePath(projectName, fp)
-            Files.createDirectories(apa.getParent)
-            Files.write(apa, data)
-            add.addFilepattern(pa.toString)
-        }
-        add.call()
+      val addCommand: AddCommand = git.add()
 
-        val commit = git.commit()
-        val ref = commit
-          .setCommitter("databus", "databus@infai.org")
-          .setMessage(s"$projectName: committed ${filenameAndData.keys}")
-          .call()
-        ref.getName
-      })
+      filenameAndData.foreach {
+        case (fp, data) =>
+          val pa = getRelativeFilePath(fp)
+          val apa = getFilePath(projectName, fp)
+          Files.createDirectories(apa.getParent)
+          Files.write(apa, data)
+          addCommand.addFilepattern(pa.toString)
+      }
+
+      addCommand.call()
+
+      val commitCommand: CommitCommand = git.commit()
+      val ref = commitCommand
+        .setCommitter("databus", "databus@infai.org")
+        .setMessage(s"$projectName: committed ${filenameAndData.keys}")
+        .call()
+
+      ref.getName
     }
+  }
 
 
   override def deleteSeveralFiles(projectName: String, names: Seq[String]): Try[String] =
@@ -107,9 +113,16 @@ class LocalGitClient(rootPath: Path) extends GitClient {
       }
     }
 
-  private def wrapWithSync[R](name: String)(func: => R): R =
-    locks.computeIfAbsent(name, _ => new Object)
-      .synchronized(func)
+private def wrapWithSync[R](name: String)(func: Repository => R): R =
+  locks.computeIfAbsent(name, _ => new Object)
+    .synchronized {
+      val repo = initrepo(getRepoPathFromUsername(name))
+      try {
+        func(repo)
+      } finally {
+        repo.close()
+      }
+    }
 
 
   private def getFilePath(repoName: String, filePath: String): Path = {
@@ -126,10 +139,10 @@ class LocalGitClient(rootPath: Path) extends GitClient {
     }
   }
 
-  private def initrepo(pa: Path): Try[Repository] = Try(
-    Git.open(pa.toFile)
-      .getRepository
-  )
+private def initrepo(pa: Path): Repository = {
+  Git.open(pa.toFile)
+    .getRepository
+}
 
   private def getRepoPathFromUsername(un: String) =
     rootPath.resolve(Paths.get(un))
