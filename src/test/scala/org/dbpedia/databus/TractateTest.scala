@@ -2,12 +2,20 @@ package org.dbpedia.databus
 
 import java.io.ByteArrayInputStream
 import java.nio.file.{Files, Paths}
-
 import org.apache.jena.rdf.model.ModelFactory
 import org.apache.jena.riot.{Lang, RDFDataMgr}
-import org.scalatest.{FlatSpec, Matchers}
+import org.apache.jena.sys.JenaSystem
+import org.scalatest.{BeforeAndAfter, FlatSpec, Matchers}
 
-class TractateTest extends FlatSpec with Matchers {
+class TractateTest extends FlatSpec with Matchers with BeforeAndAfter {
+
+  before {
+    JenaSystem.init()
+  }
+
+  after {
+    JenaSystem.shutdown()
+  }
 
   "Tractate" should "be extracted from dataid" in {
 
@@ -15,7 +23,7 @@ class TractateTest extends FlatSpec with Matchers {
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
     val model = ModelFactory.createDefaultModel()
     val dataStream = new ByteArrayInputStream(bytes)
-    RDFDataMgr.read(model, dataStream, Lang.JSONLD)
+    RDFDataMgr.read(model, dataStream, Lang.JSONLD10)
     val t = Tractate.extract(model.getGraph, TractateV1.Version)
     val expected =
       """Databus Tractate V1

@@ -8,6 +8,7 @@ import javax.servlet.http.HttpServletRequest
 import org.apache.jena.rdf.model.Model
 import org.apache.jena.riot.Lang
 import org.apache.jena.shared.JenaException
+import org.apache.jena.sys.JenaSystem
 import org.dbpedia.databus.ApiImpl.Config
 import org.dbpedia.databus.RdfConversions.{contextUrl, generateGraphId, graphToBytes, jenaJsonLdContextWithFallbackForLocalhost, mapContentType, readModel}
 import org.dbpedia.databus.swagger.api.DatabusApi
@@ -26,8 +27,12 @@ class ApiImpl(config: Config) extends DatabusApi {
   import ApiImpl._
 
   private val client: GitClient = initGitClient(config)
-  private val defaultLang = Lang.JSONLD
+  private val defaultLang = Lang.JSONLD10
   private lazy val sparqlClient: SparqlClient = SparqlClient.get(config)
+  init()
+
+  def init() = JenaSystem.init()
+  def stop() = JenaSystem.shutdown()
 
 
   override def dataidSubgraph(body: String)(request: HttpServletRequest): Try[String] =

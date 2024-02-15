@@ -1,11 +1,19 @@
 package org.dbpedia.databus
 
+import org.apache.jena.sys.JenaSystem
+
 import java.util.UUID
-
 import org.dbpedia.databus.CachingJsonldContext.ApproxSizeStringKeyCache
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.{BeforeAndAfter, FlatSpec, Matchers}
 
-class CacheTests extends FlatSpec with Matchers {
+class CacheTests extends FlatSpec with Matchers with BeforeAndAfter {
+
+  before {
+    JenaSystem.init()
+  }
+  after {
+    JenaSystem.shutdown()
+  }
 
   "CacheKey" should "be sorted by time of creation" in {
 

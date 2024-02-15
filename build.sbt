@@ -8,7 +8,7 @@ name := "gstore"
 version := "0.2.0-SNAPSHOT"
 
 val ScalatraVersion = "2.6.3"
-val jenaVersion = "3.17.0"
+val jenaVersion = "4.10.0"
 val jettyVersion = "9.4.9.v20180320"
 
 libraryDependencies ++= Seq(

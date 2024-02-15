@@ -9,10 +9,11 @@ import com.github.jsonldjava.utils.JsonUtils
 import com.mchange.v2.c3p0.ComboPooledDataSource
 import org.apache.jena.atlas.json.JsonString
 import org.apache.jena.graph.{Graph, Node}
+import org.apache.jena.iri.ViolationCodes
 import org.apache.jena.rdf.model.{Model, ModelFactory}
-import org.apache.jena.riot.lang.JsonLDReader
+import org.apache.jena.riot.lang.LangJSONLD10
 import org.apache.jena.riot.system.{ErrorHandler, ErrorHandlerFactory, StreamRDFLib}
-import org.apache.jena.riot.writer.JsonLDWriter
+import org.apache.jena.riot.writer.JsonLD10Writer
 import org.apache.jena.riot.{Lang, RDFDataMgr, RDFFormat, RDFLanguages, RDFParserBuilder, RDFWriter, RIOT}
 import org.apache.jena.shacl.{ShaclValidator, Shapes, ValidationReport}
 import org.apache.jena.sparql.util
@@ -187,7 +188,7 @@ object RdfConversions {
     context.foreach(ctx => {
       val jctx = jenaContext(CachingContext.parse(ctx.toString))
       builder.context(jctx)
-      builder.set(JsonLDWriter.JSONLD_CONTEXT_SUBSTITUTION, new JsonString(ctx.toString))
+      builder.set(JsonLD10Writer.JSONLD_CONTEXT_SUBSTITUTION, new JsonString(ctx.toString))
     })
 
     builder
@@ -201,6 +202,7 @@ object RdfConversions {
       ShaclValidator.get()
         .validate(Shapes.parse(shacl), model.getGraph)
     )
+
   def validateWithShacl(file: Array[Byte], modelLang: Lang, shaclGraph: Graph, fileCtx: Option[util.Context]): Try[ValidationReport] =
     for {
       (model, _) <- readModel(file, modelLang, fileCtx)
@@ -222,7 +224,9 @@ object RdfConversions {
   def langToFormat(lang: Lang): RDFFormat = lang match {
     case RDFLanguages.TURTLE => RDFFormat.TURTLE_PRETTY
     case RDFLanguages.TTL => RDFFormat.TTL
-    case RDFLanguages.JSONLD => RDFFormat.JSONLD_FLATTEN_PRETTY
+    case RDFLanguages.JSONLD => RDFFormat.JSONLD10
+    case RDFLanguages.JSONLD10 => RDFFormat.JSONLD10
+    case RDFLanguages.JSONLD11 => RDFFormat.JSONLD11
     case RDFLanguages.TRIG => RDFFormat.TRIG_PRETTY
     case RDFLanguages.RDFXML => RDFFormat.RDFXML_PRETTY
     case RDFLanguages.RDFTHRIFT => RDFFormat.RDF_THRIFT
@@ -249,7 +253,7 @@ object RdfConversions {
       case "text/turtle" => Lang.TURTLE
       case "application/rdf+xml" => Lang.RDFXML
       case "application/n-triples" => Lang.NTRIPLES
-      case "application/ld+json" => Lang.JSONLD
+      case "application/ld+json" => Lang.JSONLD10
       case "text/trig" => Lang.TRIG
       case "application/n-quads" => Lang.NQUADS
       case "application/trix+xml" => Lang.TRIX
@@ -302,7 +306,7 @@ object RdfConversions {
   }
 
   def contextUrl(data: Array[Byte], lang: Lang): Option[URL] =
-    if (lang == Lang.JSONLD) {
+    if (lang == Lang.JSONLD10) {
       jsonLdContextUrl(data)
         .get
     } else {
@@ -342,8 +346,8 @@ object RdfConversions {
   private def jenaContext(jsonLdCtx: core.Context) = {
     val context: util.Context = RIOT.getContext.copy()
     jsonLdCtx.putAll(jsonLdCtx.getPrefixes(true))
-    context.put(JsonLDWriter.JSONLD_CONTEXT, jsonLdCtx)
-    context.put(JsonLDReader.JSONLD_CONTEXT, jsonLdCtx)
+    context.put(JsonLD10Writer.JSONLD_CONTEXT, jsonLdCtx)
+    context.put(LangJSONLD10.JSONLD_CONTEXT, jsonLdCtx)
     context
   }
 
@@ -430,9 +434,44 @@ object RdfConversions {
 
     import org.apache.jena.riot.SysRIOT.fmtMessage
 
+    private val reportAsError = List(
+      ViolationCodes.ILLEGAL_CHARACTER,
+      ViolationCodes.CONTROL_CHARACTER,
+      ViolationCodes.NON_XML_CHARACTER,
+      ViolationCodes.EMPTY_SCHEME,
+      ViolationCodes.SCHEME_MUST_START_WITH_LETTER,
+      ViolationCodes.BIDI_FORMATTING_CHARACTER,
+      ViolationCodes.WHITESPACE,
+      ViolationCodes.DOUBLE_WHITESPACE,
+      ViolationCodes.NOT_XML_SCHEMA_WHITESPACE,
+      ViolationCodes.NOT_DNS_NAME,
+      ViolationCodes.ILLEGAL_PERCENT_ENCODING,
+      ViolationCodes.LONE_SURROGATE,
+      ViolationCodes.DNS_LABEL_DASH_START_OR_END,
+      ViolationCodes.BAD_IDN,
+      ViolationCodes.HAS_PASSWORD,
+      ViolationCodes.UNREGISTERED_IANA_SCHEME,
+      ViolationCodes.UNREGISTERED_NONIETF_SCHEME_TREE,
+      ViolationCodes.DEPRECATED_UNICODE_CHARACTER,
+      ViolationCodes.UNDEFINED_UNICODE_CHARACTER,
+      ViolationCodes.PRIVATE_USE_CHARACTER,
+      ViolationCodes.UNICODE_CONTROL_CHARACTER,
+      ViolationCodes.UNICODE_WHITESPACE,
+      ViolationCodes.COMPATIBILITY_CHARACTER,
+      ViolationCodes.REQUIRED_COMPONENT_MISSING,
+      ViolationCodes.PROHIBITED_COMPONENT_PRESENT,
+      ViolationCodes.SCHEME_REQUIRES_LOWERCASE,
+      ViolationCodes.SCHEME_PATTERN_MATCH_FAILED
+    ).map(i => s"Code: $i")
+      // there is a weird additional URI check for spaces
+      // org.apache.jena.riot.system.ParserProfileStd method internalMakeIRI line 95
+      // {@link org.apache.jena.riot.system.ParserProfileStd#internalMakeIRI}
+      .+("Spaces are not legal in URIs/IRIs.").toSet
+
+
     override def warning(message: String, line: Long, col: Long): Unit =
     // Fix for https://github.com/dbpedia/databus/issues/156, need to convert this to error
-      if (message.contains("Spaces are not legal in URIs/IRIs")) {
+      if (reportAsError.exists(s => message.contains(s))) {
         error(message, line, col)
       } else {
         warnings = warnings :+ Warning(fmtMessage(message, line, col))

@@ -1,15 +1,21 @@
 package org.dbpedia.databus
 
 import java.nio.file.{Files, Paths}
-import org.apache.jena.query.ARQ
 import org.apache.jena.riot.Lang
+import org.apache.jena.sys.JenaSystem
 import org.dbpedia.databus.RdfConversions.{contextUrl, jenaJsonLdContextWithFallbackForLocalhost}
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.{BeforeAndAfter, FlatSpec, Matchers}
 
-class ValidationTest extends FlatSpec with Matchers {
+class ValidationTest extends FlatSpec with Matchers with BeforeAndAfter {
 
-  ARQ.init()
-  val lang = Lang.JSONLD
+  before {
+    JenaSystem.init()
+  }
+  after {
+    JenaSystem.shutdown()
+  }
+
+  val lang = Lang.JSONLD10
 
   "SHACL validation" should "work for version" in {
     val shacl = "https://raw.githubusercontent.com/dbpedia/databus-git-mockup/main/dev/dataid-shacl.ttl"

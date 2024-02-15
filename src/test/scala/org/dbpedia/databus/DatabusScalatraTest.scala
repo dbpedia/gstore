@@ -1,6 +1,8 @@
 package org.dbpedia.databus
 
 
+import org.apache.jena.iri.ViolationCodes
+
 import java.io.ByteArrayInputStream
 import java.nio.file.{Files, Paths}
 import org.apache.jena.rdf.model.ModelFactory
@@ -21,9 +23,11 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
   val dir = Files.createDirectories(Paths.get("target", "test_dir-git"))
 
   before {
+    impl.init()
     Files.createDirectories(Paths.get("target", "test_dir-git"))
   }
   after {
+    impl.stop()
     Directory(Path.jfile2path(dir.toFile)).deleteRecursively()
   }
 
@@ -63,8 +67,8 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
 
     get("/databus/graph/read?repo=kuckuck&path=pa/fl.jsonld") {
       status should equal(200)
-      val respCtx = RdfConversions.contextUrl(bodyBytes, Lang.JSONLD)
-      respCtx should equal(RdfConversions.contextUrl(bytes, Lang.JSONLD))
+      val respCtx = RdfConversions.contextUrl(bodyBytes, Lang.JSONLD10)
+      respCtx should equal(RdfConversions.contextUrl(bytes, Lang.JSONLD10))
       respCtx.get.toString.nonEmpty should equal(true)
     }
 
@@ -73,19 +77,19 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
   "File save" should "report problems in input" in {
 
 
-    val file = "report_syntax_err.jsonld"
+    val file = "space_in_iri.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
 
     post("/databus/graph/save?repo=kuckuck&path=pa/syntax_err.jsonld", bytes) {
-      (status >= 400) should  equal(true)
+      (status >= 400) should equal(true)
       response.body.contains("Spaces are not legal in URIs/IRIs") should equal(true)
     }
 
   }
 
-  "Shacl validation" should "report problems in input" in {
+  "Shacl validation" should "report problems in input with spaces in IRIs" in {
 
-    val file = "report_syntax_err.jsonld"
+    val file = "space_in_iri.jsonld"
     val sha = "test.shacl"
     val bytes = Paths.get(getClass.getClassLoader.getResource(file).getFile).toFile
     val shacl = Paths.get(getClass.getClassLoader.getResource(sha).getFile).toFile
@@ -93,6 +97,22 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
     post("/databus/shacl/validate", Map.empty, Map("shacl" -> shacl, "graph" -> bytes)) {
       status should equal(400)
       body should include("Bad IRI")
+      body should include(s"Spaces are not legal")
+    }
+
+  }
+
+  "Shacl validation" should "report problems in input with newlines in IRIs" in {
+
+    val file = "newline_in_iri.jsonld"
+    val sha = "test.shacl"
+    val bytes = Paths.get(getClass.getClassLoader.getResource(file).getFile).toFile
+    val shacl = Paths.get(getClass.getClassLoader.getResource(sha).getFile).toFile
+
+    post("/databus/shacl/validate", Map.empty, Map("shacl" -> shacl, "graph" -> bytes)) {
+      status should equal(400)
+      body should include("Bad IRI")
+      body should include(s"Code: ${ViolationCodes.CONTROL_CHARACTER}")
     }
 
   }
@@ -141,7 +161,7 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
 
       val model = ModelFactory.createDefaultModel()
       val dataStream = new ByteArrayInputStream(version)
-      RDFDataMgr.read(model, dataStream, Lang.JSONLD)
+      RDFDataMgr.read(model, dataStream, Lang.JSONLD10)
       val tr = Tractate.extract(model.getGraph, TractateV1.Version)
       body should equal(tr.get.stringForSigning)
     }
