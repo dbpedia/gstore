@@ -1,10 +1,10 @@
-FROM hseeberger/scala-sbt:graalvm-ce-21.1.0-java8_1.5.1_2.12.13 AS build
+FROM sbtscala/scala-sbt:graalvm-ce-22.3.3-b1-java17_1.9.8_2.13.12 AS build
 
 COPY . /gstore
 WORKDIR /gstore
 RUN sbt 'set test in assembly := {}' clean assembly
 
-FROM openjdk:8-alpine
+FROM eclipse-temurin:21-jre-alpine
 
 ENV STORAGE_SPARQL_ENDPOINT_URI=http://gstore-virtuoso:8890/sparql
 ENV STORAGE_USER=""
