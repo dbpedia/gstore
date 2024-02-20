@@ -434,7 +434,7 @@ object RdfConversions {
 
     import org.apache.jena.riot.SysRIOT.fmtMessage
 
-    private val reportAsError = List(
+    private val reportAsError: Set[String] = List(
       ViolationCodes.ILLEGAL_CHARACTER,
       ViolationCodes.CONTROL_CHARACTER,
       ViolationCodes.NON_XML_CHARACTER,
@@ -462,11 +462,11 @@ object RdfConversions {
       ViolationCodes.PROHIBITED_COMPONENT_PRESENT,
       ViolationCodes.SCHEME_REQUIRES_LOWERCASE,
       ViolationCodes.SCHEME_PATTERN_MATCH_FAILED
-    ).map(i => s"Code: $i")
+    ).map(i => s"Code: $i/")
       // there is a weird additional URI check for spaces
       // org.apache.jena.riot.system.ParserProfileStd method internalMakeIRI line 95
       // {@link org.apache.jena.riot.system.ParserProfileStd#internalMakeIRI}
-      .+("Spaces are not legal in URIs/IRIs.").toSet
+      .:+("Spaces are not legal in URIs/IRIs.").toSet
 
 
     override def warning(message: String, line: Long, col: Long): Unit =
