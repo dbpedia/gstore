@@ -36,6 +36,18 @@ paths:
           type: string
           required: false
           example: "http://foreighhost/api"
+        - in: query
+          name: author_name
+          description: "Name of a person who saves the data."
+          type: string
+          required: false
+          example: "John Snow"
+        - in: query
+          name: author_email
+          description: "An email of a person who saves the data."
+          type: string
+          required: false
+          example: "bla@bla.bla"
         - in: body
           name: body
           description: "Graph data in Turtle or JSONLD."
@@ -86,6 +98,18 @@ paths:
           type: string
           required: false
           example: "http://foreighhost/api"
+        - in: query
+          name: author_name
+          description: "Name of a person deleting file."
+          type: string
+          required: false
+          example: "John Snows"
+        - in: query
+          name: author_email
+          description: "Email of a person deleting file."
+          type: string
+          required: false
+          example: "John Snows"
       responses:
         "200":
           description: "Successful operation."
@@ -126,6 +150,38 @@ paths:
           description: "Not found."
           schema:
             $ref: "#/definitions/OperationFailure"
+  /graph/history:
+    get:
+      summary: "Graph history"
+      description: "Get graph history for particular repo."
+      operationId: "history"
+      produces:
+        - "application/json"
+      parameters:
+        - in: query
+          name: repo
+          description: "Repository name in which the graph is stored."
+          type: string
+          required: true
+          example: "testuser"
+        - in: query
+          name: limit
+          description: "Number of latest history entries to query."
+          type: integer
+          required: false
+          default: 10
+          example: 1
+      responses:
+        "200":
+          description: "List of history entries details."
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/HistoryEntry"
+        "400":
+          description: "Returns a description of an error."
+          schema:
+            $ref: "#/definitions/OperationFailure"
   /shacl/validate:
     post:
       summary: "Validate a graph with SHACL."
@@ -157,6 +213,8 @@ paths:
             format: binary
         "400":
           description: "Invalid input."
+          schema:
+            $ref: "#/definitions/OperationFailure"
   /dataid/tractate:
     post:
       summary: "DataID tractate."
@@ -180,6 +238,23 @@ paths:
           schema:
             type: string
 definitions:
+
+  HistoryEntry:
+    properties:
+      commit_hash:
+        description: "hash of a commit of the changes"
+        type: "string"
+      author_name:
+        description: "name of a person who did the changes"
+        type: "string"
+      author_email:
+        description: "email of a person who did the changes"
+        type: "string"
+    required:
+      - commit_hash
+      - author_name
+      - author_email
+
   OperationSuccess:
     properties:
       graphid:
@@ -191,6 +266,7 @@ definitions:
     required:
       - graphid
       - commit_hash
+
   OperationFailure:
     properties:
       message:

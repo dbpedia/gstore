@@ -61,8 +61,32 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
     val file = "group.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
 
+    post("/databus/graph/save?repo=kuckuck&path=pa/fl.jsonld&author_name=BlaBla&author_email=wrong", bytes) {
+      status should equal(400)
+    }
+
     post("/databus/graph/save?repo=kuckuck&path=pa/fl.jsonld", bytes) {
       status should equal(200)
+    }
+
+    post("/databus/graph/save?repo=kuckuck&path=pa/fl.jsonld&author_name=BlaBla", bytes) {
+      status should equal(200)
+    }
+
+    post("/databus/graph/save?repo=kuckuck&path=pa/fl.jsonld&author_name=BlaBla&author_email=bla@bla.com", bytes) {
+      status should equal(200)
+    }
+
+    post("/databus/graph/save?repo=kuckuck&path=pa/fl.jsonld&&author_email=bla@bla.com", bytes) {
+      status should equal(200)
+    }
+
+    get("/databus/graph/history?repo=kuckuck&limit=2") {
+      status should equal(200)
+      body should include("author_name")
+      body should include("bla@bla.com")
+      body should include("BlaBla")
+      println(body)
     }
 
     get("/databus/graph/read?repo=kuckuck&path=pa/fl.jsonld") {

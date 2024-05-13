@@ -1,9 +1,9 @@
 {{#isQueryParam}}
     {{#required}}
-        val {{paramName}} = params.getAs[{{dataType}}]("{{paramName}}")
-        .getOrElse(halt(400, "Query parameter {{paramName}} not specified."))
+        val {{paramName}} = params.getAs[{{dataType}}]("{{baseName}}")
+        .getOrElse(halt(400, "Query parameter {{baseName}} not specified."))
     {{/required}}
     {{^required}}
-        val {{paramName}} = params.getAs[{{dataType}}]("{{paramName}}")
+        val {{paramName}} = params.getAs[{{dataType}}]("{{baseName}}")
     {{/required}}
 {{/isQueryParam}}

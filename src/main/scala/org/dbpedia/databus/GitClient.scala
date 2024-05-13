@@ -1,10 +1,11 @@
 package org.dbpedia.databus
 
 
+import org.dbpedia.databus.GitClient.{CommitDetails, nameAndEmail}
+
 import java.nio.file.{Files, Path, Paths}
 import java.util.Base64
 import java.util.concurrent.ConcurrentHashMap
-
 import org.dbpedia.databus.RemoteGitlabHttpClient.{CreateFile, DeleteFile, FileAction, UpdateFile}
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.{Constants, Repository}
@@ -17,29 +18,45 @@ import org.json4s._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 
+import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 import scala.util.{Failure, Success, Try}
 
 trait GitClient {
-
   def projectExists(name: String): Boolean
 
   def createProject(name: String): Try[String]
 
-  def commitFileContent(projectName: String, name: String, data: Array[Byte]): Try[String] =
-    commitSeveralFiles(projectName, Map(name -> data))
+  def commitFileContent(projectName: String, name: String, data: Array[Byte], author_name: Option[String], author_email: Option[String]): Try[String] =
+    commitSeveralFiles(projectName, Map(name -> data), author_name, author_email)
 
-  def commitFileDelete(projectName: String, name: String): Try[String] =
-    deleteSeveralFiles(projectName, Seq(name))
+  def commitFileDelete(projectName: String, name: String, author_name: Option[String], author_email: Option[String]): Try[String] =
+    deleteSeveralFiles(projectName, Seq(name), author_name, author_email)
 
   def readFile(projectName: String, name: String): Try[Array[Byte]]
 
-  def commitSeveralFiles(projectName: String, filenameAndData: Map[String, Array[Byte]]): Try[String]
+  def commitSeveralFiles(projectName: String, filenameAndData: Map[String, Array[Byte]], author_name: Option[String], author_email: Option[String]): Try[String]
 
-  def deleteSeveralFiles(projectName: String, names: Seq[String]): Try[String]
+  def deleteSeveralFiles(projectName: String, names: Seq[String], author_name: Option[String], author_email: Option[String]): Try[String]
+
+  def getHistory(projectName: String, limit: Int): Try[Seq[CommitDetails]]
+
+}
+
+object GitClient {
+  case class CommitDetails(hash: String, author: String, email: String)
+
+  def nameAndEmail(name: Option[String], email: Option[String]): (String, String) = (name, email) match {
+    case (Some(n), Some(e)) => (n, e)
+    case (Some(n), None) => (n, "")
+    case (None, Some(e)) => (e, e)
+    case _ => ("databus", "databus@infai.org")
+  }
 
 }
 
 class LocalGitClient(rootPath: Path) extends GitClient {
+
+  // todo maybe remove wrap with sync for read operations
 
   // here we do not cleanup, assuming that the number os repos is relatively low (less than 1 000 000)
   private val locks = new ConcurrentHashMap[String, Object]()
@@ -79,7 +96,7 @@ class LocalGitClient(rootPath: Path) extends GitClient {
       }
     }
 
-  override def commitSeveralFiles(projectName: String, filenameAndData: Map[String, Array[Byte]]): Try[String] =
+  override def commitSeveralFiles(projectName: String, filenameAndData: Map[String, Array[Byte]], author_name: Option[String], author_email: Option[String]): Try[String] =
     wrapWithSync(projectName) {
       Try({
         val git = Git.open(getRepoPathFromUsername(projectName).toFile)
@@ -95,8 +112,9 @@ class LocalGitClient(rootPath: Path) extends GitClient {
         }
         add.call()
 
+        val (name, email) = nameAndEmail(author_name, author_email)
         git.commit()
-          .setCommitter("databus", "databus@infai.org")
+          .setCommitter(name, email)
           .setMessage(s"$projectName: committed ${filenameAndData.keys}")
           .call()
           .getName
@@ -104,7 +122,7 @@ class LocalGitClient(rootPath: Path) extends GitClient {
     }
 
 
-  override def deleteSeveralFiles(projectName: String, names: Seq[String]): Try[String] =
+  override def deleteSeveralFiles(projectName: String, names: Seq[String], author_name: Option[String], author_email: Option[String]): Try[String] =
     wrapWithSync(projectName) {
       Try {
         val git = Git.open(getRepoPathFromUsername(projectName).toFile)
@@ -116,13 +134,27 @@ class LocalGitClient(rootPath: Path) extends GitClient {
         })
         rm.call()
 
+        val (name, email) = nameAndEmail(author_name, author_email)
         val commit = git.commit()
         val hash = commit
-          .setCommitter("databus", "databus@infai.org")
+          .setCommitter(name, email)
           .setMessage(s"$projectName: removed $names")
           .call()
           .getName
         hash
+      }
+    }
+
+  override def getHistory(projectName: String, limit: Int): Try[Seq[CommitDetails]] =
+    wrapWithSync(projectName) {
+      Try {
+        Git.open(getRepoPathFromUsername(projectName).toFile).log().setMaxCount(limit).call().asScala.toSeq
+          .map(c =>
+            CommitDetails(
+              c.getName,
+              c.getAuthorIdent.getName,
+              c.getAuthorIdent.getEmailAddress)
+          )
       }
     }
 
@@ -203,16 +235,20 @@ class RemoteGitlabHttpClient(rootUser: String, rootPass: String, scheme: String,
     projectIdByName(projectName)
       .flatMap(readSingleFile(_, name))
 
-  override def commitSeveralFiles(projectName: String, filenameAndData: Map[String, Array[Byte]]): Try[String] =
+  // todo: author name and email just ignored, this needs fix if we would want to use this feature some day with gitlab
+  override def commitSeveralFiles(projectName: String, filenameAndData: Map[String, Array[Byte]], author_name: Option[String], author_email: Option[String]): Try[String] = {
     projectIdByName(projectName)
       .flatMap(id =>
         commitSeveralActions(id, filenameAndData.map(p => CreateFile(p._1, p._2)).toSeq)
           .orElse(commitSeveralActions(id, filenameAndData.map(p => UpdateFile(p._1, p._2)).toSeq))
       )
+  }.flatMap(_ => Try(throw new RuntimeException("author and email not implemented")))
 
-  override def deleteSeveralFiles(projectName: String, names: Seq[String]): Try[String] =
+  // todo: author name and email just ignored, this needs fix if we would want to use this feature some day with gitlab
+  override def deleteSeveralFiles(projectName: String, names: Seq[String], author_name: Option[String], author_email: Option[String]): Try[String] =
     projectIdByName(projectName)
       .flatMap(id => commitSeveralActions(id, names.map(p => DeleteFile(p))))
+      .flatMap(_ => Try(throw new RuntimeException("author and email not implemented")))
 
   private def projectIdByName(name: String): Try[String] = {
     val req = withAuth(
@@ -310,6 +346,7 @@ class RemoteGitlabHttpClient(rootUser: String, rootPass: String, scheme: String,
     })
   }
 
+  override def getHistory(projectName: String, limit: Int): Try[Seq[CommitDetails]] = ???
 }
 
 object RemoteGitlabHttpClient {

@@ -12,7 +12,7 @@ import org.apache.jena.sys.JenaSystem
 import org.dbpedia.databus.ApiImpl.Config
 import org.dbpedia.databus.RdfConversions.{contextUrl, generateGraphId, graphToBytes, jenaJsonLdContextWithFallbackForLocalhost, mapContentType, readModel}
 import org.dbpedia.databus.swagger.api.DatabusApi
-import org.dbpedia.databus.swagger.model.{OperationFailure, OperationSuccess}
+import org.dbpedia.databus.swagger.model.{HistoryEntry, OperationFailure, OperationSuccess}
 import org.eclipse.jgit.errors.{MissingObjectException, RepositoryNotFoundException}
 import sttp.model.Uri
 import virtuoso.jdbc4.VirtuosoException
@@ -32,6 +32,7 @@ class ApiImpl(config: Config) extends DatabusApi {
   init()
 
   def init() = JenaSystem.init()
+
   def stop() = JenaSystem.shutdown()
 
 
@@ -45,54 +46,72 @@ class ApiImpl(config: Config) extends DatabusApi {
       .flatMap(m => Tractate.extract(m._1.getGraph, TractateV1.Version))
       .map(_.stringForSigning)
 
-  override def deleteFile(username: String, path: String, prefix: Option[String])(request: HttpServletRequest): Try[OperationSuccess] = {
+  override def deleteFile(username: String,
+                          path: String,
+                          prefix: Option[String],
+                          author_name: Option[String],
+                          author_email: Option[String])(request: HttpServletRequest): Try[OperationSuccess] = {
     val gid = generateGraphId(prefix.getOrElse(getPrefix(request)), username, path)
-    sparqlClient.executeUpdates(
-      RdfConversions.dropGraphSparqlQuery(gid)
-    )(m => {
-      if (m.map(_._2).sum > 0) {
-        deleteFileFromGit(username, path)(request)
-          .map(hash => OperationSuccess(gid, hash))
-      } else {
-        Failure(new GraphDoesNotExistException(gid))
-      }
-    })
+    validateEmail(author_email)
+      .flatMap(email =>
+        sparqlClient.executeUpdates(
+          RdfConversions.dropGraphSparqlQuery(gid)
+        )(m => {
+          if (m.map(_._2).sum > 0) {
+            deleteFileFromGit(username, path, author_name, email)(request)
+              .map(hash => OperationSuccess(gid, hash))
+          } else {
+            Failure(new GraphDoesNotExistException(gid))
+          }
+        })
+      )
   }
 
-  override def getFile(username: String, path: String)(request: HttpServletRequest): Try[String] =
-    readFile(username, path)(request)
+  override def getFile(repo: String, path: String)(request: HttpServletRequest): Try[String] =
+    readFile(repo, path)(request)
 
-  override def saveFile(username: String,
+
+  override def saveFile(repo: String,
                         path: String,
                         body: String,
-                        prefix: Option[String])
+                        prefix: Option[String],
+                        author_name: Option[String],
+                        author_email: Option[String])
                        (request: HttpServletRequest): Try[OperationSuccess] = {
+
     val pa = gitPath(path)
-    val graphId = generateGraphId(prefix.getOrElse(getPrefix(request)), username, pa)
+    val graphId = generateGraphId(prefix.getOrElse(getPrefix(request)), repo, pa)
     val ct = Option(request.getContentType)
       .map(_.toLowerCase)
       .getOrElse("")
     val lang = mapContentType(ct, defaultLang)
     val ctxU = contextUrl(body.getBytes, lang)
     val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, request.getRemoteHost).get)
-    readModel(body.getBytes, lang, ctx)
-      .flatMap(model => {
-        saveToVirtuoso(model._1, graphId)({
-          graphToBytes(model._1.getGraph, defaultLang, ctxU)
-            .flatMap(a => saveFiles(username, Map(
-              pa -> a
-            )).map(hash => OperationSuccess(graphId, hash)))
-        }).transform(Success(_), e =>
-          if (model._2.isEmpty) {
-            Failure(e)
-          } else {
-            val ee = new RuntimeException(
-              s"Error saving data, potentially caused by: ${model._2.map(_.message).fold("")((l, r) => l + '\n' + r)}",
-              e)
-            ee.setStackTrace(Array.empty)
-            Failure(ee)
-          })
-      })
+    validateEmail(author_email).flatMap(email =>
+      readModel(body.getBytes, lang, ctx)
+        .flatMap(model => {
+          saveToVirtuoso(model._1, graphId)({
+            graphToBytes(model._1.getGraph, defaultLang, ctxU)
+              .flatMap(a => saveFiles(
+                repo,
+                Map(
+                  pa -> a
+                ),
+                author_name,
+                email)
+                .map(hash => OperationSuccess(graphId, hash)))
+          }).transform(Success(_), e =>
+            if (model._2.isEmpty) {
+              Failure(e)
+            } else {
+              val ee = new RuntimeException(
+                s"Error saving data, potentially caused by: ${model._2.map(_.message).fold("")((l, r) => l + '\n' + r)}",
+                e)
+              ee.setStackTrace(Array.empty)
+              Failure(ee)
+            })
+        })
+    )
   }
 
   override def shaclValidate(dataid: String, shacl: String)(request: HttpServletRequest): Try[String] = {
@@ -116,6 +135,7 @@ class ApiImpl(config: Config) extends DatabusApi {
 
   override def deleteFileMapException400(e: Throwable)(request: HttpServletRequest): Option[OperationFailure] = e match {
     case _: GraphDoesNotExistException => Some(OperationFailure(e.getMessage))
+    case _: BadEmailException => Some(OperationFailure(e.getMessage))
     case _ => None
   }
 
@@ -134,12 +154,23 @@ class ApiImpl(config: Config) extends DatabusApi {
       Some(OperationFailure(s"Wrong value for type. ${e.getCause.getMessage}. ${e.getMessage}"))
     case _: RuntimeException if e.getCause.isInstanceOf[VirtuosoException] && e.getCause.getMessage.contains("SQ074") =>
       Some(OperationFailure(s"Wrong input data. ${e.getCause.getMessage}. ${e.getMessage}"))
+    case _: BadEmailException => Some(OperationFailure(e.getMessage))
     case _ => None
   }
 
-  override def shaclValidateMapException400(e: Throwable)(request: HttpServletRequest): Option[String] = e match {
-    case _ => Some(e.getMessage)
-  }
+  override def shaclValidateMapException400(e: Throwable)(request: HttpServletRequest): Option[OperationFailure] =
+    e match {
+      case _ => Some(OperationFailure(e.getMessage))
+    }
+
+  def history(repo: String, limit: Option[Int])(request: HttpServletRequest): scala.util.Try[List[HistoryEntry]] =
+    client.getHistory(repo, limit.getOrElse(10)).map(_.map(c => HistoryEntry(c.hash, c.author, c.email)).toList)
+
+  def historyMapException400(e: Throwable)(request: HttpServletRequest): Option[OperationFailure] =
+    e match {
+      case _ => Some(OperationFailure(e.getMessage))
+    }
+
 
   private def getPrefix(request: HttpServletRequest): String = {
     val url = new URL(request.getRequestURL.toString)
@@ -194,24 +225,30 @@ class ApiImpl(config: Config) extends DatabusApi {
     )(_ => execInTransaction)
   }
 
-  private def saveFileToGit(username: String, path: String, data: Array[Byte]): Try[String] =
-    saveFiles(username, Map(path -> data))
-
-  private def saveFiles(username: String, fullFilenamesAndData: Map[String, Array[Byte]]): Try[String] =
+  private def saveFiles(username: String,
+                        fullFilenamesAndData: Map[String, Array[Byte]],
+                        author_name: Option[String],
+                        author_email: Option[String]): Try[String] =
     (if (!client.projectExists(username)) {
       client.createProject(username)
     } else {
       Success(Unit)
-    }).flatMap(_ => client.commitSeveralFiles(username, fullFilenamesAndData))
+    }).flatMap(_ => client.commitSeveralFiles(username, fullFilenamesAndData, author_name, author_email))
 
 
-  private def deleteFileFromGit(username: String, path: String)(request: HttpServletRequest): Try[String] = {
+  private def deleteFileFromGit(username: String,
+                                path: String,
+                                author_name: Option[String],
+                                author_email: Option[String])(request: HttpServletRequest): Try[String] = {
     val p = gitPath(path)
-    deleteFiles(username, Seq(p))(request)
+    deleteFiles(username, Seq(p), author_name, author_email)(request)
   }
 
-  private def deleteFiles(username: String, paths: Seq[String])(request: HttpServletRequest): Try[String] =
-    client.deleteSeveralFiles(username, paths)
+  private def deleteFiles(username: String,
+                          paths: Seq[String],
+                          author_name: Option[String],
+                          author_email: Option[String])(request: HttpServletRequest): Try[String] =
+    client.deleteSeveralFiles(username, paths, author_name, author_email)
 
   private def initGitClient(config: Config): GitClient = {
     import config._
@@ -231,6 +268,22 @@ class ApiImpl(config: Config) extends DatabusApi {
 
 
 object ApiImpl {
+
+  private final val Email_Pattern = "(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21\\x23-\\x5b\\x5d-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21-\\x5a\\x53-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])+)\\])".r
+
+  def validateEmail(email: Option[String]): Try[Option[String]] =
+    email match {
+      case None => Success(None)
+      case Some(e) => Try {
+        if (Email_Pattern.unapplySeq(e).isDefined) {
+          email
+        } else {
+          throw new BadEmailException(e);
+        }
+      }
+    }
+
+  class BadEmailException(email: String) extends Exception(s"The $email is not correct email.")
 
   class GraphDoesNotExistException(id: String) extends Exception(s"Graph $id does not exist")
 

@@ -24,10 +24,6 @@ class LocalGitTest extends FlatSpec with Matchers with BeforeAndAfter {
   })
 
   "Client" should "create and check project" in {
-
-
-    val rp = Paths.get(root).resolve("test_root")
-
     val cli = new LocalGitClient(rp)
 
     val re = cli.createProject("gut")
@@ -37,14 +33,42 @@ class LocalGitTest extends FlatSpec with Matchers with BeforeAndAfter {
     cli.projectExists("gut") should be(true)
   }
 
+  "Client" should "commit with different author names and emails" in {
+    val cli = new LocalGitClient(rp)
+    val pn = "test"
+    cli.createProject(pn)
+    Seq(
+      cli.commitSeveralFiles(pn, Map("haha.txt" -> "lol".getBytes), None, None),
+      cli.commitSeveralFiles(pn, Map("haha.txt" -> "lol".getBytes), None, Some("bla")),
+      cli.commitSeveralFiles(pn, Map("haha.txt" -> "lol".getBytes), Some("Bla1"), None),
+      cli.commitSeveralFiles(pn, Map("haha.txt" -> "lol".getBytes), Some("Bla2"), Some("")),
+      cli.commitSeveralFiles(pn, Map("haha.txt" -> "lol".getBytes), Some("Bla3"), Some("e@mail.mail")),
+      cli.commitSeveralFiles(pn, Map("haha.txt" -> "lol".getBytes), Some("Bla4"), Some("stri")),
+    ).foreach(_.isSuccess should be(true))
+
+    val ts = Seq(
+      ("Bla4", "stri"),
+      ("Bla3", "e@mail.mail"),
+      ("Bla2", ""),
+      ("Bla1", ""),
+      ("bla", "bla"),
+      ("databus", "databus@infai.org")
+    )
+
+    allCommits(pn).zip(ts).foreach(c => {
+      c._1.getAuthorIdent.getName should be(c._2._1)
+      c._1.getAuthorIdent.getEmailAddress should be(c._2._2)
+    })
+
+  }
+
   "Client" should "commit twice" in {
-    val rp = Paths.get(root).resolve("test_root")
     val cli = new LocalGitClient(rp)
 
     val pn = "test"
     cli.createProject(pn)
-    val re2 = cli.commitSeveralFiles(pn, Map("haha.txt" -> "lol".getBytes, "/loldata/lol.txt" -> "haha".getBytes))
-    val re = cli.commitSeveralFiles(pn, Map("haha.txt" -> "lol".getBytes, "/loldata/lol.txt" -> "haha".getBytes))
+    val re2 = cli.commitSeveralFiles(pn, Map("haha.txt" -> "lol".getBytes, "/loldata/lol.txt" -> "haha".getBytes), Some("Bla"), None)
+    val re = cli.commitSeveralFiles(pn, Map("haha.txt" -> "lol".getBytes, "/loldata/lol.txt" -> "haha".getBytes), Some("Bla"), None)
     re2.isSuccess should be(true)
     re.isSuccess should be(true)
 
@@ -78,12 +102,11 @@ class LocalGitTest extends FlatSpec with Matchers with BeforeAndAfter {
   }
 
   "Client" should "delete twice" in {
-    val rp = Paths.get(root).resolve("test_root")
     val cli = new LocalGitClient(rp)
 
     val pn = "test"
     cli.createProject(pn)
-    val re = cli.commitSeveralFiles(pn, Map("haha.txt" -> "lol".getBytes, "/loldata/lol.txt" -> "haha".getBytes))
+    val re = cli.commitSeveralFiles(pn, Map("haha.txt" -> "lol".getBytes, "/loldata/lol.txt" -> "haha".getBytes), Some("Bla"), None)
     re.isSuccess should be(true)
 
 
@@ -94,21 +117,19 @@ class LocalGitTest extends FlatSpec with Matchers with BeforeAndAfter {
       "lol.txt"
     )
 
-    val re2 = cli.deleteSeveralFiles("test", files.toSeq)
+    val re2 = cli.deleteSeveralFiles("test", files.toSeq, Some("Bla"), None)
     re2.isSuccess should be(true)
-    val re3 = cli.deleteSeveralFiles("test", files.toSeq)
+    val re3 = cli.deleteSeveralFiles("test", files.toSeq, Some("Bla"), None)
     re3.isSuccess should be(true)
   }
 
 
   "Client" should "commit files" in {
-
-    val rp = Paths.get(root).resolve("test_root")
     val cli = new LocalGitClient(rp)
 
     val pn = "test"
     cli.createProject(pn)
-    val re = cli.commitSeveralFiles(pn, Map("haha.txt" -> "lol".getBytes, "/loldata/lol.txt" -> "haha".getBytes))
+    val re = cli.commitSeveralFiles(pn, Map("haha.txt" -> "lol".getBytes, "/loldata/lol.txt" -> "haha".getBytes), Some("Bla"), None)
     re.isSuccess should be(true)
 
 
@@ -132,7 +153,7 @@ class LocalGitTest extends FlatSpec with Matchers with BeforeAndAfter {
     treeWalk.next() should be(false)
 
 
-    val red = cli.deleteSeveralFiles(pn, files.toSeq)
+    val red = cli.deleteSeveralFiles(pn, files.toSeq, Some("Bla"), None)
     red.isSuccess should be(true)
 
     val entrs2 = diff(pn)
@@ -142,6 +163,20 @@ class LocalGitTest extends FlatSpec with Matchers with BeforeAndAfter {
         e.getChangeType should be(ChangeType.DELETE)
         files should contain(e.getOldPath)
       })
+  }
+
+
+  def lastCommit(repoName: String) = {
+    val git = Git.open(rp.resolve(repoName).toFile)
+    val rw = new RevWalk(git.getRepository)
+    val head = git.getRepository.resolve(Constants.HEAD)
+    rw.parseCommit(head)
+  }
+
+
+  def allCommits(repoName: String) = {
+    val git = Git.open(rp.resolve(repoName).toFile)
+    git.log().call().asScala
   }
 
   def treeWalkForLastCommit(repoName: String) = {
