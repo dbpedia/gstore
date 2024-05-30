@@ -40,6 +40,7 @@ class ApiImpl(config: Config) extends DatabusApi {
     readModel(
       body.getBytes,
       defaultLang,
+      null,
       contextUrl(body.getBytes, defaultLang)
         .map(jenaJsonLdContextWithFallbackForLocalhost(_, request.getRemoteHost).get)
     )
@@ -87,19 +88,13 @@ class ApiImpl(config: Config) extends DatabusApi {
     val lang = mapContentType(ct, defaultLang)
     val ctxU = contextUrl(body.getBytes, lang)
     val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, request.getRemoteHost).get)
+    val baseUrl = getPrefix(request) + gitPath(path)
     validateEmail(author_email).flatMap(email =>
-      readModel(body.getBytes, lang, ctx)
+      readModel(body.getBytes, lang, baseUrl, ctx)
         .flatMap(model => {
           saveToVirtuoso(model._1, graphId)({
-            graphToBytes(model._1.getGraph, defaultLang, ctxU)
-              .flatMap(a => saveFiles(
-                repo,
-                Map(
-                  pa -> a
-                ),
-                author_name,
-                email)
-                .map(hash => OperationSuccess(graphId, hash)))
+            saveFiles(repo, Map(pa -> body.getBytes), author_name, email)
+                .map(hash => OperationSuccess(graphId, hash))
           }).transform(Success(_), e =>
             if (model._2.isEmpty) {
               Failure(e)
@@ -180,6 +175,7 @@ class ApiImpl(config: Config) extends DatabusApi {
   private def readFile(username: String, path: String)(request: HttpServletRequest): Try[String] = {
     val p = gitPath(path)
     val lang = getLangFromAcceptHeader(request)
+    val baseUrl = getPrefix(request) + p
     setResponseHeaders(Map("Content-Type" -> lang.getContentType.toHeaderString))(request)
     client.readFile(username, p)
       .flatMap(body => {
@@ -187,6 +183,7 @@ class ApiImpl(config: Config) extends DatabusApi {
         readModel(
           body,
           defaultLang,
+          baseUrl,
           contextUrl(body, defaultLang)
             .map(jenaJsonLdContextWithFallbackForLocalhost(_, request.getRemoteHost).get)
         )

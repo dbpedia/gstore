@@ -159,24 +159,21 @@ object RdfConversions {
 
   private lazy val CachingContext = initCachingContext()
 
+  private lazy val log = LoggerFactory.getLogger(this.getClass)
+
   val DefaultShaclLang = Lang.TTL
 
-  def readModel(data: Array[Byte], lang: Lang, context: Option[util.Context]): Try[(Model, List[Warning])] = Try {
+  def readModel(data: Array[Byte], lang: Lang, baseUrl: String, context: Option[util.Context]): Try[(Model, List[Warning])] = Try {
+    
+    log.debug(s"Parsing with base url: ${baseUrl}")
+
     val model = ModelFactory.createDefaultModel()
     val dataStream = new ByteArrayInputStream(data)
     val dest = StreamRDFLib.graph(model.getGraph)
-    val parser = RDFParserBuilder.create()
-      .source(dataStream)
-      .base(null)
-      .lang(lang)
 
+    RDFDataMgr.read(model, dataStream, baseUrl, lang);
     val eh = newErrorHandlerWithWarnings
-    parser.errorHandler(eh)
 
-    context.foreach(cs =>
-      parser.context(cs))
-
-    parser.parse(dest)
     (model, eh.warningsList)
   }
 
@@ -205,13 +202,13 @@ object RdfConversions {
 
   def validateWithShacl(file: Array[Byte], modelLang: Lang, shaclGraph: Graph, fileCtx: Option[util.Context]): Try[ValidationReport] =
     for {
-      (model, _) <- readModel(file, modelLang, fileCtx)
+      (model, _) <- readModel(file, modelLang, null, fileCtx)
       re <- validateWithShacl(model, shaclGraph)
     } yield re
 
   def validateWithShacl(file: Array[Byte], shaclData: Array[Byte], fileCtx: Option[util.Context], shaclCtx: Option[util.Context], modelLang: Lang): Try[ValidationReport] =
     for {
-      (shaclGra, _) <- readModel(shaclData, DefaultShaclLang, shaclCtx)
+      (shaclGra, _) <- readModel(shaclData, DefaultShaclLang, null, shaclCtx)
       re <- validateWithShacl(file, modelLang, shaclGra.getGraph, fileCtx)
     } yield re
 
