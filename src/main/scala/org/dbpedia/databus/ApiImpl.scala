@@ -88,9 +88,8 @@ class ApiImpl(config: Config) extends DatabusApi {
     val lang = mapContentType(ct, defaultLang)
     val ctxU = contextUrl(body.getBytes, lang)
     val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, request.getRemoteHost).get)
-    val baseUrl = getPrefix(request) + gitPath(path)
     validateEmail(author_email).flatMap(email =>
-      readModel(body.getBytes, lang, baseUrl, ctx)
+      readModel(body.getBytes, lang, graphId, ctx)
         .flatMap(model => {
           saveToVirtuoso(model._1, graphId)({
             saveFiles(repo, Map(pa -> body.getBytes), author_name, email)
