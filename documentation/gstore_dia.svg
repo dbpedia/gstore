@@ -26,7 +26,7 @@
      inkscape:pagecheckerboard="0"
      showgrid="false"
      inkscape:zoom="2.6706587"
-     inkscape:cx="337.55717"
+     inkscape:cx="512.79484"
      inkscape:cy="174.30157"
      inkscape:window-width="1850"
      inkscape:window-height="1016"
@@ -339,23 +339,20 @@
           </xhtml:div>
         </foreignObject>
         <text
-           x="278.2027"
-           y="168.11409"
-           fill="#000000"
-           font-family="Helvetica"
-           font-size="11px"
-           text-anchor="middle"
-           id="text50-7-5"
-           style="font-size:8px"><tspan
+           xml:space="preserve"
+           style="font-style:normal;font-weight:normal;font-size:8px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none"
+           x="234.95758"
+           y="165.98022"
+           id="text4314"><tspan
              sodipodi:role="line"
-             id="tspan15415"
-             x="278.2027"
-             y="168.11409"
+             id="tspan4312"
+             x="234.95758"
+             y="165.98022"
              style="font-weight:bold;font-size:8px">Fully synchronized</tspan><tspan
              sodipodi:role="line"
-             id="tspan15417"
-             x="278.2027"
-             y="178.11409"
+             x="234.95758"
+             y="175.98022"
+             id="tspan4316"
              style="font-weight:bold;font-size:8px">distributed transaction</tspan></text>
       </switch>
     </g>
