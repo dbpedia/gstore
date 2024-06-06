@@ -26,13 +26,13 @@
      inkscape:pagecheckerboard="0"
      showgrid="false"
      inkscape:zoom="2.6706587"
-     inkscape:cx="337.74439"
-     inkscape:cy="174.48879"
-     inkscape:window-width="1551"
-     inkscape:window-height="991"
-     inkscape:window-x="26"
-     inkscape:window-y="23"
-     inkscape:window-maximized="0"
+     inkscape:cx="337.55717"
+     inkscape:cy="174.30157"
+     inkscape:window-width="1850"
+     inkscape:window-height="1016"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
      inkscape:current-layer="switch52-6-3" />
   <defs
      id="defs2" />
@@ -124,6 +124,7 @@
                style="box-sizing: border-box; font-size: 0px; text-align: center;">
               <xhtml:div
                  style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">Sparql service<xhtml:br />
+
 (Virtuoso / Jena Fuseki)</xhtml:div>
             </xhtml:div>
           </xhtml:div>
@@ -338,7 +339,7 @@
           </xhtml:div>
         </foreignObject>
         <text
-           x="276.2027"
+           x="278.2027"
            y="168.11409"
            fill="#000000"
            font-family="Helvetica"
@@ -348,12 +349,12 @@
            style="font-size:8px"><tspan
              sodipodi:role="line"
              id="tspan15415"
-             x="276.2027"
+             x="278.2027"
              y="168.11409"
              style="font-weight:bold;font-size:8px">Fully synchronized</tspan><tspan
              sodipodi:role="line"
              id="tspan15417"
-             x="276.2027"
+             x="278.2027"
              y="178.11409"
              style="font-weight:bold;font-size:8px">distributed transaction</tspan></text>
       </switch>
