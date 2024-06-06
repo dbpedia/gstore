@@ -35,13 +35,13 @@ class ApiImpl(config: Config) extends DatabusApi {
 
   def stop() = JenaSystem.shutdown()
 
-
+  // todo NOTICE! this may fail with relative URIS, NOT TESTED!
   override def dataidSubgraph(body: String)(request: HttpServletRequest): Try[String] =
     readModel(
       body.getBytes,
       defaultLang,
       contextUrl(body.getBytes, defaultLang)
-        .map(jenaJsonLdContextWithFallbackForLocalhost(_, request.getRemoteHost).get)
+        .map(jenaJsonLdContextWithFallbackForLocalhost(_, request.getRemoteHost, None).get)
     )
       .flatMap(m => Tractate.extract(m._1.getGraph, TractateV1.Version))
       .map(_.stringForSigning)
@@ -67,8 +67,8 @@ class ApiImpl(config: Config) extends DatabusApi {
       )
   }
 
-  override def getFile(repo: String, path: String)(request: HttpServletRequest): Try[String] =
-    readFile(repo, path)(request)
+  override def getFile(repo: String, path: String, prefix: Option[String])(request: HttpServletRequest): Try[String] =
+    readFile(repo, path, prefix)(request)
 
 
   override def saveFile(repo: String,
@@ -86,12 +86,12 @@ class ApiImpl(config: Config) extends DatabusApi {
       .getOrElse("")
     val lang = mapContentType(ct, defaultLang)
     val ctxU = contextUrl(body.getBytes, lang)
-    val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, request.getRemoteHost).get)
+    val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, request.getRemoteHost, Some(graphId)).get)
     validateEmail(author_email).flatMap(email =>
       readModel(body.getBytes, lang, ctx)
         .flatMap(model => {
           saveToVirtuoso(model._1, graphId)({
-            graphToBytes(model._1.getGraph, defaultLang, ctxU)
+            graphToBytes(model._1.getGraph, defaultLang, ctx, ctxU)
               .flatMap(a => saveFiles(
                 repo,
                 Map(
@@ -118,10 +118,12 @@ class ApiImpl(config: Config) extends DatabusApi {
     val lang = getLangFromAcceptHeader(request)
     setResponseHeaders(Map("Content-Type" -> lang.getContentType.toHeaderString))(request)
     val ctxU = contextUrl(dataid.getBytes, lang)
-    val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, request.getRemoteHost).get)
+    val ctx = ctxU.map(cu =>
+      jenaJsonLdContextWithFallbackForLocalhost(cu, request.getRemoteHost, None).get)
 
     val shaclU = contextUrl(shacl.getBytes, RdfConversions.DefaultShaclLang)
-    val shaclCtx = shaclU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, request.getRemoteHost).get)
+    val shaclCtx = shaclU.map(cu =>
+      jenaJsonLdContextWithFallbackForLocalhost(cu, request.getRemoteHost, None).get)
 
     RdfConversions.validateWithShacl(
       dataid.getBytes,
@@ -129,7 +131,7 @@ class ApiImpl(config: Config) extends DatabusApi {
       ctx,
       shaclCtx,
       defaultLang
-    ).flatMap(r => RdfConversions.graphToBytes(r.getGraph, lang, None))
+    ).flatMap(r => RdfConversions.graphToBytes(r.getGraph, lang, shaclCtx, None))
       .map(new String(_))
   }
 
@@ -177,21 +179,22 @@ class ApiImpl(config: Config) extends DatabusApi {
     s"${url.getProtocol}://${url.getHost}:${url.getPort}${config.defaultGraphIdPrefix}/"
   }
 
-  private def readFile(username: String, path: String)(request: HttpServletRequest): Try[String] = {
+  private def readFile(username: String, path: String, prefix: Option[String])(request: HttpServletRequest): Try[String] = {
     val p = gitPath(path)
     val lang = getLangFromAcceptHeader(request)
+    val graphId = generateGraphId(prefix.getOrElse(getPrefix(request)), username, path)
     setResponseHeaders(Map("Content-Type" -> lang.getContentType.toHeaderString))(request)
     client.readFile(username, p)
       .flatMap(body => {
         val ctxUri = contextUrl(body, defaultLang)
+        val ctx = ctxUri.map(jenaJsonLdContextWithFallbackForLocalhost(_, request.getRemoteHost, Some(graphId)).get)
         readModel(
           body,
           defaultLang,
-          contextUrl(body, defaultLang)
-            .map(jenaJsonLdContextWithFallbackForLocalhost(_, request.getRemoteHost).get)
+          ctx
         )
           .flatMap(m =>
-            graphToBytes(m._1.getGraph, lang, ctxUri)
+            graphToBytes(m._1.getGraph, lang, ctx, ctxUri)
           )
       })
       .map(new String(_))

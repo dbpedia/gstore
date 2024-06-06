@@ -14,9 +14,10 @@ import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.riot.lang.LangJSONLD10
 import org.apache.jena.riot.system.{ErrorHandler, ErrorHandlerFactory, StreamRDFLib}
 import org.apache.jena.riot.writer.JsonLD10Writer
-import org.apache.jena.riot.{Lang, RDFDataMgr, RDFFormat, RDFLanguages, RDFParserBuilder, RDFWriter, RIOT}
+import org.apache.jena.riot.{Lang, RDFDataMgr, RDFFormat, RDFLanguages, RDFParser, RDFWriter, RIOT}
 import org.apache.jena.shacl.{ShaclValidator, Shapes, ValidationReport}
 import org.apache.jena.sparql.util
+import org.apache.jena.sparql.util.Context
 import org.dbpedia.databus.ApiImpl.Config
 import org.slf4j.LoggerFactory
 import sttp.client3.{DigestAuthenticationBackend, HttpURLConnectionBackend, basicRequest}
@@ -163,15 +164,14 @@ object RdfConversions {
 
   def readModel(data: Array[Byte], lang: Lang, context: Option[util.Context]): Try[(Model, List[Warning])] = Try {
     val model = ModelFactory.createDefaultModel()
+    val eh = newErrorHandlerWithWarnings
     val dataStream = new ByteArrayInputStream(data)
     val dest = StreamRDFLib.graph(model.getGraph)
-    val parser = RDFParserBuilder.create()
-      .source(dataStream)
-      .base(null)
-      .lang(lang)
 
-    val eh = newErrorHandlerWithWarnings
-    parser.errorHandler(eh)
+    val parser = RDFParser.create()
+      .source(dataStream)
+      .errorHandler(eh)
+      .lang(lang)
 
     context.foreach(cs =>
       parser.context(cs))
@@ -180,19 +180,18 @@ object RdfConversions {
     (model, eh.warningsList)
   }
 
-  def graphToBytes(model: Graph, outputLang: Lang, context: Option[URL]): Try[Array[Byte]] = Try {
+  def graphToBytes(model: Graph, outputLang: Lang, context: Option[Context], contextURL: Option[URL]): Try[Array[Byte]] = Try {
     val str = new ByteArrayOutputStream()
-    val builder = RDFWriter.create.format(langToFormat(outputLang))
+    val builder = RDFWriter.create()
       .source(model)
+      .format(langToFormat(outputLang))
 
-    context.foreach(ctx => {
-      val jctx = jenaContext(CachingContext.parse(ctx.toString))
-      builder.context(jctx)
-      builder.set(JsonLD10Writer.JSONLD_CONTEXT_SUBSTITUTION, new JsonString(ctx.toString))
-    })
+    context.foreach(ctx =>
+      builder.context(ctx))
+    contextURL.foreach(ctx =>
+      builder.set(JsonLD10Writer.JSONLD_CONTEXT_SUBSTITUTION, new JsonString(ctx.toString)))
 
     builder
-      .build()
       .output(str)
     str.toByteArray
   }
@@ -224,8 +223,8 @@ object RdfConversions {
   def langToFormat(lang: Lang): RDFFormat = lang match {
     case RDFLanguages.TURTLE => RDFFormat.TURTLE_PRETTY
     case RDFLanguages.TTL => RDFFormat.TTL
-    case RDFLanguages.JSONLD => RDFFormat.JSONLD10
-    case RDFLanguages.JSONLD10 => RDFFormat.JSONLD10
+    case RDFLanguages.JSONLD => RDFFormat.JSONLD10_COMPACT_PRETTY
+    case RDFLanguages.JSONLD10 => RDFFormat.JSONLD10_COMPACT_PRETTY
     case RDFLanguages.JSONLD11 => RDFFormat.JSONLD11
     case RDFLanguages.TRIG => RDFFormat.TRIG_PRETTY
     case RDFLanguages.RDFXML => RDFFormat.RDFXML_PRETTY
@@ -313,8 +312,17 @@ object RdfConversions {
       None
     }
 
-  def jenaJsonLdContextWithFallbackForLocalhost(jsonLdContextUrl: URL, requestHost: String): Try[util.Context] =
+  def jenaJsonLdContextWithFallbackForLocalhost(jsonLdContextUrl: URL, requestHost: String, baseUrl: Option[String]): Try[util.Context] =
     jsonLdContextWithFallbackForLocalhost(jsonLdContextUrl, requestHost)
+      .map(ctx =>
+        baseUrl
+          .map(bu => {
+            val c = ctx.clone()
+            c.put("@base", bu)
+            c
+          })
+          .getOrElse(ctx)
+      )
       .map(jenaContext)
 
   private def jsonLdContextUrl(data: Array[Byte]): Try[Option[URL]] =
@@ -359,11 +367,13 @@ object RdfConversions {
     ctx
   }
 
-  private def initCachingContext() = {
-    val opts = new JsonLdOptions(null)
+  def defaultJsonLdOpts(base: String) = {
+    val opts = new JsonLdOptions(base)
     opts.useNamespaces = true
-    new CachingJsonldContext(30, opts)
+    opts
   }
+
+  private def initCachingContext() = new CachingJsonldContext(30, defaultJsonLdOpts(null))
 
   private def escapeString(s: String) = {
     val sb = new StringBuilder(s.length())

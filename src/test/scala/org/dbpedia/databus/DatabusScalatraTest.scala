@@ -3,7 +3,7 @@ package org.dbpedia.databus
 
 import org.apache.jena.iri.ViolationCodes
 
-import java.io.ByteArrayInputStream
+import java.io.{ByteArrayInputStream}
 import java.nio.file.{Files, Paths}
 import org.apache.jena.rdf.model.ModelFactory
 import org.apache.jena.riot.{Lang, RDFDataMgr}
@@ -94,6 +94,25 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
       val respCtx = RdfConversions.contextUrl(bodyBytes, Lang.JSONLD10)
       respCtx should equal(RdfConversions.contextUrl(bytes, Lang.JSONLD10))
       respCtx.get.toString.nonEmpty should equal(true)
+    }
+
+  }
+
+  "File save" should "save and retrieve jsonlds with relative uris" in {
+
+    val file = "test-relative.jsonld"
+    val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
+
+    post("/databus/graph/save?repo=kuckuck&path=pa/rel_test.jsonld", bytes) {
+      status should equal(200)
+    }
+
+    get("/databus/graph/read?repo=kuckuck&path=pa/rel_test.jsonld") {
+      status should equal(200)
+      val respCtx = RdfConversions.contextUrl(bodyBytes, Lang.JSONLD10)
+      respCtx should equal(RdfConversions.contextUrl(bytes, Lang.JSONLD10))
+      respCtx.get.toString.nonEmpty should equal(true)
+      body.contains(" \"generated\" : \"#mod\",") should equal(true)
     }
 
   }

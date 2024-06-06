@@ -23,7 +23,7 @@ class ValidationTest extends FlatSpec with Matchers with BeforeAndAfter {
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
 
     val ctxU = contextUrl(bytes, lang)
-    val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, "random").get)
+    val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, "random", None).get)
 
     val re = RdfConversions.validateWithShacl(bytes, ctx, shacl, lang)
     re.get.conforms() should be(true)
@@ -35,7 +35,7 @@ class ValidationTest extends FlatSpec with Matchers with BeforeAndAfter {
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
 
     val ctxU = contextUrl(bytes, lang)
-    val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, "random").get)
+    val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, "random", None).get)
 
     val re = RdfConversions.validateWithShacl(bytes, ctx, shacl, lang)
     re.get.conforms() should be(false)
@@ -47,7 +47,7 @@ class ValidationTest extends FlatSpec with Matchers with BeforeAndAfter {
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
 
     val ctxU = contextUrl(bytes, lang)
-    val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, "random").get)
+    val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, "random", None).get)
 
     val re = RdfConversions.validateWithShacl(bytes, ctx, shacl, lang)
     re.get.conforms() should be(true)
@@ -59,7 +59,7 @@ class ValidationTest extends FlatSpec with Matchers with BeforeAndAfter {
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
 
     val ctxU = contextUrl(bytes, lang)
-    val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, "random").get)
+    val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, "random", None).get)
 
     val re = RdfConversions.validateWithShacl(bytes, ctx, shacl, lang)
     re.get.conforms() should be(true)
@@ -72,10 +72,10 @@ class ValidationTest extends FlatSpec with Matchers with BeforeAndAfter {
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
 
     val ctxU = contextUrl(bytes, lang)
-    val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, "random").get)
+    val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, "random", None).get)
 
     val shaclU = contextUrl(shacl, RdfConversions.DefaultShaclLang)
-    val shaclCtx = shaclU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, "random").get)
+    val shaclCtx = shaclU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, "random", None).get)
 
     val re = RdfConversions.validateWithShacl(bytes, shacl, ctx, shaclCtx, lang)
     re.get.conforms() should be(true)

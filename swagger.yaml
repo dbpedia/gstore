@@ -140,6 +140,12 @@ paths:
           type: string
           required: true
           example: "testgroup/test.jsonld"
+        - in: query
+          name: prefix
+          description: "Prefix for graphid URL if it is not default. NOTE! should be without slash in the end."
+          type: string
+          required: false
+          example: "http://foreighhost/api"
       responses:
         "200":
           description: "A file data."
