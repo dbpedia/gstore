@@ -2,7 +2,7 @@ package org.dbpedia.databus
 
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
-import java.net.{InetAddress, URL}
+import java.net.URL
 import com.github.jsonldjava.core
 import com.github.jsonldjava.core.{JsonLdConsts, JsonLdOptions}
 import com.github.jsonldjava.utils.JsonUtils
@@ -14,11 +14,11 @@ import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.riot.lang.LangJSONLD10
 import org.apache.jena.riot.system.{ErrorHandler, ErrorHandlerFactory, StreamRDFLib}
 import org.apache.jena.riot.writer.JsonLD10Writer
-import org.apache.jena.riot.{Lang, RDFDataMgr, RDFFormat, RDFLanguages, RDFParser, RDFWriter, RIOT}
+import org.apache.jena.riot.{Lang, RDFDataMgr, RDFFormat, RDFLanguages, RDFParser, RDFParserBuilder, RDFWriter, RDFWriterBuilder, RIOT}
 import org.apache.jena.shacl.{ShaclValidator, Shapes, ValidationReport}
 import org.apache.jena.sparql.util
-import org.apache.jena.sparql.util.Context
 import org.dbpedia.databus.ApiImpl.Config
+import org.dbpedia.databus.RdfConversions.RDFGraphSerialiser.serialiseGraph
 import org.slf4j.LoggerFactory
 import sttp.client3.{DigestAuthenticationBackend, HttpURLConnectionBackend, basicRequest}
 import sttp.model.Uri
@@ -158,42 +158,294 @@ class FusekiJDBCClient(host: String, port: Int, user: String, pass: String, data
 
 object RdfConversions {
 
-  private lazy val CachingContext = initCachingContext()
+  val DefaultShaclLang = Turtle
 
-  val DefaultShaclLang = Lang.TTL
-
-  def readModel(data: Array[Byte], lang: Lang, context: Option[util.Context]): Try[(Model, List[Warning])] = Try {
-    val model = ModelFactory.createDefaultModel()
-    val eh = newErrorHandlerWithWarnings
-    val dataStream = new ByteArrayInputStream(data)
-    val dest = StreamRDFLib.graph(model.getGraph)
-
-    val parser = RDFParser.create()
-      .source(dataStream)
-      .errorHandler(eh)
-      .lang(lang)
-
-    context.foreach(cs =>
-      parser.context(cs))
-
-    parser.parse(dest)
-    (model, eh.warningsList)
+  sealed trait ContentFormat {
+    def extensions: Set[String]
   }
 
-  def graphToBytes(model: Graph, outputLang: Lang, context: Option[Context], contextURL: Option[URL]): Try[Array[Byte]] = Try {
-    val str = new ByteArrayOutputStream()
-    val builder = RDFWriter.create()
-      .source(model)
-      .format(langToFormat(outputLang))
+  object ContentFormat {
+    private val AllMembers: Set[ContentFormat] = Set(
+      JSON,
+      RDFThrift,
+      JSONLD,
+      Turtle,
+      NTriples,
+      NQuads,
+      Trig,
+      Trix,
+      RDFXML
+    )
+    private val extToFmt = AllMembers.flatMap(f => f.extensions.map(e => (e.toLowerCase, f))).toMap
+    private val ctToFmt = AllMembers.collect { case rdf: RDFContentFormat => rdf }
+      .map(ct => (ct.lang.getContentType.toHeaderString.toLowerCase, ct)).toMap
 
-    context.foreach(ctx =>
-      builder.context(ctx))
-    contextURL.foreach(ctx =>
-      builder.set(JsonLD10Writer.JSONLD_CONTEXT_SUBSTITUTION, new JsonString(ctx.toString)))
+    //todo make the same as with the extensions? make content type a field of ContentFormat?
+    def fromContentType(cn: String): Option[ContentFormat] =
+      Try {
+        cn.toLowerCase match {
+          case "application/json" => JSON
+          case other => ctToFmt(other)
+        }
+      }.toOption
 
-    builder
-      .output(str)
-    str.toByteArray
+    def fromPath(path: String): Option[ContentFormat] = fromExt(path.split('.').last)
+
+    def fromExt(ext: String): Option[ContentFormat] = extToFmt.get(ext.toLowerCase)
+
+    /*
+    * This is the main mapping function of the formats, new non-rdf formats with RDF content must be added here
+    * */
+    def rdf(cf: ContentFormat): Option[RDFContentFormat] = cf match {
+      case JSON => Some(JSONLD)
+      case other: RDFContentFormat => Some(other)
+      case _ => None
+    }
+
+  }
+
+  sealed trait RDFContentFormat extends ContentFormat {
+    def lang: Lang
+
+    def format: RDFFormat
+  }
+
+  case object JSON extends ContentFormat {
+    override def extensions: Set[String] = Set("json")
+
+  }
+
+  case object RDFThrift extends RDFContentFormat {
+    override def lang: Lang = Lang.RDFTHRIFT
+
+    override def format: RDFFormat = RDFFormat.RDF_THRIFT
+
+    override def extensions: Set[String] = Set("rt", "trdf")
+  }
+
+  case object JSONLD extends RDFContentFormat {
+    override def lang: Lang = RDFLanguages.JSONLD10
+
+    override def format: RDFFormat = RDFFormat.JSONLD10_COMPACT_PRETTY
+
+    override def extensions: Set[String] = Set("jsonld")
+  }
+
+  case object Turtle extends RDFContentFormat {
+    override def lang: Lang = Lang.TURTLE
+
+    override def format: RDFFormat = RDFFormat.TURTLE_PRETTY
+
+    override def extensions: Set[String] = Set("ttl")
+  }
+
+  case object NTriples extends RDFContentFormat {
+    override def lang: Lang = Lang.NTRIPLES
+
+    override def format: RDFFormat = RDFFormat.NTRIPLES
+
+    override def extensions: Set[String] = Set("nt")
+  }
+
+  case object NQuads extends RDFContentFormat {
+    override def lang: Lang = Lang.NQUADS
+
+    override def format: RDFFormat = RDFFormat.NQUADS
+
+    override def extensions: Set[String] = Set("nq")
+  }
+
+  case object Trix extends RDFContentFormat {
+    override def lang: Lang = Lang.TRIX
+
+    override def format: RDFFormat = RDFFormat.TRIX
+
+    override def extensions: Set[String] = Set("trix")
+  }
+
+  case object RDFXML extends RDFContentFormat {
+    override def lang: Lang = Lang.RDFXML
+
+    override def format: RDFFormat = RDFFormat.RDFXML_PRETTY
+
+    override def extensions: Set[String] = Set("rdf", "rdfs", "owl")
+  }
+
+  case object Trig extends RDFContentFormat {
+    override def lang: Lang = Lang.TRIG
+
+    override def format: RDFFormat = RDFFormat.TRIG_PRETTY
+
+    override def extensions: Set[String] = Set("trig")
+  }
+
+  trait GraphBytesExtractor {
+    def extractGraphBytes(data: Array[Byte]): Try[Array[Byte]]
+  }
+
+  object GraphBytesExtractor {
+    implicit def fromRdfContent(ct: RDFContentFormat): GraphBytesExtractor = DefaultGraphBytesExtractor
+
+    implicit def fromContent(ct: ContentFormat): Option[GraphBytesExtractor] = ct match {
+      case c: RDFContentFormat => Some(c)
+      case JSON => Some(DefaultGraphBytesExtractor)
+      case _ => None
+    }
+
+  }
+
+  object DefaultGraphBytesExtractor extends GraphBytesExtractor {
+    override def extractGraphBytes(data: Array[Byte]): Try[Array[Byte]] = Success(data)
+  }
+
+  object RDFGraphSerialiser {
+    def init(inputFormat: RDFContentFormat, extractor: GraphBytesExtractor, data: Array[Byte], base: Option[String]) = inputFormat match {
+      case JSONLD => new JsonLDSerialiser(extractor, data, base)
+      case other => new RDFGraphSerialiser(other, extractor, data, base)
+    }
+
+    def serialiseGraph(graph: Graph, outFormat: RDFContentFormat, base: Option[String], editBuilder: Option[RDFWriterBuilder => Unit]): Try[Array[Byte]] = Try {
+      val str = new ByteArrayOutputStream()
+      val builder = RDFWriter.create()
+        .source(graph)
+        .base(base.orNull)
+        .format(outFormat.format)
+      editBuilder.foreach(_(builder))
+      builder
+        .output(str)
+      str.toByteArray
+    }
+
+  }
+
+  // NOTE! Not thread safe!
+  class RDFGraphSerialiser protected(inputFormat: RDFContentFormat, extractor: GraphBytesExtractor, data: Array[Byte], base: Option[String]) {
+
+    private var parsed: Try[(Model, List[Warning])] = Failure(null)
+
+    def graph: Try[(Model, List[Warning])] = parsed.orElse {
+      extractor.extractGraphBytes(data).flatMap { bytes =>
+        val re = Try {
+          val model = ModelFactory.createDefaultModel()
+          val parser = RDFParser.create()
+            .source(new ByteArrayInputStream(bytes))
+            .base(base.orNull)
+            .lang(inputFormat.lang)
+          val eh = newErrorHandlerWithWarnings
+          parser.errorHandler(eh)
+          modifyParser(parser)
+          parser.parse(StreamRDFLib.graph(model.getGraph))
+          (model, eh.warningsList)
+        }
+        parsed = re
+        re
+      }
+    }
+
+    def graphBytes(outFormat: RDFContentFormat): Try[Array[Byte]] =
+      graph
+        .map(_._1)
+        .flatMap(m => serialiseGraph(m.getGraph, outFormat, base, Some(modifyWriter)))
+
+    protected def modifyParser(parser: RDFParserBuilder): Try[Unit] = Success()
+
+    protected def modifyWriter(writer: RDFWriterBuilder): Try[Unit] = Success()
+
+  }
+
+  // NOTE! Not thread safe!
+  private class JsonLDSerialiser(extractor: GraphBytesExtractor, data: Array[Byte], base: Option[String]) extends RDFGraphSerialiser(JSONLD, extractor, data, base) {
+
+    import JsonLDSerialiser._
+
+    // NOTE! Not thread safe!
+    private var remoteContext: Option[Try[(URL, util.Context)]] = None
+
+    override def graph: Try[(Model, List[Warning])] = {
+      parseContext(data, base)
+      super.graph
+    }
+
+    override def modifyParser(parser: RDFParserBuilder) =
+      remoteContext.get.map(cs =>
+        parser.context(cs._2))
+
+    override def modifyWriter(writer: RDFWriterBuilder) =
+      remoteContext.get.map(ctx => {
+        writer.context(ctx._2)
+        writer.set(JsonLD10Writer.JSONLD_CONTEXT_SUBSTITUTION, new JsonString(ctx._1.toString))
+      })
+
+
+    private def parseContext(body: Array[Byte], base: Option[String]): Option[Try[(URL, util.Context)]] =
+      remoteContext match {
+        case None | Some(Failure(_)) =>
+          val c = jsonLdContextUrl(body)
+            .map(c => jenaJsonLdContext(c, base).map((c, _)))
+          remoteContext = c
+          c
+        case other => other
+      }
+
+  }
+
+  object JsonLDSerialiser {
+
+    private lazy val CachingContext = new CachingJsonldContext(30, defaultJsonLdOpts(null))
+
+    def preloadContextFromAnotherUri(ctxUri: String, downloadUri: String): Try[core.Context] = Try {
+      val ctx = CachingContext.parse(downloadUri)
+      CachingContext.putInCache(ctxUri, ctx)
+      ctx
+    }
+
+    def preloadContextFromAnotherHost(ctxUri: String, downloadHost: String): Try[core.Context] = Try {
+      val ctxUrl = new URL(ctxUri)
+      ctxUri.replace(ctxUrl.getHost, downloadHost)
+    }.flatMap(preloadContextFromAnotherUri(ctxUri, _))
+
+    private def defaultJsonLdOpts(base: String) = {
+      val opts = new JsonLdOptions(base)
+      opts.useNamespaces = true
+      opts
+    }
+
+    private def jenaJsonLdContext(jsonLdContextUrl: URL, baseUrl: Option[String]): Try[util.Context] =
+      Try(CachingContext.parse(jsonLdContextUrl.toString))
+        .map(ctx =>
+          baseUrl
+            .map(bu => {
+              val c = ctx.clone()
+              c.put("@base", bu)
+              c
+            })
+            .getOrElse(ctx)
+        )
+        .map(jenaContext)
+
+    private[databus] def jsonLdContextUrl(data: Array[Byte]): Option[URL] =
+      Try(
+        JsonUtils.fromString(new String(data))
+      )
+        .map(j =>
+          Try(j.asInstanceOf[java.util.Map[String, Object]]).toOption)
+        .map(_.flatMap(c =>
+          Option(c.get(JsonLdConsts.CONTEXT))
+            .map(_.toString)
+            .flatMap(ctx =>
+              Try(new URL(ctx)) match {
+                case Failure(_) => None
+                case Success(uri) => Some(uri)
+              }))).toOption.flatten
+
+    private def jenaContext(jsonLdCtx: core.Context) = {
+      val context: util.Context = RIOT.getContext.copy()
+      jsonLdCtx.putAll(jsonLdCtx.getPrefixes(true))
+      context.put(JsonLD10Writer.JSONLD_CONTEXT, jsonLdCtx)
+      context.put(LangJSONLD10.JSONLD_CONTEXT, jsonLdCtx)
+      context
+    }
+
   }
 
   def validateWithShacl(model: Model, shacl: Graph): Try[ValidationReport] =
@@ -202,63 +454,24 @@ object RdfConversions {
         .validate(Shapes.parse(shacl), model.getGraph)
     )
 
-  def validateWithShacl(file: Array[Byte], modelLang: Lang, shaclGraph: Graph, fileCtx: Option[util.Context]): Try[ValidationReport] =
+  def validateWithShacl(file: Array[Byte], modelLang: RDFContentFormat, shaclGraph: Graph): Try[ValidationReport] =
     for {
-      (model, _) <- readModel(file, modelLang, fileCtx)
+      (model, _) <- RdfConversions.RDFGraphSerialiser.init(modelLang, modelLang, file, None).graph
       re <- validateWithShacl(model, shaclGraph)
     } yield re
 
-  def validateWithShacl(file: Array[Byte], shaclData: Array[Byte], fileCtx: Option[util.Context], shaclCtx: Option[util.Context], modelLang: Lang): Try[ValidationReport] =
+  def validateWithShacl(file: Array[Byte], shaclData: Array[Byte], modelLang: RDFContentFormat): Try[ValidationReport] =
     for {
-      (shaclGra, _) <- readModel(shaclData, DefaultShaclLang, shaclCtx)
-      re <- validateWithShacl(file, modelLang, shaclGra.getGraph, fileCtx)
+      (shaclGra, _) <- RdfConversions.RDFGraphSerialiser.init(DefaultShaclLang, DefaultShaclLang, shaclData, None).graph
+      re <- validateWithShacl(file, modelLang, shaclGra.getGraph)
     } yield re
 
-  def validateWithShacl(file: Array[Byte], fileCtx: Option[util.Context], shaclUri: String, modelLang: Lang): Try[ValidationReport] =
+  def validateWithShacl(file: Array[Byte], shaclUri: String, modelLang: RDFContentFormat): Try[ValidationReport] =
     for {
       shaclGra <- Try(RDFDataMgr.loadGraph(shaclUri))
-      re <- validateWithShacl(file, modelLang, shaclGra, fileCtx)
+      re <- validateWithShacl(file, modelLang, shaclGra)
     } yield re
 
-  def langToFormat(lang: Lang): RDFFormat = lang match {
-    case RDFLanguages.TURTLE => RDFFormat.TURTLE_PRETTY
-    case RDFLanguages.TTL => RDFFormat.TTL
-    case RDFLanguages.JSONLD => RDFFormat.JSONLD10_COMPACT_PRETTY
-    case RDFLanguages.JSONLD10 => RDFFormat.JSONLD10_COMPACT_PRETTY
-    case RDFLanguages.JSONLD11 => RDFFormat.JSONLD11
-    case RDFLanguages.TRIG => RDFFormat.TRIG_PRETTY
-    case RDFLanguages.RDFXML => RDFFormat.RDFXML_PRETTY
-    case RDFLanguages.RDFTHRIFT => RDFFormat.RDF_THRIFT
-    case RDFLanguages.NTRIPLES => RDFFormat.NTRIPLES
-    case RDFLanguages.NQUADS => RDFFormat.NQUADS
-    case RDFLanguages.TRIX => RDFFormat.TRIX
-  }
-
-  def mapFilenameToContentType(fn: String): String =
-    fn.split('.').last match {
-      case "ttl" => "text/turtle"
-      case "rdf" => "application/rdf+xml"
-      case "nt" => "application/n-triples"
-      case "jsonld" => "application/ld+json"
-      case "trig" => "text/trig"
-      case "nq" => "application/n-quads"
-      case "trix" => "application/trix+xml"
-      case "trdf" => "application/rdf+thrift"
-      case _ => "application/ld+json"
-    }
-
-  def mapContentType(cn: String, default: Lang): Lang =
-    cn match {
-      case "text/turtle" => Lang.TURTLE
-      case "application/rdf+xml" => Lang.RDFXML
-      case "application/n-triples" => Lang.NTRIPLES
-      case "application/ld+json" => Lang.JSONLD10
-      case "text/trig" => Lang.TRIG
-      case "application/n-quads" => Lang.NQUADS
-      case "application/trix+xml" => Lang.TRIX
-      case "application/rdf+thrift" => Lang.RDFTHRIFT
-      case _ => default
-    }
 
   import org.apache.jena.graph.Triple
 
@@ -303,77 +516,6 @@ object RdfConversions {
     bld.append(s)
     bld.append(">")
   }
-
-  def contextUrl(data: Array[Byte], lang: Lang): Option[URL] =
-    if (lang == Lang.JSONLD10) {
-      jsonLdContextUrl(data)
-        .get
-    } else {
-      None
-    }
-
-  def jenaJsonLdContextWithFallbackForLocalhost(jsonLdContextUrl: URL, requestHost: String, baseUrl: Option[String]): Try[util.Context] =
-    jsonLdContextWithFallbackForLocalhost(jsonLdContextUrl, requestHost)
-      .map(ctx =>
-        baseUrl
-          .map(bu => {
-            val c = ctx.clone()
-            c.put("@base", bu)
-            c
-          })
-          .getOrElse(ctx)
-      )
-      .map(jenaContext)
-
-  private def jsonLdContextUrl(data: Array[Byte]): Try[Option[URL]] =
-    Try(
-      JsonUtils.fromString(new String(data))
-    )
-      .map(j =>
-        Try(j.asInstanceOf[java.util.Map[String, Object]]).toOption)
-      .map(_.flatMap(c =>
-        Option(c.get(JsonLdConsts.CONTEXT))
-          .map(_.toString)
-          .flatMap(ctx =>
-            Try(new URL(ctx)) match {
-              case Failure(_) => None
-              case Success(uri) => Some(uri)
-            })))
-
-  private def jsonLdContextWithFallbackForLocalhost(jsonLdContextUrl: URL, requestHost: String): Try[core.Context] =
-    Try(CachingContext.parse(jsonLdContextUrl.toString))
-      .recoverWith {
-        case e =>
-          if (InetAddress.getByName(jsonLdContextUrl.getHost).isLoopbackAddress) {
-            preloadLocalhostContextFromRequestHost(jsonLdContextUrl.toString, requestHost)
-          } else {
-            Failure(e)
-          }
-      }
-
-  private def jenaContext(jsonLdCtx: core.Context) = {
-    val context: util.Context = RIOT.getContext.copy()
-    jsonLdCtx.putAll(jsonLdCtx.getPrefixes(true))
-    context.put(JsonLD10Writer.JSONLD_CONTEXT, jsonLdCtx)
-    context.put(LangJSONLD10.JSONLD_CONTEXT, jsonLdCtx)
-    context
-  }
-
-  private def preloadLocalhostContextFromRequestHost(localhostCtxUri: String, requestHost: String): Try[core.Context] = Try {
-    val ctxUrl = new URL(localhostCtxUri)
-    val addressWithIp = localhostCtxUri.replace(ctxUrl.getHost, requestHost)
-    val ctx = CachingContext.parse(addressWithIp)
-    CachingContext.putInCache(localhostCtxUri, ctx)
-    ctx
-  }
-
-  def defaultJsonLdOpts(base: String) = {
-    val opts = new JsonLdOptions(base)
-    opts.useNamespaces = true
-    opts
-  }
-
-  private def initCachingContext() = new CachingJsonldContext(30, defaultJsonLdOpts(null))
 
   private def escapeString(s: String) = {
     val sb = new StringBuilder(s.length())
@@ -473,8 +615,9 @@ object RdfConversions {
       ViolationCodes.SCHEME_REQUIRES_LOWERCASE,
       ViolationCodes.SCHEME_PATTERN_MATCH_FAILED
     ).map(i => s"Code: $i/")
-      // there is a weird additional URI check for spaces
-      // org.apache.jena.riot.system.ParserProfileStd method internalMakeIRI line 95
+      // there is a weird additional URI check for spaces, so it does not return ViolationCode
+      // for error with spaces, we need to tackle this separately.
+      // see org.apache.jena.riot.system.ParserProfileStd method internalMakeIRI line 95
       // {@link org.apache.jena.riot.system.ParserProfileStd#internalMakeIRI}
       .:+("Spaces are not legal in URIs/IRIs.").toSet
 

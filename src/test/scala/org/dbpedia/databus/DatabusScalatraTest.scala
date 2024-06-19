@@ -3,7 +3,7 @@ package org.dbpedia.databus
 
 import org.apache.jena.iri.ViolationCodes
 
-import java.io.{ByteArrayInputStream}
+import java.io.ByteArrayInputStream
 import java.nio.file.{Files, Paths}
 import org.apache.jena.rdf.model.ModelFactory
 import org.apache.jena.riot.{Lang, RDFDataMgr}
@@ -45,7 +45,9 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
     Some("http"),
     Some("localhost"),
     Some(port),
-    false
+    false,
+    Some(""),
+    Some("")
   )
 
   implicit val sw = new DatabusSwagger
@@ -57,31 +59,30 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
 
   "File save" should "work" in {
 
-
     val file = "group.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
 
-    post("/databus/graph/save?repo=kuckuck&path=pa/fl.jsonld&author_name=BlaBla&author_email=wrong", bytes) {
+    post("/databus/document/save?repo=kuckuck&path=pa/fl.jsonld&author_name=BlaBla&author_email=wrong", bytes) {
       status should equal(400)
     }
 
-    post("/databus/graph/save?repo=kuckuck&path=pa/fl.jsonld", bytes) {
+    post("/databus/document/save?repo=kuckuck&path=pa/fl.jsonld", bytes) {
       status should equal(200)
     }
 
-    post("/databus/graph/save?repo=kuckuck&path=pa/fl.jsonld&author_name=BlaBla", bytes) {
+    post("/databus/document/save?repo=kuckuck&path=pa/fl.jsonld&author_name=BlaBla", bytes) {
       status should equal(200)
     }
 
-    post("/databus/graph/save?repo=kuckuck&path=pa/fl.jsonld&author_name=BlaBla&author_email=bla@bla.com", bytes) {
+    post("/databus/document/save?repo=kuckuck&path=pa/fl.jsonld&author_name=BlaBla&author_email=bla@bla.com", bytes) {
       status should equal(200)
     }
 
-    post("/databus/graph/save?repo=kuckuck&path=pa/fl.jsonld&&author_email=bla@bla.com", bytes) {
+    post("/databus/document/save?repo=kuckuck&path=pa/fl.jsonld&&author_email=bla@bla.com", bytes) {
       status should equal(200)
     }
 
-    get("/databus/graph/history?repo=kuckuck&limit=2") {
+    get("/databus/document/history?repo=kuckuck&limit=2") {
       status should equal(200)
       body should include("author_name")
       body should include("bla@bla.com")
@@ -91,9 +92,49 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
 
     get("/databus/graph/read?repo=kuckuck&path=pa/fl.jsonld") {
       status should equal(200)
-      val respCtx = RdfConversions.contextUrl(bodyBytes, Lang.JSONLD10)
-      respCtx should equal(RdfConversions.contextUrl(bytes, Lang.JSONLD10))
+      val respCtx = RdfConversions.JsonLDSerialiser.jsonLdContextUrl(bodyBytes)
+      respCtx should equal(RdfConversions.JsonLDSerialiser.jsonLdContextUrl(bytes))
       respCtx.get.toString.nonEmpty should equal(true)
+    }
+
+    get("/databus/document/read?repo=kuckuck&path=pa/fl.jsonld") {
+      status should equal(200)
+      bodyBytes should equal(bytes)
+    }
+
+  }
+
+  "Preloading context for localhost" should "work" in {
+
+    val file = "group_with_localhostcontext.jsonld"
+    val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
+    val localhostContext = RdfConversions.JsonLDSerialiser.jsonLdContextUrl(bytes).get.toString
+    val vfile = "group.jsonld"
+    val vbytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(vfile).getFile))
+    val validContext = RdfConversions.JsonLDSerialiser.jsonLdContextUrl(vbytes).get.toString
+
+    RdfConversions.JsonLDSerialiser.preloadContextFromAnotherUri(localhostContext, validContext)
+
+    post(s"/databus/document/save?repo=kuckuck&path=pa/$file", bytes) {
+      status should equal(200)
+    }
+
+  }
+
+  "File save" should "save and return original jsonld with json fields" in {
+
+    val file = "group_with_json.jsonld"
+    val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
+    post(s"/databus/document/save?repo=kuckuck&path=pa/$file", bytes) {
+      status should equal(200)
+    }
+    get(s"/databus/document/read?repo=kuckuck&path=pa/$file") {
+      status should equal(200)
+      bodyBytes should equal(bytes)
+    }
+    get(s"/databus/graph/read?repo=kuckuck&path=pa/$file") {
+      status should equal(200)
+      bodyBytes should not equal(bytes)
     }
 
   }
@@ -103,14 +144,14 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
     val file = "test-relative.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
 
-    post("/databus/graph/save?repo=kuckuck&path=pa/rel_test.jsonld", bytes) {
+    post("/databus/document/save?repo=kuckuck&path=pa/rel_test.jsonld", bytes) {
       status should equal(200)
     }
 
     get("/databus/graph/read?repo=kuckuck&path=pa/rel_test.jsonld") {
       status should equal(200)
-      val respCtx = RdfConversions.contextUrl(bodyBytes, Lang.JSONLD10)
-      respCtx should equal(RdfConversions.contextUrl(bytes, Lang.JSONLD10))
+      val respCtx = RdfConversions.JsonLDSerialiser.jsonLdContextUrl(bodyBytes)
+      respCtx should equal(RdfConversions.JsonLDSerialiser.jsonLdContextUrl(bytes))
       respCtx.get.toString.nonEmpty should equal(true)
       body.contains(" \"generated\" : \"#mod\",") should equal(true)
     }
@@ -123,7 +164,7 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
     val file = "space_in_iri.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
 
-    post("/databus/graph/save?repo=kuckuck&path=pa/syntax_err.jsonld", bytes) {
+    post("/databus/document/save?repo=kuckuck&path=pa/syntax_err.jsonld", bytes) {
       (status >= 400) should equal(true)
       response.body.contains("Spaces are not legal in URIs/IRIs") should equal(true)
     }

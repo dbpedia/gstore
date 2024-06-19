@@ -2,7 +2,6 @@ package org.dbpedia.databus // remember this package in the sbt project definiti
 
 import java.net.URL
 import java.nio.file.{Files, Paths}
-
 import org.eclipse.jetty.server.{Handler, NCSARequestLog, Server, ServerConnector}
 import org.eclipse.jetty.servlet.DefaultServlet
 import org.eclipse.jetty.webapp.WebAppContext
@@ -10,7 +9,9 @@ import org.scalatra.servlet.ScalatraListener
 import org.eclipse.jetty.server.handler.ContextHandlerCollection
 import org.slf4j.LoggerFactory
 
-import scala.util.Try
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.util._
 import scala.xml.XML
 
 object JettyLauncher { // this is my entry object as specified in sbt project definition
@@ -19,7 +20,7 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
   private lazy val log = LoggerFactory.getLogger(this.getClass)
 
   def main(args: Array[String]) {
-    val port = if (System.getenv("GSTORE_JETTY_PORT") != null) System.getenv("GSTORE_JETTY_PORT").toInt else 8080
+    val port =  Option(System.getenv("GSTORE_JETTY_PORT")).map(_.toInt).getOrElse(8080)
     val logBaseProp = "logsFolder"
     val logBase = Paths.get(Option(System.getProperty(logBaseProp))
       .getOrElse({
@@ -66,10 +67,10 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
     requestLog.setLogLatency(true)
     requestLog.setRetainDays(90)
     server.setRequestLog(requestLog)
-    server.getConnectors.foreach(_ match {
+    server.getConnectors.foreach{
       case sc : ServerConnector => sc.setIdleTimeout(JettyHelpers.DefaultTimeout.toMillis)
       case _ =>
-    })
+    }
     server.start
     log.info(
       s"""The service has been started.
@@ -77,6 +78,22 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
         |git repo: http://localhost:${port}${browserPath}
         |sparql endpoint: http://localhost:${port}${sparqlPath}
         |""".stripMargin)
+
+    (for {
+      local <- config.defaultJsonldLocalhostContext
+      remote <- config.defaultJsonldLocalhostContextLocation
+    } yield (local, remote))
+      .foreach(p =>
+        Future(RdfConversions.JsonLDSerialiser.preloadContextFromAnotherUri(p._1, p._2).get)
+          .onComplete{
+            case util.Failure(exception) => log.info(s"Failed to load remote context for localhost: ${exception.getMessage}")
+            case util.Success(_) => log.info(
+              s"""Successfully loaded remote context for localhost.
+                 |Localhost context: ${p._1}.
+                 |Remote context: ${p._2}""".stripMargin)
+          }
+      )
+
     server.join
   }
 
@@ -94,8 +111,8 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
       import org.eclipse.jetty.server.handler.IPAccessHandler
       val ipaccess = new IPAccessHandler()
       ipaccess.setWhiteListByPath(true)
-      ipaccess.addWhite("127.0.0.1|/graph/save")
-      ipaccess.addWhite("127.0.0.1|/graph/delete")
+      ipaccess.addWhite("127.0.0.1|/document/save")
+      ipaccess.addWhite("127.0.0.1|/document/delete")
       ipaccess.setHandler(context.getHandler)
       context.setHandler(ipaccess)
     }

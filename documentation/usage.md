@@ -6,14 +6,15 @@ After the containers are up, the following services will be available:
 * SPARQL endpoint http://localhost:3002/sparql
 * GSTORE http://localhost:3002/ with swagger documentation
     * GET /graph/read
-    * DELETE /graph/delete
-    * POST /graph/save
+    * DELETE /document/delete
+    * POST /document/save
+    * GET /document/read
     * POST /dataid/tractate
     * POST /shacl/validate
 
 ### Example: Saving a file
 ```
-curl -X 'POST'   'http://localhost:3002/file/save?repo=kurzum&path=example.jsonld'   -H 'accept: application/json'   -H 'Content-Type: application/ld+json'   -d '{
+curl -X 'POST'   'http://localhost:3002/document/save?repo=kurzum&path=example.jsonld'   -H 'accept: application/json'   -H 'Content-Type: application/ld+json'   -d '{
   "@context": "http://schema.org/",
   "@type": "Person",
   "name": "Jane Doe",

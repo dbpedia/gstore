@@ -6,11 +6,11 @@ import java.nio.file.{NoSuchFileException, Path, Paths}
 import javax.servlet.ServletContext
 import javax.servlet.http.HttpServletRequest
 import org.apache.jena.rdf.model.Model
-import org.apache.jena.riot.Lang
 import org.apache.jena.shared.JenaException
 import org.apache.jena.sys.JenaSystem
 import org.dbpedia.databus.ApiImpl.Config
-import org.dbpedia.databus.RdfConversions.{contextUrl, generateGraphId, graphToBytes, jenaJsonLdContextWithFallbackForLocalhost, mapContentType, readModel}
+import org.dbpedia.databus.RdfConversions.ContentFormat.rdf
+import org.dbpedia.databus.RdfConversions.{ContentFormat, GraphBytesExtractor, JSONLD, RDFContentFormat, generateGraphId}
 import org.dbpedia.databus.swagger.api.DatabusApi
 import org.dbpedia.databus.swagger.model.{HistoryEntry, OperationFailure, OperationSuccess}
 import org.eclipse.jgit.errors.{MissingObjectException, RepositoryNotFoundException}
@@ -27,22 +27,17 @@ class ApiImpl(config: Config) extends DatabusApi {
   import ApiImpl._
 
   private val client: GitClient = initGitClient(config)
-  private val defaultLang = Lang.JSONLD10
+  private val DefaultFormat = JSONLD
   private lazy val sparqlClient: SparqlClient = SparqlClient.get(config)
   init()
 
-  def init() = JenaSystem.init()
+  def init(): Unit = JenaSystem.init()
 
-  def stop() = JenaSystem.shutdown()
+  def stop(): Unit = JenaSystem.shutdown()
 
   // todo NOTICE! this may fail with relative URIS, NOT TESTED!
-  override def dataidSubgraph(body: String)(request: HttpServletRequest): Try[String] =
-    readModel(
-      body.getBytes,
-      defaultLang,
-      contextUrl(body.getBytes, defaultLang)
-        .map(jenaJsonLdContextWithFallbackForLocalhost(_, request.getRemoteHost, None).get)
-    )
+  override def dataidSubgraph(body: Array[Byte])(request: HttpServletRequest): Try[String] =
+    RdfConversions.RDFGraphSerialiser.init(DefaultFormat, DefaultFormat, body, None).graph
       .flatMap(m => Tractate.extract(m._1.getGraph, TractateV1.Version))
       .map(_.stringForSigning)
 
@@ -52,86 +47,94 @@ class ApiImpl(config: Config) extends DatabusApi {
                           author_name: Option[String],
                           author_email: Option[String])(request: HttpServletRequest): Try[OperationSuccess] = {
     val gid = generateGraphId(prefix.getOrElse(getPrefix(request)), username, path)
-    validateEmail(author_email)
-      .flatMap(email =>
-        sparqlClient.executeUpdates(
-          RdfConversions.dropGraphSparqlQuery(gid)
-        )(m => {
-          if (m.map(_._2).sum > 0) {
-            deleteFileFromGit(username, path, author_name, email)(request)
-              .map(hash => OperationSuccess(gid, hash))
-          } else {
-            Failure(new GraphDoesNotExistException(gid))
-          }
-        })
-      )
+    wrapWithUnsupportedException(ContentFormat.fromPath(path), path).flatMap { format =>
+      validateEmail(author_email).flatMap { email =>
+        val delete: () => Try[OperationSuccess] = () =>
+          deleteFileFromGit(username, path, author_name, email)(request)
+            .map(hash => OperationSuccess(gid, hash))
+        rdf(format).map { _ =>
+          sparqlClient.executeUpdates(
+            RdfConversions.dropGraphSparqlQuery(gid)
+          )(m => {
+            if (m.values.sum > 0) {
+              delete()
+            } else {
+              Failure(new GraphDoesNotExistException(gid))
+            }
+          })
+        }.getOrElse(delete())
+      }
+    }
   }
 
-  override def getFile(repo: String, path: String, prefix: Option[String])(request: HttpServletRequest): Try[String] =
-    readFile(repo, path, prefix)(request)
+  override def getFile(repo: String, path: String)(request: HttpServletRequest): Try[String] =
+    wrapWithUnsupportedException(formatFromPath(path), path)
+      .flatMap(_ =>
+        client.readFile(repo, gitPath(path))
+          .map(new String(_)))
 
 
-  override def saveFile(repo: String,
+  override def saveFile(body: Array[Byte],
+                        repo: String,
                         path: String,
-                        body: String,
                         prefix: Option[String],
                         author_name: Option[String],
                         author_email: Option[String])
                        (request: HttpServletRequest): Try[OperationSuccess] = {
-
     val pa = gitPath(path)
     val graphId = generateGraphId(prefix.getOrElse(getPrefix(request)), repo, pa)
-    val ct = Option(request.getContentType)
-      .map(_.toLowerCase)
-      .getOrElse("")
-    val lang = mapContentType(ct, defaultLang)
-    val ctxU = contextUrl(body.getBytes, lang)
-    val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, request.getRemoteHost, Some(graphId)).get)
-    validateEmail(author_email).flatMap(email =>
-      readModel(body.getBytes, lang, ctx)
-        .flatMap(model => {
-          saveToVirtuoso(model._1, graphId)({
-            graphToBytes(model._1.getGraph, defaultLang, ctx, ctxU)
-              .flatMap(a => saveFiles(
-                repo,
-                Map(
-                  pa -> a
-                ),
-                author_name,
-                email)
-                .map(hash => OperationSuccess(graphId, hash)))
-          }).transform(Success(_), e =>
-            if (model._2.isEmpty) {
-              Failure(e)
-            } else {
-              val ee = new RuntimeException(
-                s"Error saving data, potentially caused by: ${model._2.map(_.message).fold("")((l, r) => l + '\n' + r)}",
-                e)
-              ee.setStackTrace(Array.empty)
-              Failure(ee)
+    validateEmail(author_email).flatMap(email => {
+      wrapWithUnsupportedException(formatFromPath(path), path).flatMap { format =>
+        val saveRawBody: () => Try[OperationSuccess] = () => saveFiles(
+          repo,
+          Map(
+            pa -> body
+          ),
+          author_name,
+          email)
+          .map(hash => OperationSuccess(graphId, hash))
+        rdfExtractor(format).map { extr =>
+          RdfConversions.RDFGraphSerialiser.init(extr._2, extr._1, body, Some(graphId)).graph
+            .flatMap(model => {
+              saveToVirtuoso(model._1, graphId)(saveRawBody())
+                .transform(Success(_), e =>
+                  if (model._2.isEmpty) {
+                    Failure(e)
+                  } else {
+                    val ee = new RuntimeException(
+                      s"Error saving data, potentially caused by: ${model._2.map(_.message).fold("")((l, r) => l + '\n' + r)}",
+                      e)
+                    ee.setStackTrace(Array.empty)
+                    Failure(ee)
+                  })
             })
-        })
-    )
+        }.getOrElse(saveRawBody())
+      }
+    })
   }
 
-  override def shaclValidate(dataid: String, shacl: String)(request: HttpServletRequest): Try[String] = {
-    val lang = getLangFromAcceptHeader(request)
-    setResponseHeaders(Map("Content-Type" -> lang.getContentType.toHeaderString))(request)
-    val ctxU = contextUrl(dataid.getBytes, lang)
-    val ctx = ctxU.map(cu =>
-      jenaJsonLdContextWithFallbackForLocalhost(cu, request.getRemoteHost, None).get)
 
-    val shaclU = contextUrl(shacl.getBytes, RdfConversions.DefaultShaclLang)
-    val shaclCtx = shaclU.map(cu =>
-      jenaJsonLdContextWithFallbackForLocalhost(cu, request.getRemoteHost, None).get)
+  override def getGraph(repo: String, path: String, prefix: Option[String])(request: javax.servlet.http.HttpServletRequest): scala.util.Try[String] =
+    readGraph(repo, path, prefix)(request)
+
+  override def getGraphMapException404(e: Throwable)(request: javax.servlet.http.HttpServletRequest): Option[org.dbpedia.databus.swagger.model.OperationFailure] = e match {
+    case _: FileNotFoundException => Some(OperationFailure(e.getMessage))
+    case _: NoSuchFileException => Some(OperationFailure(e.getMessage))
+    case _: RepositoryNotFoundException => Some(OperationFailure("File not found."))
+    case _: MissingObjectException => Some(OperationFailure("File not found."))
+    case _: UnsupportedFormatException => Some(OperationFailure(e.getMessage))
+    case _ => None
+  }
+
+  override def shaclValidate(dataid: Array[Byte], shacl: Array[Byte])(request: HttpServletRequest): Try[String] = {
+    val outLang = getLangFromAcceptHeader(request).flatMap(rdf).getOrElse(DefaultFormat)
+    setResponseHeaders(Map("Content-Type" -> outLang.lang.getContentType.toHeaderString))(request)
 
     RdfConversions.validateWithShacl(
-      dataid.getBytes,
-      shacl.getBytes,
-      ctx,
-      shaclCtx,
-      defaultLang
-    ).flatMap(r => RdfConversions.graphToBytes(r.getGraph, lang, shaclCtx, None))
+      dataid,
+      shacl,
+      DefaultFormat
+    ).flatMap(r => RdfConversions.RDFGraphSerialiser.serialiseGraph(r.getGraph, outLang, None, None))
       .map(new String(_))
   }
 
@@ -146,6 +149,7 @@ class ApiImpl(config: Config) extends DatabusApi {
     case _: NoSuchFileException => Some(OperationFailure(e.getMessage))
     case _: RepositoryNotFoundException => Some(OperationFailure("File not found."))
     case _: MissingObjectException => Some(OperationFailure("File not found."))
+    case _: UnsupportedFormatException => Some(OperationFailure(e.getMessage))
     case _ => None
   }
 
@@ -157,6 +161,7 @@ class ApiImpl(config: Config) extends DatabusApi {
     case _: RuntimeException if e.getCause.isInstanceOf[VirtuosoException] && e.getCause.getMessage.contains("SQ074") =>
       Some(OperationFailure(s"Wrong input data. ${e.getCause.getMessage}. ${e.getMessage}"))
     case _: BadEmailException => Some(OperationFailure(e.getMessage))
+    case _: UnsupportedFormatException => Some(OperationFailure(e.getMessage))
     case _ => None
   }
 
@@ -179,31 +184,43 @@ class ApiImpl(config: Config) extends DatabusApi {
     s"${url.getProtocol}://${url.getHost}:${url.getPort}${config.defaultGraphIdPrefix}/"
   }
 
-  private def readFile(username: String, path: String, prefix: Option[String])(request: HttpServletRequest): Try[String] = {
+  private def readGraph(username: String, path: String, prefix: Option[String])(request: HttpServletRequest): Try[String] = {
     val p = gitPath(path)
-    val lang = getLangFromAcceptHeader(request)
+    val outFormat = getLangFromAcceptHeader(request)
+      .collect { case c: RDFContentFormat => c }
+      .getOrElse(DefaultFormat)
     val graphId = generateGraphId(prefix.getOrElse(getPrefix(request)), username, path)
-    setResponseHeaders(Map("Content-Type" -> lang.getContentType.toHeaderString))(request)
-    client.readFile(username, p)
-      .flatMap(body => {
-        val ctxUri = contextUrl(body, defaultLang)
-        val ctx = ctxUri.map(jenaJsonLdContextWithFallbackForLocalhost(_, request.getRemoteHost, Some(graphId)).get)
-        readModel(
-          body,
-          defaultLang,
-          ctx
-        )
-          .flatMap(m =>
-            graphToBytes(m._1.getGraph, lang, ctx, ctxUri)
-          )
+    wrapWithUnsupportedException(formatFromPath(path)
+      .flatMap(rdfExtractor),
+      path)
+      .flatMap(format => {
+        setResponseHeaders(Map("Content-Type" -> outFormat.lang.getContentType.toHeaderString))(request)
+        client.readFile(username, p)
+          .flatMap(body => {
+            RdfConversions.RDFGraphSerialiser
+              .init(format._2, format._1, body, Some(graphId))
+              .graphBytes(outFormat)
+          })
+          .map(new String(_))
       })
-      .map(new String(_))
   }
+
+
+  private def wrapWithUnsupportedException[T](a: Option[T], path: String): Try[T] = a match {
+    case None => Failure(new UnsupportedOperationException(path))
+    case Some(c) => Success(c)
+  }
+
+  private def formatFromPath(path: String) =
+    ContentFormat.fromPath(path)
+
+  private def rdfExtractor(format: ContentFormat) =
+    ContentFormat.rdf(format).map((format, _))
+      .flatMap(c => GraphBytesExtractor.fromContent(c._1).map((_, c._2)))
 
   private def getLangFromAcceptHeader(request: HttpServletRequest) =
     Option(request.getHeader("Accept"))
-      .map(RdfConversions.mapContentType(_, defaultLang))
-      .getOrElse(defaultLang)
+      .flatMap(RdfConversions.ContentFormat.fromContentType)
 
   private def gitPath(path: String): String = {
     val pa = Paths.get(path)
@@ -286,6 +303,8 @@ object ApiImpl {
       }
     }
 
+  class UnsupportedFormatException(path: String) extends Exception(s"The file of $path has an extension which is not supported.")
+
   class BadEmailException(email: String) extends Exception(s"The $email is not correct email.")
 
   class GraphDoesNotExistException(id: String) extends Exception(s"Graph $id does not exist")
@@ -306,7 +325,11 @@ object ApiImpl {
                     gitApiSchema: Option[String],
                     gitApiHost: Option[String],
                     gitApiPort: Option[Int],
-                    restrictEditsToLocalhost: Boolean)
+                    restrictEditsToLocalhost: Boolean,
+                    defaultJsonldLocalhostContext: Option[String],
+                    defaultJsonldLocalhostContextLocation: Option[String])
+
+
 
   object Config {
 
@@ -342,6 +365,9 @@ object ApiImpl {
         .map(_.toBoolean)
         .getOrElse(false)
 
+      val defaultJsonldLocalhostContext = getParam("defaultJsonldLocalhostContext")
+      val defaultJsonldLocalhostContextLocation = getParam("defaultJsonldLocalhostContextLocation")
+
       ApiImpl.Config(
         Uri.parse(stUri).right.get,
         storageUser,
@@ -357,7 +383,9 @@ object ApiImpl {
         gitApiSchema,
         gitApiHost,
         gitApiPort,
-        restrictEditsToLocalhost
+        restrictEditsToLocalhost,
+        defaultJsonldLocalhostContext,
+        defaultJsonldLocalhostContextLocation
       )
     }
 

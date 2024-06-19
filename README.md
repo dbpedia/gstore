@@ -1,6 +1,6 @@
 # G(it|raph) Store
 
-A web service for retrieving, validating and storing rdf data (jsonld) in 
+A web service for retrieving, validating and storing documents with rdf data (jsonld) in 
 1. a SPARQL endpoint using filepath as graph 
 2. a git-enabled storage.  
 

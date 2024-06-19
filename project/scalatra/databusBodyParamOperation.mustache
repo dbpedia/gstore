@@ -1,4 +1,10 @@
 {{#isBodyParam}}
-    {{!val paramName = parsedBody.extract[dataType] }}
-    val {{paramName}} = request.body
+    {{#isByteArray}}
+            val {{paramName}} =
+            if(!request.getInputStream.isFinished) request.getInputStream.readAllBytes else request.body.getBytes
+
+    {{/isByteArray}}
+    {{^isByteArray}}
+            val paramName = parsedBody.extract[dataType]
+    {{/isByteArray}}
 {{/isBodyParam}}

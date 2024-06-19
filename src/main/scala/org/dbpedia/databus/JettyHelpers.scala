@@ -49,9 +49,7 @@ object JettyHelpers {
   class GstoreRewriteRule(prefix: String) extends Rule with ApplyURI {
 
     private val RequestRuleMapping = Map(
-      "GET" -> new RewriteRegexRule(s"$prefix/(.*?)/(.*)",  "/graph/read?repo=$1&path=$2"),
-      "POST" -> new RewriteRegexRule(s"$prefix/(.*?)/(.*)",  "/graph/save?repo=$1&path=$2"),
-      "DELETE" -> new RewriteRegexRule(s"$prefix/(.*?)/(.*)",  "/graph/delete?repo=$1&path=$2"),
+      "GET" -> new RewriteRegexRule(s"$prefix/(.*?)/(.*)",  "/document/read?repo=$1&path=$2"),
     )
 
     override def matchAndApply(target: String, request: HttpServletRequest, response: HttpServletResponse): String =

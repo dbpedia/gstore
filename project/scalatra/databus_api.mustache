@@ -42,9 +42,10 @@ class {{classname}}(implicit val swagger: Swagger, apiImpl: DatabusApi) extends 
   {{httpMethod}}("{{{vendorExtensions.x-scalatra-path}}}",operation({{nickname}}Operation)) {
     {{#allParams}}
     {{#isFile}}val {{paramName}} = fileParams("{{paramName}}"){{/isFile}}
-    {{^isFile}}{{#isPathParam}}
-    val {{paramName}} = params.getOrElse("{{paramName}}", halt(400)){{/isPathParam}}
-    {{>databusQueryParam}}{{>headerParamOperation}}{{>databusFormParam}}{{>databusBodyParamOperation}}
+    {{^isFile}}
+        {{>databusBodyParamOperation}}
+        {{#isPathParam}}val {{paramName}} = params.getOrElse("{{paramName}}", halt(400)){{/isPathParam}}
+        {{>databusQueryParam}}{{>headerParamOperation}}{{>databusFormParam}}
     {{/isFile}}
   {{/allParams}}
     val resp = apiImpl.{{nickname}}({{#allParams}}{{paramName}}{{#hasMore}}, {{/hasMore}}{{/allParams}})(request)
@@ -81,7 +82,7 @@ trait DatabusApi {
 {{#operations}}
 {{#operation}}
 {{newline}}
-  def {{nickname}}({{#allParams}}{{paramName}}: {{#required}}{{dataType}}{{/required}}{{^required}}Option[{{dataType}}]{{/required}}{{#hasMore}}, {{/hasMore}}{{/allParams}})(request: HttpServletRequest): Try[{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}Unit{{/returnType}}]
+  def {{nickname}}({{#allParams}}{{paramName}}: {{#required}}{{#isByteArray}}Array[Byte]{{/isByteArray}}{{^isByteArray}}{{dataType}}{{/isByteArray}}{{/required}}{{^required}}{{#isByteArray}}Option[Array[Byte]]{{/isByteArray}}{{^isByteArray}}Option[{{dataType}}]{{/isByteArray}}{{/required}}{{#hasMore}}, {{/hasMore}}{{/allParams}})(request: HttpServletRequest): Try[{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}Unit{{/returnType}}]
 
 {{#responses}}
   {{^isDefault}}

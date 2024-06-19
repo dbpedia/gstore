@@ -1,9 +1,8 @@
 package org.dbpedia.databus
 
 import java.nio.file.{Files, Paths}
-import org.apache.jena.riot.Lang
 import org.apache.jena.sys.JenaSystem
-import org.dbpedia.databus.RdfConversions.{contextUrl, jenaJsonLdContextWithFallbackForLocalhost}
+import org.dbpedia.databus.RdfConversions.JSONLD
 import org.scalatest.{BeforeAndAfter, FlatSpec, Matchers}
 
 class ValidationTest extends FlatSpec with Matchers with BeforeAndAfter {
@@ -15,17 +14,14 @@ class ValidationTest extends FlatSpec with Matchers with BeforeAndAfter {
     JenaSystem.shutdown()
   }
 
-  val lang = Lang.JSONLD10
+  val lang = JSONLD
 
   "SHACL validation" should "work for version" in {
     val shacl = "https://raw.githubusercontent.com/dbpedia/databus-git-mockup/main/dev/dataid-shacl.ttl"
     val file = "version.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
 
-    val ctxU = contextUrl(bytes, lang)
-    val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, "random", None).get)
-
-    val re = RdfConversions.validateWithShacl(bytes, ctx, shacl, lang)
+    val re = RdfConversions.validateWithShacl(bytes, shacl, lang)
     re.get.conforms() should be(true)
   }
 
@@ -34,10 +30,7 @@ class ValidationTest extends FlatSpec with Matchers with BeforeAndAfter {
     val file = "version_wrong.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
 
-    val ctxU = contextUrl(bytes, lang)
-    val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, "random", None).get)
-
-    val re = RdfConversions.validateWithShacl(bytes, ctx, shacl, lang)
+    val re = RdfConversions.validateWithShacl(bytes, shacl, lang)
     re.get.conforms() should be(false)
   }
 
@@ -46,10 +39,7 @@ class ValidationTest extends FlatSpec with Matchers with BeforeAndAfter {
     val file = "group.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
 
-    val ctxU = contextUrl(bytes, lang)
-    val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, "random", None).get)
-
-    val re = RdfConversions.validateWithShacl(bytes, ctx, shacl, lang)
+    val re = RdfConversions.validateWithShacl(bytes, shacl, lang)
     re.get.conforms() should be(true)
   }
 
@@ -58,10 +48,7 @@ class ValidationTest extends FlatSpec with Matchers with BeforeAndAfter {
     val file = "version.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
 
-    val ctxU = contextUrl(bytes, lang)
-    val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, "random", None).get)
-
-    val re = RdfConversions.validateWithShacl(bytes, ctx, shacl, lang)
+    val re = RdfConversions.validateWithShacl(bytes, shacl, lang)
     re.get.conforms() should be(true)
   }
 
@@ -71,13 +58,7 @@ class ValidationTest extends FlatSpec with Matchers with BeforeAndAfter {
     val file = "version.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
 
-    val ctxU = contextUrl(bytes, lang)
-    val ctx = ctxU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, "random", None).get)
-
-    val shaclU = contextUrl(shacl, RdfConversions.DefaultShaclLang)
-    val shaclCtx = shaclU.map(cu => jenaJsonLdContextWithFallbackForLocalhost(cu, "random", None).get)
-
-    val re = RdfConversions.validateWithShacl(bytes, shacl, ctx, shaclCtx, lang)
+    val re = RdfConversions.validateWithShacl(bytes, shacl, lang)
     re.get.conforms() should be(true)
   }
 

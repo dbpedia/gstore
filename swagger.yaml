@@ -7,27 +7,39 @@ basePath: "/"
 schemes:
   - "http"
 paths:
-  /graph/save:
+  /document/save:
     post:
-      summary: "Save graph."
-      description: "Saving a graph to GStore."
+      summary: "Save document, extract RDF and also save."
+      description: "Save document, extract RDF and also save."
       operationId: "saveFile"
-      consumes:
-        - "application/ld+json"
-        - "text/turtle"
       produces:
         - "application/json"
       parameters:
+        - in: body
+          name: body
+          description: "Document bytes."
+          required: true
+          schema:
+            type: string
+            format: binary
+            example: '{
+                        "@context": "http://schema.org/",
+                        "@type": "Person",
+                        "name": "Jane Doe",
+                        "jobTitle": "Professor",
+                        "telephone": "(425) 123-4567",
+                        "url": "http://www.janedoe.com"
+                      }'
         - in: query
           name: repo
           type: string
-          description: "Repository name in which the graph is saved."
+          description: "Repository name in which the document is saved."
           required: true
           example: "testuser"
         - in: query
           name: path
           type: string
-          description: "A path at which the graph will be saved."
+          description: "A path at which the document will be saved."
           required: true
           example: "testgroup/test.jsonld"
         - in: query
@@ -48,21 +60,6 @@ paths:
           type: string
           required: false
           example: "bla@bla.bla"
-        - in: body
-          name: body
-          description: "Graph data in Turtle or JSONLD."
-          required: true
-          schema:
-            type: string
-            format: binary
-            example: '{
-                        "@context": "http://schema.org/",
-                        "@type": "Person",
-                        "name": "Jane Doe",
-                        "jobTitle": "Professor",
-                        "telephone": "(425) 123-4567",
-                        "url": "http://www.janedoe.com"
-                      }'
       responses:
         "200":
           description: "Successful operation."
@@ -72,23 +69,23 @@ paths:
           description: "Returns a description of an error."
           schema:
             $ref: "#/definitions/OperationFailure"
-  /graph/delete:
+  /document/delete:
     delete:
-      summary: "Delete graph."
-      description: "Delete a graph from GStore."
+      summary: "Delete a document and corresponding graph from GStore."
+      description: "Delete a document and corresponding graph from GStore."
       operationId: "deleteFile"
       produces:
         - "application/json"
       parameters:
         - in: query
           name: repo
-          description: "Repository name in which the graph is stored."
+          description: "Repository name in which the document is stored."
           type: string
           required: true
           example: "testuser"
         - in: query
           name: path
-          description: "A path at which the graph is stored."
+          description: "A path at which the document is stored."
           type: string
           required: true
           example: "testgroup/test.jsonld"
@@ -119,18 +116,15 @@ paths:
           description: "Returns a description of an error."
           schema:
             $ref: "#/definitions/OperationFailure"
-  /graph/read:
+  /document/read:
     get:
-      summary: "Read a graph from GStore."
-      description: "Read rdf graph from GStore."
+      summary: "Read a document from GStore."
+      description: "Read document from GStore."
       operationId: "getFile"
-      produces:
-        - "application/ld+json"
-        - "text/turtle"
       parameters:
         - in: query
           name: repo
-          description: "Repository name in which the graph is stored."
+          description: "Repository name in which the document is stored."
           type: string
           required: true
           example: "testuser"
@@ -140,12 +134,6 @@ paths:
           type: string
           required: true
           example: "testgroup/test.jsonld"
-        - in: query
-          name: prefix
-          description: "Prefix for graphid URL if it is not default. NOTE! should be without slash in the end."
-          type: string
-          required: false
-          example: "http://foreighhost/api"
       responses:
         "200":
           description: "A file data."
@@ -156,17 +144,17 @@ paths:
           description: "Not found."
           schema:
             $ref: "#/definitions/OperationFailure"
-  /graph/history:
+  /document/history:
     get:
-      summary: "Graph history"
-      description: "Get graph history for particular repo."
+      summary: "Document history"
+      description: "Get document history for particular repo."
       operationId: "history"
       produces:
         - "application/json"
       parameters:
         - in: query
           name: repo
-          description: "Repository name in which the graph is stored."
+          description: "Repository name in which the document is stored."
           type: string
           required: true
           example: "testuser"
@@ -186,6 +174,43 @@ paths:
               $ref: "#/definitions/HistoryEntry"
         "400":
           description: "Returns a description of an error."
+          schema:
+            $ref: "#/definitions/OperationFailure"
+  /graph/read:
+    get:
+      summary: "Extract a graph of a corresponding document from GStore."
+      description: "Read rdf graph of a corresponding document from GStore."
+      operationId: "getGraph"
+      produces:
+        - "application/ld+json"
+        - "text/turtle"
+      parameters:
+        - in: query
+          name: repo
+          description: "Repository name in which the document is stored."
+          type: string
+          required: true
+          example: "testuser"
+        - in: query
+          name: path
+          description: "A path at which the document is stored."
+          type: string
+          required: true
+          example: "testgroup/test.jsonld"
+        - in: query
+          name: prefix
+          description: "Prefix for graphid URL if it is not default. NOTE! should be without slash in the end."
+          type: string
+          required: false
+          example: "http://foreighhost/api"
+      responses:
+        "200":
+          description: "A file data."
+          schema:
+            type: string
+            format: binary
+        "404":
+          description: "Not found."
           schema:
             $ref: "#/definitions/OperationFailure"
   /shacl/validate:
