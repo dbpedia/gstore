@@ -117,15 +117,8 @@ class ApiImpl(config: Config) extends DatabusApi {
   override def getGraph(repo: String, path: String, prefix: Option[String])(request: javax.servlet.http.HttpServletRequest): scala.util.Try[String] =
     readGraph(repo, path, prefix)(request)
 
-  override def getGraphMapException404(e: Throwable)(request: javax.servlet.http.HttpServletRequest): Option[org.dbpedia.databus.swagger.model.OperationFailure] = e match {
-    case _: FileNotFoundException => Some(OperationFailure(e.getMessage))
-    case _: NoSuchFileException => Some(OperationFailure(e.getMessage))
-    case _: RepositoryNotFoundException => Some(OperationFailure("File not found."))
-    case _: MissingObjectException => Some(OperationFailure("File not found."))
-    case _: UnsupportedFormatException => Some(OperationFailure(e.getMessage))
-    case _ => None
-  }
-
+  override def getGraphMapException404(e: Throwable)(request: javax.servlet.http.HttpServletRequest): Option[org.dbpedia.databus.swagger.model.OperationFailure] =
+    getFileMapException404(e)(request)
   override def shaclValidate(dataid: Array[Byte], shacl: Array[Byte])(request: HttpServletRequest): Try[String] = {
     val outLang = getLangFromAcceptHeader(request).flatMap(rdf).getOrElse(DefaultFormat)
     setResponseHeaders(Map("Content-Type" -> outLang.lang.getContentType.toHeaderString))(request)
@@ -148,6 +141,7 @@ class ApiImpl(config: Config) extends DatabusApi {
     case _: FileNotFoundException => Some(OperationFailure(e.getMessage))
     case _: NoSuchFileException => Some(OperationFailure(e.getMessage))
     case _: RepositoryNotFoundException => Some(OperationFailure("File not found."))
+    case _: ArrayIndexOutOfBoundsException => Some(OperationFailure("File not found"))
     case _: MissingObjectException => Some(OperationFailure("File not found."))
     case _: UnsupportedFormatException => Some(OperationFailure(e.getMessage))
     case _ => None

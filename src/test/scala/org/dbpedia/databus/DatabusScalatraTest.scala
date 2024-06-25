@@ -186,6 +186,34 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
 
   }
 
+  "File delete" should "work" in {
+
+    val file = "group.jsonld"
+    val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
+
+    post(s"/databus/document/save?repo=kuckuck&path=pa/for_delete/$file", bytes) {
+      status should equal(200)
+    }
+
+    get(s"/databus/document/read?repo=kuckuck&path=pa/for_delete/$file") {
+      bodyBytes should equal(bytes)
+      status should equal(200)
+    }
+
+    delete(s"/databus/document/delete?repo=kuckuck&path=pa/for_delete/$file") {
+      status should equal(200)
+    }
+
+    get(s"/databus/document/read?repo=kuckuck&path=pa/for_delete/$file") {
+      status should equal(404)
+    }
+
+    delete(s"/databus/document/delete?repo=kuckuck&path=pa/for_delete/$file") {
+      status should equal(200)
+    }
+
+  }
+
   "Shacl validation" should "report problems in input with newlines in IRIs" in {
 
     val file = "newline_in_iri.jsonld"

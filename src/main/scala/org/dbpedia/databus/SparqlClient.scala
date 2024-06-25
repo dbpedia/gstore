@@ -82,7 +82,8 @@ class HttpVirtClient(virtUri: Uri, virtUser: String, virtPass: String) extends S
       case Right(s) =>
         Success(s)
     }
-    re.flatMap(_ => trans(Map.empty))
+    // todo fix this if work with real virtuoso is needed
+    re.flatMap(_ => trans(Map("s" -> 1)))
   }
 
 }
