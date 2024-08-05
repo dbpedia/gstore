@@ -1,6 +1,8 @@
 package org.dbpedia.databus
 
 
+import com.github.jsonldjava.core.JsonLdConsts
+import com.github.jsonldjava.utils.JsonUtils
 import org.apache.jena.iri.ViolationCodes
 
 import java.io.ByteArrayInputStream
@@ -55,6 +57,7 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
 
   addServlet(new DefaultApi(), "/databus/*")
   addServlet(new ExternalApiEmul, "/*")
+  servletContextHandler.setMaxFormContentSize(5870342)
 
 
   "File save" should "work" in {
@@ -108,7 +111,9 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
 
     val file = "group_with_localhostcontext.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
-    val localhostContext = RdfConversions.JsonLDSerialiser.jsonLdContextUrl(bytes).get.toString
+    val localhostContext = JsonUtils.fromString(new String(bytes))
+      .asInstanceOf[java.util.Map[String, Object]]
+      .get(JsonLdConsts.CONTEXT).toString
     val vfile = "group.jsonld"
     val vbytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(vfile).getFile))
     val validContext = RdfConversions.JsonLDSerialiser.jsonLdContextUrl(vbytes).get.toString
@@ -135,6 +140,25 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
     get(s"/databus/graph/read?repo=kuckuck&path=pa/$file") {
       status should equal(200)
       bodyBytes should not equal(bytes)
+    }
+
+  }
+
+  "File save" should "work with a file with expanded context" in {
+
+    val file = "output.jsonld"
+    val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
+
+    val mod = ModelFactory.createDefaultModel();
+    RDFDataMgr.read(mod, new ByteArrayInputStream(bytes), Lang.JSONLD)
+
+    post("/databus/document/save?repo=kuckuck&path=pa/rel_test.jsonld", bytes) {
+      status should equal(200)
+    }
+
+    get("/databus/document/read?repo=kuckuck&path=pa/rel_test.jsonld") {
+      status should equal(200)
+      body should equal(new String(bytes))
     }
 
   }

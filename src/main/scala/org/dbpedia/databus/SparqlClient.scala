@@ -360,7 +360,7 @@ object RdfConversions {
     import JsonLDSerialiser._
 
     // NOTE! Not thread safe!
-    private var remoteContext: Option[Try[(URL, util.Context)]] = None
+    private var remoteContext: Option[Try[(Option[URL], util.Context)]] = None
 
     override def graph: Try[(Model, List[Warning])] = {
       parseContext(data, base)
@@ -374,17 +374,15 @@ object RdfConversions {
     override def modifyWriter(writer: RDFWriterBuilder) =
       remoteContext.get.map(ctx => {
         writer.context(ctx._2)
-        writer.set(JsonLD10Writer.JSONLD_CONTEXT_SUBSTITUTION, new JsonString(ctx._1.toString))
+        ctx._1.foreach(url => writer.set(JsonLD10Writer.JSONLD_CONTEXT_SUBSTITUTION, new JsonString(url.toString)))
       })
 
 
-    private def parseContext(body: Array[Byte], base: Option[String]): Option[Try[(URL, util.Context)]] =
+    private def parseContext(body: Array[Byte], base: Option[String]): Option[Try[(Option[URL], util.Context)]] =
       remoteContext match {
         case None | Some(Failure(_)) =>
-          val c = jsonLdContextUrl(body)
-            .map(c => jenaJsonLdContext(c, base).map((c, _)))
-          remoteContext = c
-          c
+          remoteContext = Some(jsonLdContext(body, base))
+          remoteContext
         case other => other
       }
 
@@ -411,33 +409,40 @@ object RdfConversions {
       opts
     }
 
-    private def jenaJsonLdContext(jsonLdContextUrl: URL, baseUrl: Option[String]): Try[util.Context] =
-      Try(CachingContext.parse(jsonLdContextUrl.toString))
-        .map(ctx =>
-          baseUrl
-            .map(bu => {
-              val c = ctx.clone()
-              c.put("@base", bu)
-              c
-            })
-            .getOrElse(ctx)
-        )
-        .map(jenaContext)
-
+    /*
+    * Only for testing, do not use this in the app
+    *
+    * todo, remove in the future
+    * */
     private[databus] def jsonLdContextUrl(data: Array[Byte]): Option[URL] =
+      jsonLdContext(data, None)
+        .map(_._1)
+        .toOption
+        .flatten
+
+    private def wrapWithBase(ctx: core.Context, baseUrl: Option[String]): core.Context =
+      baseUrl
+        .map(bu => {
+          val c = ctx.clone()
+          c.put("@base", bu)
+          c
+        })
+        .getOrElse(ctx)
+
+    private[databus] def jsonLdContext(data: Array[Byte], base: Option[String]): Try[(Option[URL], util.Context)] =
       Try(
-        JsonUtils.fromString(new String(data))
+        JsonUtils.fromInputStream(new ByteArrayInputStream(data))
       )
-        .map(j =>
-          Try(j.asInstanceOf[java.util.Map[String, Object]]).toOption)
-        .map(_.flatMap(c =>
-          Option(c.get(JsonLdConsts.CONTEXT))
-            .map(_.toString)
-            .flatMap(ctx =>
-              Try(new URL(ctx)) match {
-                case Failure(_) => None
-                case Success(uri) => Some(uri)
-              }))).toOption.flatten
+        .flatMap(j =>
+          Try(j.asInstanceOf[java.util.Map[String, Object]]))
+        .flatMap(c =>
+          Try(c.get(JsonLdConsts.CONTEXT)).flatMap {
+            case ctxs: String => Try(new URL(ctxs))
+              .flatMap(uri => Try(CachingContext.parse(uri.toString))
+                .map((Some(uri), _)))
+            case ctxo => Try(CachingContext.parse(ctxo))
+              .map(c => (None, c))
+          }).map(p => (p._1, jenaContext(wrapWithBase(p._2, base))))
 
     private def jenaContext(jsonLdCtx: core.Context) = {
       val context: util.Context = RIOT.getContext.copy()

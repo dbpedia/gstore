@@ -22,7 +22,9 @@ import scala.xml.Node
 import collection.JavaConverters._
 
 
-class ApiImpl(config: Config) extends DatabusApi {
+class ApiImpl(config: Config, batchSize: Int = 1000) extends DatabusApi {
+
+  val SPARQLBatchSize = batchSize
 
   import ApiImpl._
 
@@ -227,7 +229,7 @@ class ApiImpl(config: Config) extends DatabusApi {
 
   private[databus] def saveToVirtuoso[T](model: Model, graphId: String)(execInTransaction: => Try[T]): Try[T] = {
     val rqsts = model.getGraph.find().asScala
-      .grouped(1000)
+      .grouped(SPARQLBatchSize)
       .map(tpls => RdfConversions.makeInsertSparqlQuery(tpls, graphId))
       .toSeq
     // NOTE! here the order of concatenation is important!
