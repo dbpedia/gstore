@@ -1,5 +1,5 @@
 {
-  "@context" : "https://raw.githubusercontent.com/dbpedia/databus-moss/dev/devenv/context2.jsonld",
+  "@context" : "https://raw.githubusercontent.com/dbpedia/databus-moss-lodgeoss/a40b6d11271b4a81a8d6aa9ba18b5b0a1903dabb/devenv/context2.jsonld",
   "@id" : "#mod",
   "wasGeneratedBy" :  {
       "@id" : "#layer",

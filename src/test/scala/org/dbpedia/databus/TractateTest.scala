@@ -1,5 +1,7 @@
 package org.dbpedia.databus
 
+import com.apicatalog.jsonld.loader.JsonLdInit
+
 import java.io.ByteArrayInputStream
 import java.nio.file.{Files, Paths}
 import org.apache.jena.rdf.model.ModelFactory
@@ -10,6 +12,7 @@ import org.scalatest.{BeforeAndAfter, FlatSpec, Matchers}
 class TractateTest extends FlatSpec with Matchers with BeforeAndAfter {
 
   before {
+    JsonLdInit.initLoader
     JenaSystem.init()
   }
 
@@ -23,7 +26,7 @@ class TractateTest extends FlatSpec with Matchers with BeforeAndAfter {
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
     val model = ModelFactory.createDefaultModel()
     val dataStream = new ByteArrayInputStream(bytes)
-    RDFDataMgr.read(model, dataStream, Lang.JSONLD10)
+    RDFDataMgr.read(model, dataStream, Lang.JSONLD11)
     val t = Tractate.extract(model.getGraph, TractateV1.Version)
     val expected =
       """Databus Tractate V1

@@ -24,7 +24,7 @@
       "abstract": "Countries\n2023-09-18T12:22:14Z",
       "description": "Countries\n2023-09-18T12:22:14Z",
       "license": "https://dalicc.net/licenselibrary/Cc010Universal",
-      "wasDerivedFrom": "https://metadata.coypu.org/dataset/wikidata-distribution\nWikidata Query Service\nhttps://query.wikidata.org/",
+      "wasDerivedFrom": "https://metadata.coypu.org/dataset/wikidata-distributionWikidata Query Service",
       "distribution": [
         {
           "@type": "Part",

@@ -1,19 +1,19 @@
 package org.dbpedia.databus
 
+import com.apicatalog.jsonld.deseralization.JsonLdToRdf
+import com.apicatalog.jsonld.document.JsonDocument
+import com.apicatalog.jsonld.lang.Keywords
+import com.apicatalog.jsonld.JsonLdOptions
+import com.apicatalog.jsonld.loader.{DocumentLoader, DocumentLoaderOptions, HttpLoader, JsonLdInit}
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
-import java.net.URL
-import com.github.jsonldjava.core
-import com.github.jsonldjava.core.{JsonLdConsts, JsonLdOptions}
-import com.github.jsonldjava.utils.JsonUtils
+import java.net.{URI, URL}
 import com.mchange.v2.c3p0.ComboPooledDataSource
-import org.apache.jena.atlas.json.JsonString
 import org.apache.jena.graph.{Graph, Node}
 import org.apache.jena.iri.ViolationCodes
 import org.apache.jena.rdf.model.{Model, ModelFactory}
-import org.apache.jena.riot.lang.LangJSONLD10
+import org.apache.jena.riot.lang.LangJSONLD11
 import org.apache.jena.riot.system.{ErrorHandler, ErrorHandlerFactory, StreamRDFLib}
-import org.apache.jena.riot.writer.JsonLD10Writer
 import org.apache.jena.riot.{Lang, RDFDataMgr, RDFFormat, RDFLanguages, RDFParser, RDFParserBuilder, RDFWriter, RDFWriterBuilder, RIOT}
 import org.apache.jena.shacl.{ShaclValidator, Shapes, ValidationReport}
 import org.apache.jena.sparql.util
@@ -23,6 +23,8 @@ import org.slf4j.LoggerFactory
 import sttp.client3.{DigestAuthenticationBackend, HttpURLConnectionBackend, basicRequest}
 import sttp.model.Uri
 
+import java.util.concurrent.ConcurrentHashMap
+import java.util.logging.{Handler, Level, LogRecord, Logger}
 import scala.util.{Failure, Success, Try}
 
 
@@ -225,9 +227,9 @@ object RdfConversions {
   }
 
   case object JSONLD extends RDFContentFormat {
-    override def lang: Lang = RDFLanguages.JSONLD10
+    override def lang: Lang = RDFLanguages.JSONLD11
 
-    override def format: RDFFormat = RDFFormat.JSONLD10_COMPACT_PRETTY
+    override def format: RDFFormat = RDFFormat.JSONLD11_PRETTY
 
     override def extensions: Set[String] = Set("jsonld")
   }
@@ -320,24 +322,27 @@ object RdfConversions {
   }
 
   // NOTE! Not thread safe!
-  class RDFGraphSerialiser protected(inputFormat: RDFContentFormat, extractor: GraphBytesExtractor, data: Array[Byte], base: Option[String]) {
+  class RDFGraphSerialiser protected(val inputFormat: RDFContentFormat, extractor: GraphBytesExtractor, data: Array[Byte], base: Option[String]) {
 
     private var parsed: Try[(Model, List[Warning])] = Failure(null)
 
     def graph: Try[(Model, List[Warning])] = parsed.orElse {
       extractor.extractGraphBytes(data).flatMap { bytes =>
+        val eh = ErrorHandlerWithWarnings.getNew
+        ErrorHandlerWithWarnings.registerWithInterceptor(eh)
         val re = Try {
           val model = ModelFactory.createDefaultModel()
           val parser = RDFParser.create()
             .source(new ByteArrayInputStream(bytes))
             .base(base.orNull)
             .lang(inputFormat.lang)
-          val eh = newErrorHandlerWithWarnings
           parser.errorHandler(eh)
           modifyParser(parser)
           parser.parse(StreamRDFLib.graph(model.getGraph))
           (model, eh.warningsList)
         }
+        // hack to intercept warnings in logs and return errors when needed
+        ErrorHandlerWithWarnings.deregisterFromInterceptor(eh)
         parsed = re
         re
       }
@@ -350,7 +355,9 @@ object RdfConversions {
 
     protected def modifyParser(parser: RDFParserBuilder): Try[Unit] = Success()
 
-    protected def modifyWriter(writer: RDFWriterBuilder): Try[Unit] = Success()
+    protected def modifyWriter(writer: RDFWriterBuilder): Try[Unit] = Try(
+      writer.format(inputFormat.format)
+    )
 
   }
 
@@ -359,97 +366,52 @@ object RdfConversions {
 
     import JsonLDSerialiser._
 
-    // NOTE! Not thread safe!
-    private var remoteContext: Option[Try[(Option[URL], util.Context)]] = None
-
-    override def graph: Try[(Model, List[Warning])] = {
-      parseContext(data, base)
-      super.graph
-    }
+    private val ctx = jsonLdContext(base)
 
     override def modifyParser(parser: RDFParserBuilder) =
-      remoteContext.get.map(cs =>
-        parser.context(cs._2))
+      super.modifyParser(parser)
+        .map(_ => parser.context(ctx))
 
     override def modifyWriter(writer: RDFWriterBuilder) =
-      remoteContext.get.map(ctx => {
-        writer.context(ctx._2)
-        ctx._1.foreach(url => writer.set(JsonLD10Writer.JSONLD_CONTEXT_SUBSTITUTION, new JsonString(url.toString)))
-      })
-
-
-    private def parseContext(body: Array[Byte], base: Option[String]): Option[Try[(Option[URL], util.Context)]] =
-      remoteContext match {
-        case None | Some(Failure(_)) =>
-          remoteContext = Some(jsonLdContext(body, base))
-          remoteContext
-        case other => other
-      }
+      super.modifyWriter(writer)
+        .map(_ => writer.context(ctx))
 
   }
 
   object JsonLDSerialiser {
+    private val DocumentCache = new LRUDocumentCacheLoader(new CachingJsonldContexts(32), JsonLdInit.initLoader)
 
-    private lazy val CachingContext = new CachingJsonldContext(30, defaultJsonLdOpts(null))
-
-    def preloadContextFromAnotherUri(ctxUri: String, downloadUri: String): Try[core.Context] = Try {
-      val ctx = CachingContext.parse(downloadUri)
-      CachingContext.putInCache(ctxUri, ctx)
-      ctx
+    def preloadContextFromAnotherUri(ctxUri: String, downloadUri: String): Try[Unit] = Try {
+      val dl: DocumentLoader = HttpLoader.defaultInstance()
+      val d = dl.loadDocument(new URI(downloadUri), new DocumentLoaderOptions())
+      DocumentCache.put(ctxUri, d)
     }
 
-    def preloadContextFromAnotherHost(ctxUri: String, downloadHost: String): Try[core.Context] = Try {
-      val ctxUrl = new URL(ctxUri)
-      ctxUri.replace(ctxUrl.getHost, downloadHost)
-    }.flatMap(preloadContextFromAnotherUri(ctxUri, _))
+    private[databus] def jsonLdContext(base: Option[String]): util.Context =
+      jenaContext(jsonldOpts(base))
 
-    private def defaultJsonLdOpts(base: String) = {
-      val opts = new JsonLdOptions(base)
-      opts.useNamespaces = true
-      opts
+    private def jsonldOpts(base: Option[String]): JsonLdOptions = {
+      val o = new JsonLdOptions()
+      o.setDocumentLoader(DocumentCache)
+      o.setUriValidation(true)
+      base.flatMap(b => Try(new URI(b)).toOption)
+        .foreach(o.setBase)
+      o
     }
 
-    /*
-    * Only for testing, do not use this in the app
-    *
-    * todo, remove in the future
-    * */
-    private[databus] def jsonLdContextUrl(data: Array[Byte]): Option[URL] =
-      jsonLdContext(data, None)
-        .map(_._1)
-        .toOption
-        .flatten
-
-    private def wrapWithBase(ctx: core.Context, baseUrl: Option[String]): core.Context =
-      baseUrl
-        .map(bu => {
-          val c = ctx.clone()
-          c.put("@base", bu)
-          c
-        })
-        .getOrElse(ctx)
-
-    private[databus] def jsonLdContext(data: Array[Byte], base: Option[String]): Try[(Option[URL], util.Context)] =
-      Try(
-        JsonUtils.fromInputStream(new ByteArrayInputStream(data))
-      )
-        .flatMap(j =>
-          Try(j.asInstanceOf[java.util.Map[String, Object]]))
-        .flatMap(c =>
-          Try(c.get(JsonLdConsts.CONTEXT)).flatMap {
-            case ctxs: String => Try(new URL(ctxs))
-              .flatMap(uri => Try(CachingContext.parse(uri.toString))
-                .map((Some(uri), _)))
-            case ctxo => Try(CachingContext.parse(ctxo))
-              .map(c => (None, c))
-          }).map(p => (p._1, jenaContext(wrapWithBase(p._2, base))))
-
-    private def jenaContext(jsonLdCtx: core.Context) = {
+    private def jenaContext(jsonLdOpts: JsonLdOptions): util.Context = {
       val context: util.Context = RIOT.getContext.copy()
-      jsonLdCtx.putAll(jsonLdCtx.getPrefixes(true))
-      context.put(JsonLD10Writer.JSONLD_CONTEXT, jsonLdCtx)
-      context.put(LangJSONLD10.JSONLD_CONTEXT, jsonLdCtx)
+      context.put(LangJSONLD11.JSONLD_OPTIONS, jsonLdOpts)
       context
+    }
+
+    def contextUrl(data: Array[Byte]): Try[URL] = Try {
+      val d = JsonDocument.of(new ByteArrayInputStream(data))
+      new URL(
+        d.getJsonContent.get()
+          .getValue(s"/${Keywords.CONTEXT}")
+          .toString.drop(1).dropRight(1)
+      )
     }
 
   }
@@ -585,7 +547,7 @@ object RdfConversions {
 
   case class Warning(message: String)
 
-  private class ErrorHandlerWithWarnings extends ErrorHandler {
+  class ErrorHandlerWithWarnings extends ErrorHandler {
     private val defaultEH = ErrorHandlerFactory.getDefaultErrorHandler
 
     private var warnings: List[Warning] = List.empty
@@ -646,8 +608,45 @@ object RdfConversions {
     def warningsList: List[Warning] = warnings
   }
 
-  private def newErrorHandlerWithWarnings: ErrorHandlerWithWarnings =
-    new ErrorHandlerWithWarnings
+  object ErrorHandlerWithWarnings {
+
+    /*
+    This code (until the line with deregisterFromInterceptor) is needed because Titanium library ignores wrong IRIs and silently drops triples with them,
+    to address this we have to intercept warnings. Sadly there is no config option to make it throw exception instead.
+
+    See: com.apicatalog.jsonld.deseralization.JsonLdToRdf method build(), line 118
+
+    @todo P.S. Very ugly, maybe you could find a better way to do it.
+     */
+    protected[databus] val JsonLdToRdfLOGGER = Logger.getLogger(classOf[JsonLdToRdf].getName)
+    protected[databus] val WarningsInterceptor = new Handler {
+
+      val JenaErrorHandlers = ConcurrentHashMap.newKeySet[ErrorHandlerWithWarnings](1)
+
+      override def publish(record: LogRecord): Unit = record.getLevel match {
+        case Level.WARNING if record.getMessage.contains("Non well-formed subject") =>
+          val m = s"Wrong IRI '${record.getParameters.headOption.map(_.toString).orNull}'. ${record.getSourceClassName} ${record.getSourceMethodName}"
+          JenaErrorHandlers.forEach(d => d.error(m, 0, 0))
+      }
+
+      override def flush(): Unit = {}
+
+      override def close(): Unit = JsonLdToRdfLOGGER.removeHandler(this)
+    }
+    JsonLdToRdfLOGGER.addHandler(WarningsInterceptor)
+
+    def registerWithInterceptor(eh: ErrorHandlerWithWarnings) =
+      ErrorHandlerWithWarnings.WarningsInterceptor
+        .JenaErrorHandlers.add(eh)
+
+    def deregisterFromInterceptor(eh: ErrorHandlerWithWarnings) =
+      ErrorHandlerWithWarnings.WarningsInterceptor
+        .JenaErrorHandlers.remove(eh)
+
+    def getNew: ErrorHandlerWithWarnings =
+      new ErrorHandlerWithWarnings
+
+  }
 
 }
 

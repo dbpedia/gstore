@@ -1,5 +1,7 @@
 package org.dbpedia.databus
 
+import com.apicatalog.jsonld.loader.JsonLdInit
+
 import java.io.ByteArrayInputStream
 import java.nio.file.{Files, Paths}
 import org.apache.jena.rdf.model.ModelFactory
@@ -11,6 +13,7 @@ class VirtuosoQueriesTest extends FlatSpec with Matchers with BeforeAndAfter {
   import collection.JavaConverters._
 
   before {
+    JsonLdInit.initLoader
     JenaSystem.init()
   }
   after {
@@ -22,7 +25,7 @@ class VirtuosoQueriesTest extends FlatSpec with Matchers with BeforeAndAfter {
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
     val model = ModelFactory.createDefaultModel()
     val dataStream = new ByteArrayInputStream(bytes)
-    RDFDataMgr.read(model, dataStream, Lang.JSONLD10)
+    RDFDataMgr.read(model, dataStream, Lang.JSONLD11)
 
     val bld = RdfConversions.makeInsertSparqlQuery(model.getGraph.find().asScala.toSeq, "http://randomGraphId")
 
@@ -35,7 +38,7 @@ class VirtuosoQueriesTest extends FlatSpec with Matchers with BeforeAndAfter {
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
     val model = ModelFactory.createDefaultModel()
     val dataStream = new ByteArrayInputStream(bytes)
-    RDFDataMgr.read(model, dataStream, Lang.JSONLD10)
+    RDFDataMgr.read(model, dataStream, Lang.JSONLD11)
 
     val bld = RdfConversions.makeInsertSparqlQuery(model.getGraph.find().asScala.toSeq, "http://randomGraphId")
 

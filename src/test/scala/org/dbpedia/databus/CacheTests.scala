@@ -1,29 +1,20 @@
 package org.dbpedia.databus
 
-import org.apache.jena.sys.JenaSystem
-
 import java.util.UUID
-import org.dbpedia.databus.CachingJsonldContext.ApproxSizeStringKeyCache
+import org.dbpedia.databus.CachingJsonldContexts.ApproxSizeStringKeyCache
 import org.scalatest.{BeforeAndAfter, FlatSpec, Matchers}
 
 class CacheTests extends FlatSpec with Matchers with BeforeAndAfter {
-
-  before {
-    JenaSystem.init()
-  }
-  after {
-    JenaSystem.shutdown()
-  }
 
   "CacheKey" should "be sorted by time of creation" in {
 
     val caches =
       Seq(
-        new CachingJsonldContext.StringCacheKey("scsc", 0),
-        new CachingJsonldContext.StringCacheKey("scsc", -10),
-        new CachingJsonldContext.StringCacheKey("scsc", 100),
-        new CachingJsonldContext.StringCacheKey("zzzz", 0),
-        new CachingJsonldContext.StringCacheKey("aaaa", 0)
+        new CachingJsonldContexts.StringCacheKey("scsc", 0),
+        new CachingJsonldContexts.StringCacheKey("scsc", -10),
+        new CachingJsonldContexts.StringCacheKey("scsc", 100),
+        new CachingJsonldContexts.StringCacheKey("zzzz", 0),
+        new CachingJsonldContexts.StringCacheKey("aaaa", 0)
       )
 
     caches.sorted.map(k => k.order) should contain theSameElementsInOrderAs (Seq(-10, 0, 0, 0, 100))
@@ -31,10 +22,10 @@ class CacheTests extends FlatSpec with Matchers with BeforeAndAfter {
   }
 
   "CacheKey" should "be equal with same string" in {
-    val re = new CachingJsonldContext.StringCacheKey("scsc", 0) == new CachingJsonldContext.StringCacheKey("scsc", -10)
+    val re = new CachingJsonldContexts.StringCacheKey("scsc", 0) == new CachingJsonldContexts.StringCacheKey("scsc", -10)
     re should be(true)
 
-    val re2 = new CachingJsonldContext.StringCacheKey("scsc", 0) == new CachingJsonldContext.StringCacheKey("aaaa", 0)
+    val re2 = new CachingJsonldContexts.StringCacheKey("scsc", 0) == new CachingJsonldContexts.StringCacheKey("aaaa", 0)
     re2 should be(false)
   }
 

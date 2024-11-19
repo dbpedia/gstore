@@ -121,6 +121,7 @@ class ApiImpl(config: Config, batchSize: Int = 1000) extends DatabusApi {
 
   override def getGraphMapException404(e: Throwable)(request: javax.servlet.http.HttpServletRequest): Option[org.dbpedia.databus.swagger.model.OperationFailure] =
     getFileMapException404(e)(request)
+
   override def shaclValidate(dataid: Array[Byte], shacl: Array[Byte])(request: HttpServletRequest): Try[String] = {
     val outLang = getLangFromAcceptHeader(request).flatMap(rdf).getOrElse(DefaultFormat)
     setResponseHeaders(Map("Content-Type" -> outLang.lang.getContentType.toHeaderString))(request)
@@ -186,8 +187,9 @@ class ApiImpl(config: Config, batchSize: Int = 1000) extends DatabusApi {
       .collect { case c: RDFContentFormat => c }
       .getOrElse(DefaultFormat)
     val graphId = generateGraphId(prefix.getOrElse(getPrefix(request)), username, path)
-    wrapWithUnsupportedException(formatFromPath(path)
-      .flatMap(rdfExtractor),
+    wrapWithUnsupportedException(
+      formatFromPath(path)
+        .flatMap(rdfExtractor),
       path)
       .flatMap(format => {
         setResponseHeaders(Map("Content-Type" -> outFormat.lang.getContentType.toHeaderString))(request)
@@ -324,7 +326,6 @@ object ApiImpl {
                     restrictEditsToLocalhost: Boolean,
                     defaultJsonldLocalhostContext: Option[String],
                     defaultJsonldLocalhostContextLocation: Option[String])
-
 
 
   object Config {

@@ -1,15 +1,11 @@
 package org.dbpedia.databus
 
-
-import com.github.jsonldjava.core.JsonLdConsts
-import com.github.jsonldjava.utils.JsonUtils
-import org.apache.jena.iri.ViolationCodes
-
 import java.io.ByteArrayInputStream
 import java.nio.file.{Files, Paths}
 import org.apache.jena.rdf.model.ModelFactory
 import org.apache.jena.riot.{Lang, RDFDataMgr}
 import org.dbpedia.databus.ApiImpl.Config
+import org.dbpedia.databus.RdfConversions.{ErrorHandlerWithWarnings, JsonLDSerialiser}
 import org.dbpedia.databus.swagger.DatabusSwagger
 import org.dbpedia.databus.swagger.api.DefaultApi
 import org.scalatest.BeforeAndAfter
@@ -85,6 +81,8 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
       status should equal(200)
     }
 
+    (ErrorHandlerWithWarnings.WarningsInterceptor.JenaErrorHandlers.size() < 3) should equal(true)
+
     get("/databus/document/history?repo=kuckuck&limit=2") {
       status should equal(200)
       body should include("author_name")
@@ -95,9 +93,7 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
 
     get("/databus/graph/read?repo=kuckuck&path=pa/fl.jsonld") {
       status should equal(200)
-      val respCtx = RdfConversions.JsonLDSerialiser.jsonLdContextUrl(bodyBytes)
-      respCtx should equal(RdfConversions.JsonLDSerialiser.jsonLdContextUrl(bytes))
-      respCtx.get.toString.nonEmpty should equal(true)
+      body.contains("This a short abstract for the dataset. Since this") should be(true)
     }
 
     get("/databus/document/read?repo=kuckuck&path=pa/fl.jsonld") {
@@ -111,17 +107,20 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
 
     val file = "group_with_localhostcontext.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
-    val localhostContext = JsonUtils.fromString(new String(bytes))
-      .asInstanceOf[java.util.Map[String, Object]]
-      .get(JsonLdConsts.CONTEXT).toString
+    val localhostContext = JsonLDSerialiser.contextUrl(bytes).get.toString
     val vfile = "group.jsonld"
     val vbytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(vfile).getFile))
-    val validContext = RdfConversions.JsonLDSerialiser.jsonLdContextUrl(vbytes).get.toString
+    val validContext = JsonLDSerialiser.contextUrl(vbytes).get.toString
 
     RdfConversions.JsonLDSerialiser.preloadContextFromAnotherUri(localhostContext, validContext)
 
     post(s"/databus/document/save?repo=kuckuck&path=pa/$file", bytes) {
       status should equal(200)
+    }
+
+    get(s"/databus/graph/read?repo=kuckuck&path=pa/$file") {
+      status should equal(200)
+      body.contains("This a short abstract for the dataset. Since this") should be(true)
     }
 
   }
@@ -139,7 +138,7 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
     }
     get(s"/databus/graph/read?repo=kuckuck&path=pa/$file") {
       status should equal(200)
-      bodyBytes should not equal(bytes)
+      bodyBytes should not equal (bytes)
     }
 
   }
@@ -174,23 +173,39 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
 
     get("/databus/graph/read?repo=kuckuck&path=pa/rel_test.jsonld") {
       status should equal(200)
-      val respCtx = RdfConversions.JsonLDSerialiser.jsonLdContextUrl(bodyBytes)
-      respCtx should equal(RdfConversions.JsonLDSerialiser.jsonLdContextUrl(bytes))
-      respCtx.get.toString.nonEmpty should equal(true)
-      body.contains(" \"generated\" : \"#mod\",") should equal(true)
+      body.contains("#generated\"") should equal(true)
     }
 
   }
 
   "File save" should "report problems in input" in {
 
-
     val file = "space_in_iri.jsonld"
     val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
 
     post("/databus/document/save?repo=kuckuck&path=pa/syntax_err.jsonld", bytes) {
-      (status >= 400) should equal(true)
-      response.body.contains("Spaces are not legal in URIs/IRIs") should equal(true)
+      status should equal(400)
+      body should include("Wrong IRI")
+      body should include("https://metadata.coypu.org/dataset/wikidata-distributionWikidata Query Service")
+    }
+
+    (ErrorHandlerWithWarnings.WarningsInterceptor.JenaErrorHandlers.size() < 3) should equal(true)
+
+  }
+
+  "File save" should "work with @nest keyword" in {
+
+    val file = "nest.jsonld"
+    val bytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(file).getFile))
+
+    post("/databus/document/save?repo=kuckuck&path=pa/nest.jsonld", bytes) {
+      status should equal(200)
+    }
+
+    get("/databus/graph/read?repo=kuckuck&path=pa/nest.jsonld") {
+      status should equal(200)
+      body.contains("\"dct:description\": \"Example table used to illustrate") should equal(true)
+      body.contains("\"dct:spatial\": {\n                \"@id\": \"http://sws.geonames.org/6252001/\"") should equal(true)
     }
 
   }
@@ -204,8 +219,8 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
 
     post("/databus/shacl/validate", Map.empty, Map("shacl" -> shacl, "graph" -> bytes)) {
       status should equal(400)
-      body should include("Bad IRI")
-      body should include(s"Spaces are not legal")
+      body should include("Wrong IRI")
+      body should include("https://metadata.coypu.org/dataset/wikidata-distributionWikidata Query Service")
     }
 
   }
@@ -246,9 +261,9 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
     val shacl = Paths.get(getClass.getClassLoader.getResource(sha).getFile).toFile
 
     post("/databus/shacl/validate", Map.empty, Map("shacl" -> shacl, "graph" -> bytes)) {
-      status should equal(400)
-      body should include("Bad IRI")
-      body should include(s"Code: ${ViolationCodes.CONTROL_CHARACTER}")
+      (status == 400) should equal(true)
+      body should include("Wrong IRI")
+      body should include("hTtps://metadata.coypu.org/dataset/wikidata-distribution\\nWikidataQueryService\\n")
     }
 
   }
@@ -271,12 +286,12 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
 
     post("/databus/shacl/validate", Map.empty, Map("shacl" -> shacl, "graph" -> bytes)) {
       status should equal(200)
-      body should include("\"sh:conforms\" : true")
+      body should include("\"sh:conforms\": {\n        \"@value\": \"true\",")
     }
 
     post("/databus/shacl/validate", Map.empty, Map("shacl" -> shacl, "graph" -> err)) {
       status should equal(200)
-      body should include("\"sh:conforms\" : false")
+      body should include("\"sh:conforms\": {\n                \"@value\": \"false\",")
     }
   }
 
@@ -297,11 +312,14 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
 
       val model = ModelFactory.createDefaultModel()
       val dataStream = new ByteArrayInputStream(version)
-      RDFDataMgr.read(model, dataStream, Lang.JSONLD10)
+      RDFDataMgr.read(model, dataStream, Lang.JSONLD11)
       val tr = Tractate.extract(model.getGraph, TractateV1.Version)
       body should equal(tr.get.stringForSigning)
     }
   }
 
+  "Number of handlers" should "be close to 0" in {
+    (ErrorHandlerWithWarnings.WarningsInterceptor.JenaErrorHandlers.size() < 3) should equal(true)
+  }
 
 }

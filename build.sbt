@@ -1,14 +1,14 @@
 import Keys._
 import org.dbpedia.sbt.Codegen
 
-scalaVersion := "2.12.6"
+scalaVersion := "2.12.13"
 
 organization := "org.dbpedia"
 name := "gstore"
 version := "0.2.0-SNAPSHOT"
 
 val ScalatraVersion = "2.6.3"
-val jenaVersion = "4.10.0"
+val jenaVersion = "5.2.0"
 val jettyVersion = "9.4.9.v20180320"
 
 libraryDependencies ++= Seq(
@@ -19,7 +19,6 @@ libraryDependencies ++= Seq(
   "org.apache.jena" % "apache-jena-libs" % jenaVersion,
   "org.apache.jena" % "jena-shacl" % jenaVersion,
 
-  "org.apache.jena" % "jena-jdbc-driver-remote" % jenaVersion,
   "com.openlink.virtuoso" % "virtjdbc4" % "x.x.x" from "http://download3.openlinksw.com/uda/virtuoso/jdbc/virtjdbc4.jar",
   "c3p0" % "c3p0" % "0.9.1.2",
 
