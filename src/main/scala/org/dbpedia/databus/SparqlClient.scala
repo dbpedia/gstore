@@ -113,6 +113,8 @@ abstract class JdbcCLient(connectionString: String, user: String, pass: String) 
     cpds.setMinPoolSize(5)
     cpds.setAcquireIncrement(5)
     cpds.setMaxPoolSize(20)
+    //seconds
+    cpds.setMaxIdleTime(600)
     cpds
   }
 
