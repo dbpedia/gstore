@@ -45,8 +45,12 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
     val scalatraCtx = scalatraContext(webXml, config.restrictEditsToLocalhost)
 
     val browserPath = "/file"
+
     val fileListHandler = config.gitLocalDir
-      .flatMap(p => Try(fileBrowserContext(p, browserPath)).toOption)
+      .map(p => FileBrowserContext(p, browserPath))
+
+    //val fileListHandler = config.gitLocalDir
+    //  .flatMap(p => Try(fileBrowserContext(p, browserPath)).toOption)
 
     val sparqlPath = "/sparql"
     val contexts = new ContextHandlerCollection
