@@ -146,14 +146,21 @@ class FusekiJDBCClient(host: String, port: Int, user: String, pass: String, data
 }
 
 object RdfConversions {
+  private lazy val log = LoggerFactory.getLogger(this.getClass)
 
   private val DefaultShaclLang = Lang.TTL
 
   def readModel(data: Array[Byte], lang: Lang): Try[Model] = Try {
     val model = ModelFactory.createDefaultModel()
     val dataStream = new ByteArrayInputStream(data)
-    RDFDataMgr.read(model, dataStream, lang)
-    model
+    try {
+      RDFDataMgr.read(model, dataStream, lang)
+      model
+    } catch {
+      case e: Throwable =>
+        log.error(s"Failed to parse input as ${lang.getName}: ${e.getMessage}")
+        throw e
+    }
   }
 
   def validateWithShacl(model: Model, shacl: Graph): Try[ValidationReport] =

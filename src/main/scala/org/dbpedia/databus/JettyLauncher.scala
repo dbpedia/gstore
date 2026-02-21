@@ -39,6 +39,13 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
       .map(ApiImpl.Config.fromWebXml)
       .getOrElse(ApiImpl.Config.default)
 
+    if (config.gitLocalDir.isDefined) {
+      log.info(s"Using local git directory: ${config.gitLocalDir.get.toAbsolutePath}")
+      log.info("Attempting to cache local development context (if present)")
+    } else {
+      log.info("No local git directory configured; using remote git API (if configured)")
+    }
+
     val browserPath = "/file"
     val fileListHandler = config.gitLocalDir
       .flatMap(p => Try(fileBrowserContext(p, browserPath)).toOption)

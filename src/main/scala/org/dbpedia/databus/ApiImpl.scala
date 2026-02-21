@@ -18,12 +18,15 @@ import virtuoso.jdbc4.VirtuosoException
 
 import scala.util.{Failure, Success, Try}
 import scala.xml.Node
+import org.slf4j.LoggerFactory
 import collection.JavaConverters._
 
 
 class ApiImpl(config: Config) extends DatabusApi {
 
   import ApiImpl._
+
+  private lazy val log = LoggerFactory.getLogger(this.getClass)
 
   private val client: GitClient = initGitClient(config)
   private val defaultLang = Lang.JSONLD
@@ -165,6 +168,15 @@ class ApiImpl(config: Config) extends DatabusApi {
     } else {
       Success(Unit)
     }).flatMap(_ => client.commitSeveralFiles(username, fullFilenamesAndData))
+      .recoverWith {
+        case err: Throwable =>
+          try {
+            log.error(s"Failed to save files for user '$username' (${fullFilenamesAndData.keys.mkString(",")})", err)
+          } catch {
+            case _: Throwable => // ignore logging failures
+          }
+          Failure(err)
+      }
 
 
   private def deleteFileFromGit(username: String, path: String)(request: HttpServletRequest): Try[String] = {
