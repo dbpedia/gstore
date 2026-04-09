@@ -5,7 +5,7 @@ import java.net.URL
 import java.nio.file.{NoSuchFileException, Path, Paths}
 
 import javax.servlet.ServletContext
-import javax.servlet.http.HttpServletRequest
+import javax.servlet.http.{HttpServletRequest, Part}
 import org.apache.jena.rdf.model.Model
 import org.apache.jena.riot.Lang
 import org.apache.jena.shared.JenaException
@@ -80,10 +80,24 @@ class ApiImpl(config: Config) extends DatabusApi {
   override def shaclValidate(dataid: String, shacl: String)(request: HttpServletRequest): Try[String] = {
     val lang = getLangFromAcceptHeader(request)
     setResponseHeaders(Map("Content-Type" -> lang.getContentType.toHeaderString))(request)
+
+    def getPartLang(partName: String, default: Lang): Lang = {
+      Try(request.getPart(partName))
+        .map(p => Option(p.getContentType))
+        .getOrElse(None)
+        .map(_.toLowerCase.split(";").head.trim)
+        .map(RdfConversions.mapContentType(_, default))
+        .getOrElse(default)
+    }
+
+    val graphLang = getPartLang("graph", defaultLang)
+    val shaclLang = getPartLang("shacl", RdfConversions.DefaultShaclLang)
+
     RdfConversions.validateWithShacl(
       dataid.getBytes,
       shacl.getBytes,
-      defaultLang
+      graphLang,
+      shaclLang
     ).flatMap(r => RdfConversions.graphToBytes(r.getGraph, lang))
       .map(new String(_))
   }
