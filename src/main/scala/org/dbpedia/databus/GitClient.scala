@@ -13,6 +13,7 @@ import sttp.model.Uri
 import org.json4s._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
+import org.slf4j.LoggerFactory
 
 import scala.util.{Failure, Success, Try}
 
@@ -38,6 +39,8 @@ trait GitClient {
 
 class LocalGitClient(rootPath: Path) extends GitClient {
 
+  private lazy val log = LoggerFactory.getLogger(this.getClass)
+
   // here we do not cleanup, assuming that the number os repos is relatively low (less than 1 000 000)
   private val locks = new ConcurrentHashMap[String, Object]()
 
@@ -62,6 +65,7 @@ class LocalGitClient(rootPath: Path) extends GitClient {
   override def commitSeveralFiles(projectName: String, filenameAndData: Map[String, Array[Byte]]): Try[String] =
     wrapWithSync(projectName) {
       Try({
+        log.debug(s"Opening local git repository for project $projectName at ${getRepoPathFromUsername(projectName)}")
         val git = Git.open(getRepoPathFromUsername(projectName).toFile)
         val add = git.add()
 
@@ -139,6 +143,8 @@ class LocalGitClient(rootPath: Path) extends GitClient {
 
 class RemoteGitlabHttpClient(rootUser: String, rootPass: String, scheme: String, hostname: String, port: Option[Int]) extends GitClient {
 
+  private lazy val log = LoggerFactory.getLogger(this.getClass)
+
   private val baseUri = port
     .map(p => Uri(scheme, hostname, p))
     .getOrElse(Uri(scheme, hostname))
@@ -146,9 +152,11 @@ class RemoteGitlabHttpClient(rootUser: String, rootPass: String, scheme: String,
 
   private lazy val backend = HttpURLConnectionBackend()
   private lazy val accessToken: Try[String] = Try {
+    log.info(s"Requesting access token from Gitlab at $baseUri")
     val req = authReq(rootUser, rootPass)
     backend.send(req).body match {
       case Left(e) =>
+        log.error(s"Failed to get access token from Gitlab: $e")
         Failure(new RuntimeException(e))
       case Right(value) =>
         val flds = for {
@@ -204,7 +212,9 @@ class RemoteGitlabHttpClient(rootUser: String, rootPass: String, scheme: String,
     req.flatMap(r => {
       val resp = r.send(backend)
       resp.body match {
-        case Left(_) => Failure(new RuntimeException("Failed to get project id from gitlab"))
+        case Left(e) =>
+          log.error(s"Failed to get project id from gitlab for project $name: $e")
+          Failure(new RuntimeException("Failed to get project id from gitlab"))
         case Right(li) =>
           val ps = for {
             JArray(a) <- parse(li)
@@ -221,7 +231,10 @@ class RemoteGitlabHttpClient(rootUser: String, rootPass: String, scheme: String,
           // then just taking the first one is not the right approach
           ids.headOption.map(i => i.toString)
             .map(Success(_))
-            .getOrElse(Failure(new RuntimeException("Failed to get project id from gitlab")))
+            .getOrElse({
+              log.error(s"Project $name not found in gitlab")
+              Failure(new RuntimeException("Failed to get project id from gitlab"))
+            })
       }
     })
 

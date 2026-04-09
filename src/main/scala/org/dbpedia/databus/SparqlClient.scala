@@ -147,7 +147,7 @@ class FusekiJDBCClient(host: String, port: Int, user: String, pass: String, data
 
 object RdfConversions {
 
-  private val DefaultShaclLang = Lang.TTL
+  val DefaultShaclLang = Lang.TTL
 
   def readModel(data: Array[Byte], lang: Lang): Try[Model] = Try {
     val model = ModelFactory.createDefaultModel()
@@ -163,8 +163,11 @@ object RdfConversions {
     )
 
   def validateWithShacl(file: Array[Byte], shaclData: Array[Byte], modelLang: Lang): Try[ValidationReport] =
+    validateWithShacl(file, shaclData, modelLang, DefaultShaclLang)
+
+  def validateWithShacl(file: Array[Byte], shaclData: Array[Byte], modelLang: Lang, shaclLang: Lang): Try[ValidationReport] =
     for {
-      shaclGra <- readModel(shaclData, DefaultShaclLang)
+      shaclGra <- readModel(shaclData, shaclLang)
       model <- readModel(file, modelLang)
       re <- validateWithShacl(model, shaclGra.getGraph)
     } yield re

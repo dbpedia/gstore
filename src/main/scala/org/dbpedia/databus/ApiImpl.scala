@@ -5,7 +5,7 @@ import java.net.URL
 import java.nio.file.{NoSuchFileException, Path, Paths}
 
 import javax.servlet.ServletContext
-import javax.servlet.http.HttpServletRequest
+import javax.servlet.http.{HttpServletRequest, Part}
 import org.apache.jena.rdf.model.Model
 import org.apache.jena.riot.Lang
 import org.apache.jena.shared.JenaException
@@ -16,12 +16,15 @@ import org.dbpedia.databus.swagger.model.{OperationFailure, OperationSuccess}
 import sttp.model.Uri
 import virtuoso.jdbc4.VirtuosoException
 
+import org.slf4j.LoggerFactory
 import scala.util.{Failure, Success, Try}
 import scala.xml.Node
 import collection.JavaConverters._
 
 
 class ApiImpl(config: Config) extends DatabusApi {
+
+  private lazy val log = LoggerFactory.getLogger(this.getClass)
 
   import ApiImpl._
 
@@ -77,10 +80,24 @@ class ApiImpl(config: Config) extends DatabusApi {
   override def shaclValidate(dataid: String, shacl: String)(request: HttpServletRequest): Try[String] = {
     val lang = getLangFromAcceptHeader(request)
     setResponseHeaders(Map("Content-Type" -> lang.getContentType.toHeaderString))(request)
+
+    def getPartLang(partName: String, default: Lang): Lang = {
+      Try(request.getPart(partName))
+        .map(p => Option(p.getContentType))
+        .getOrElse(None)
+        .map(_.toLowerCase.split(";").head.trim)
+        .map(RdfConversions.mapContentType(_, default))
+        .getOrElse(default)
+    }
+
+    val graphLang = getPartLang("graph", defaultLang)
+    val shaclLang = getPartLang("shacl", RdfConversions.DefaultShaclLang)
+
     RdfConversions.validateWithShacl(
       dataid.getBytes,
       shacl.getBytes,
-      defaultLang
+      graphLang,
+      shaclLang
     ).flatMap(r => RdfConversions.graphToBytes(r.getGraph, lang))
       .map(new String(_))
   }
@@ -122,6 +139,11 @@ class ApiImpl(config: Config) extends DatabusApi {
           defaultLang,
           lang))
       .map(new String(_))
+      .recoverWith({
+        case e =>
+          log.error(s"Failed to read file $path for user $username: ${e.getMessage}")
+          Failure(e)
+      })
   }
 
   private def getLangFromAcceptHeader(request: HttpServletRequest) =
@@ -165,6 +187,11 @@ class ApiImpl(config: Config) extends DatabusApi {
     } else {
       Success(Unit)
     }).flatMap(_ => client.commitSeveralFiles(username, fullFilenamesAndData))
+      .recoverWith({
+        case e =>
+          log.error(s"Failed to save files for user $username: ${e.getMessage}")
+          Failure(e)
+      })
 
 
   private def deleteFileFromGit(username: String, path: String)(request: HttpServletRequest): Try[String] = {
@@ -177,16 +204,26 @@ class ApiImpl(config: Config) extends DatabusApi {
 
   private def initGitClient(config: Config): GitClient = {
     import config._
-    gitLocalDir.map(new LocalGitClient(_))
+    val client = gitLocalDir.map(new LocalGitClient(_))
       .getOrElse({
+        log.info("Initializing remote Gitlab client")
         val scheme = gitApiSchema.getOrElse("https")
         val cl = for {
           user <- gitApiUser
           pass <- gitApiPass
           host <- gitApiHost
         } yield new RemoteGitlabHttpClient(user, pass, scheme, host, gitApiPort)
-        cl.getOrElse(throw new RuntimeException("Wrong remote git client configuration"))
+        cl.getOrElse({
+          val msg = "Wrong remote git client configuration: gitApiUser, gitApiPass, or gitApiHost is missing"
+          log.error(msg)
+          throw new RuntimeException(msg)
+        })
       })
+
+    if (gitLocalDir.isDefined) {
+      log.info(s"Git client initialized with local directory: ${gitLocalDir.get}")
+    }
+    client
   }
 
 }
@@ -224,14 +261,22 @@ object ApiImpl {
     private def fromMapper(mapper: Mapper): Config = {
       implicit val mp = mapper
 
-      val defaultGraphIdPrefix = getParam("defaultGraphIdPrefix").get
+      def getRequiredParam(name: String): String = {
+        getParam(name).getOrElse({
+          val msg = s"Missing required configuration parameter: $name"
+          LoggerFactory.getLogger(ApiImpl.getClass).error(msg)
+          throw new NoSuchElementException(msg)
+        })
+      }
 
-      val storageSparqlEndpointUri = getParam("storageSparqlEndpointUri").get
+      val defaultGraphIdPrefix = getRequiredParam("defaultGraphIdPrefix")
+
+      val storageSparqlEndpointUri = getRequiredParam("storageSparqlEndpointUri")
       val stUri = if (storageSparqlEndpointUri.endsWith("/")) storageSparqlEndpointUri.dropRight(1) else storageSparqlEndpointUri
-      val storageUser = getParam("storageUser").get
-      val storagePass = getParam("storagePass").get
+      val storageUser = getRequiredParam("storageUser")
+      val storagePass = getRequiredParam("storagePass")
       val storageJdbcPort = getParam("storageJdbcPort").map(_.toInt)
-      val storageClass = getParam("storageClass").get
+      val storageClass = getRequiredParam("storageClass")
       val storageDbName = getParam("storageDbName")
 
       val gitLocalDir: Option[Path] = getParam("gitLocalDir").map(Paths.get(_))
