@@ -2,7 +2,7 @@ package org.dbpedia.databus // remember this package in the sbt project definiti
 
 import java.net.URL
 import java.nio.file.{Files, Paths}
-import org.eclipse.jetty.server.{Handler, NCSARequestLog, Server, ServerConnector}
+import org.eclipse.jetty.server.{Handler, Server, ServerConnector}
 import org.eclipse.jetty.servlet.DefaultServlet
 import org.eclipse.jetty.webapp.WebAppContext
 import org.scalatra.servlet.ScalatraListener
@@ -20,6 +20,10 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
   private lazy val log = LoggerFactory.getLogger(this.getClass)
 
   def main(args: Array[String]) {
+    if (System.getProperty("log.level") == null) {
+      Option(System.getenv("LOG_LEVEL")).filter(_.nonEmpty).foreach(System.setProperty("log.level", _))
+    }
+
     val port =  Option(System.getenv("GSTORE_JETTY_PORT")).map(_.toInt).getOrElse(8080)
     val logBaseProp = "logsFolder"
     val logBase = Paths.get(Option(System.getProperty(logBaseProp))
@@ -64,13 +68,7 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
     rewriteHandler.setHandler(contexts)
     server.setHandler(rewriteHandler)
 
-    val requestLog = new NCSARequestLog(logBase.resolve("jetty-yyyy_mm_dd.request.log").toString)
-    requestLog.setAppend(true)
-    requestLog.setExtended(false)
-    requestLog.setLogTimeZone("GMT")
-    requestLog.setLogLatency(true)
-    requestLog.setRetainDays(90)
-    server.setRequestLog(requestLog)
+    server.setRequestLog(new RequestAccessLog())
     server.getConnectors.foreach{
       case sc : ServerConnector => sc.setIdleTimeout(JettyHelpers.DefaultTimeout.toMillis)
       case _ =>
