@@ -12,7 +12,7 @@ import org.eclipse.jetty.servlet.{ServletContextHandler, ServletHandler}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 object JettyHelpers {
 
@@ -46,9 +46,10 @@ object JettyHelpers {
   def waitForSparqlBackend(endpoint: String, attempts: Int = 30, delayMs: Long = 2000): Unit = {
     val log = LoggerFactory.getLogger("JettyLauncher")
     val host = java.net.URI.create(endpoint).getHost
-    Try(java.net.InetAddress.getByName(host)).foreach { addr =>
-      log.info(s"SPARQL backend host $host resolves to ${addr.getHostAddress}")
-    }.failed.foreach(e => log.warn(s"SPARQL backend host $host does not resolve: ${e.getMessage}"))
+    Try(java.net.InetAddress.getByName(host)) match {
+      case Success(addr) => log.info(s"SPARQL backend host $host resolves to ${addr.getHostAddress}")
+      case Failure(e) => log.warn(s"SPARQL backend host $host does not resolve: ${e.getMessage}")
+    }
 
     val ready = (1 to attempts).exists { attempt =>
       Try {
