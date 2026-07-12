@@ -29,7 +29,7 @@ libraryDependencies ++= Seq(
   "org.eclipse.jetty" % "jetty-rewrite" % jettyVersion % "compile",
   "org.eclipse.jetty" % "jetty-proxy" % jettyVersion % "compile",
 
-  "ch.qos.logback" % "logback-classic" % "1.2.3",
+  "ch.qos.logback" % "logback-classic" % "1.5.12",
 
   "org.json4s" %% "json4s-jackson" % "3.6.10",
   "com.softwaremill.sttp.client3" %% "core" % "3.0.0-RC11",
@@ -39,6 +39,7 @@ libraryDependencies ++= Seq(
 
 assemblyMergeStrategy in assembly := {
   case PathList("META-INF", "MANIFEST.MF") => MergeStrategy.discard
+  case PathList("META-INF", "services", _*) => MergeStrategy.concat
   case ps if ps.endsWith(".SF") => MergeStrategy.discard
   case ps if ps.endsWith(".DSA") => MergeStrategy.discard
   case ps if ps.endsWith(".RSA") => MergeStrategy.discard
