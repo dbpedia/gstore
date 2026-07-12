@@ -17,7 +17,7 @@
 
     <context-param>
         <param-name>storageSparqlEndpointUri</param-name>
-        <param-value>http://virtuoso:8890</param-value>
+        <param-value>http://virtuoso:8890/sparql</param-value>
     </context-param>
     <context-param>
         <param-name>storageJdbcPort</param-name>

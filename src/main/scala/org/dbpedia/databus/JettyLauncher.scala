@@ -57,8 +57,10 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
     //  .flatMap(p => Try(fileBrowserContext(p, browserPath)).toOption)
 
     val sparqlPath = "/sparql"
+    val sparqlEndpoint = JettyHelpers.normalizeSparqlEndpoint(config.storageSparqlEndpointUri.toString())
+    log.info(s"SPARQL proxy: $sparqlPath -> $sparqlEndpoint")
     val contexts = new ContextHandlerCollection
-    val proxyCtx = proxyContext(contexts, config.storageSparqlEndpointUri.toString(), sparqlPath)
+    val proxyCtx = proxyContext(contexts, sparqlEndpoint, sparqlPath)
     val fhdl: List[Handler] = fileListHandler.map(List(_)).getOrElse(List.empty)
     val handlers: List[Handler] = fhdl ++ List[Handler](proxyCtx, scalatraCtx)
 

@@ -409,9 +409,15 @@ object ApiImpl {
     private def getParam(name: String)(implicit mapper: Mapper): Option[String] =
       Option(System.getProperty(name))
         .orElse(Option(System.getenv(name)))
+        .orElse(envAlias(name).flatMap(k => Option(System.getenv(k))))
         .map(_.trim)
         .filter(_.nonEmpty)
         .orElse(Option(mapper.getKeyValue(name)))
+
+    private def envAlias(name: String): Option[String] = name match {
+      case "storageSparqlEndpointUri" => Some("STORAGE_SPARQL_ENDPOINT_URI")
+      case _ => None
+    }
   }
 
 }

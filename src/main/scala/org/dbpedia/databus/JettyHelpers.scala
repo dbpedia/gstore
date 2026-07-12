@@ -3,7 +3,6 @@ package org.dbpedia.databus
 import java.nio.file.Path
 
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
-import org.eclipse.jetty.proxy.ProxyServlet
 import org.eclipse.jetty.rewrite.handler.Rule.ApplyURI
 import org.eclipse.jetty.rewrite.handler.{RewriteHandler, RewriteRegexRule, Rule}
 import org.eclipse.jetty.server.{HandlerContainer, Request}
@@ -16,11 +15,27 @@ object JettyHelpers {
 
   val DefaultTimeout = 1 hour
 
+  def normalizeSparqlEndpoint(uri: String): String = {
+    val trimmed = uri.stripSuffix("/")
+    val parsed = java.net.URI.create(trimmed)
+    val path = Option(parsed.getRawPath).filter(p => p.nonEmpty && p != "/").getOrElse("/sparql")
+    val port = parsed.getPort match {
+      case -1 => parsed.getScheme match {
+        case "https" => ":443"
+        case _ => ":80"
+      }
+      case p => s":$p"
+    }
+    s"${parsed.getScheme}://${parsed.getHost}$port$path"
+  }
+
   def proxyContext(parent: HandlerContainer, virtUri: String, contextPath: String) = {
+    val endpoint = normalizeSparqlEndpoint(virtUri)
     val proxyContext = new ServletContextHandler(parent, contextPath, ServletContextHandler.SESSIONS)
     val handler = new ServletHandler
-    val holder = handler.addServletWithMapping(classOf[ProxyServlet.Transparent], "/*")
-    holder.setInitParameter("proxyTo", s"$virtUri")
+    val holder = handler.addServletWithMapping(classOf[SparqlProxyServlet], "/*")
+    holder.setInitParameter("proxyTo", endpoint)
+    holder.setInitParameter("sparqlEndpointUri", endpoint)
     holder.setInitParameter("idleTimeout", DefaultTimeout.toMillis.toString)
     holder.setInitParameter("timeout", DefaultTimeout.toMillis.toString)
     proxyContext.setServletHandler(handler)
