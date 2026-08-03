@@ -20,16 +20,15 @@ object JettyHelpers {
 
   def normalizeSparqlEndpoint(uri: String): String = {
     val trimmed = uri.stripSuffix("/")
-    val parsed = java.net.URI.create(trimmed)
-    val path = Option(parsed.getRawPath).filter(p => p.nonEmpty && p != "/").getOrElse("/sparql")
-    val port = parsed.getPort match {
-      case -1 => parsed.getScheme match {
-        case "https" => ":443"
-        case _ => ":80"
-      }
-      case p => s":$p"
+    // java.net.URI rejects underscores in hostnames (e.g. Docker Compose service names);
+    // java.net.URL accepts them and matches curl/HttpURLConnection behaviour.
+    Try(new URL(trimmed)).map { url =>
+      val path = Option(url.getPath).filter(p => p.nonEmpty && p != "/").getOrElse("/sparql")
+      val port = if (url.getPort == -1) url.getDefaultPort else url.getPort
+      s"${url.getProtocol}://${url.getHost}:$port$path"
+    }.getOrElse {
+      if (trimmed.endsWith("/sparql")) trimmed else s"$trimmed/sparql"
     }
-    s"${parsed.getScheme}://${parsed.getHost}$port$path"
   }
 
   def proxyContext(parent: HandlerContainer, virtUri: String, contextPath: String) = {
@@ -45,7 +44,7 @@ object JettyHelpers {
 
   def waitForSparqlBackend(endpoint: String, attempts: Int = 30, delayMs: Long = 2000): Unit = {
     val log = LoggerFactory.getLogger("JettyLauncher")
-    val host = java.net.URI.create(endpoint).getHost
+    val host = new URL(endpoint).getHost
     Try(java.net.InetAddress.getByName(host)) match {
       case Success(addr) => log.info(s"SPARQL backend host $host resolves to ${addr.getHostAddress}")
       case Failure(e) => log.warn(s"SPARQL backend host $host does not resolve: ${e.getMessage}")

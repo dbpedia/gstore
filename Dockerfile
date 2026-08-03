@@ -22,6 +22,7 @@ ENV LOG_LEVEL=INFO
 
 ENV DEFAULT_JSONLD_LOCALHOST_CONTEXT=http://localhost:3000/res/context.jsonld
 ENV DEFAULT_JSONLD_LOCALHOST_CONTEXT_LOCATION=https://databus.dbpedia.org/res/context.jsonld
+ENV DEFAULT_JSONLD_LOCALHOST_CONTEXT_CACHE_TTL_MS=900000
 
 RUN apk update
 RUN apk upgrade
@@ -50,6 +51,7 @@ CMD if [[ -n "$EXTRA_ROOT_CERT_PATH" ]]; then \
       -Dhttps.nonProxyHosts=$(echo $NO_PROXY | sed 's/,/|/g') \
       -DdefaultJsonldLocalhostContext=$DEFAULT_JSONLD_LOCALHOST_CONTEXT \
       -DdefaultJsonldLocalhostContextLocation=$DEFAULT_JSONLD_LOCALHOST_CONTEXT_LOCATION \
+      -DdefaultJsonldLocalhostContextCacheTtlMs=$DEFAULT_JSONLD_LOCALHOST_CONTEXT_CACHE_TTL_MS \
       -DrestrictEditsToLocalhost=$RESTRICT_EDITS_TO_LOCALHOST \
       -Dlog.level=$LOG_LEVEL \
       -DstorageDbName=$STORAGE_DB_NAME \

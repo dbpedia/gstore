@@ -33,7 +33,10 @@ class ApiImpl(config: Config, batchSize: Int = 1000) extends DatabusApi {
   private lazy val sparqlClient: SparqlClient = SparqlClient.get(config)
   init()
 
-  def init(): Unit = JenaSystem.init()
+  def init(): Unit = {
+    JenaSystem.init()
+    RdfConversions.JsonLDSerialiser.configure(config)
+  }
 
   def stop(): Unit = JenaSystem.shutdown()
 
@@ -325,7 +328,8 @@ object ApiImpl {
                     gitApiPort: Option[Int],
                     restrictEditsToLocalhost: Boolean,
                     defaultJsonldLocalhostContext: Option[String],
-                    defaultJsonldLocalhostContextLocation: Option[String])
+                    defaultJsonldLocalhostContextLocation: Option[String],
+                    defaultJsonldLocalhostContextCacheTtlMs: Long)
 
 
   object Config {
@@ -364,6 +368,9 @@ object ApiImpl {
 
       val defaultJsonldLocalhostContext = getParam("defaultJsonldLocalhostContext")
       val defaultJsonldLocalhostContextLocation = getParam("defaultJsonldLocalhostContextLocation")
+      val defaultJsonldLocalhostContextCacheTtlMs = getParam("defaultJsonldLocalhostContextCacheTtlMs")
+        .map(_.toLong)
+        .getOrElse(900000L)
 
       ApiImpl.Config(
         Uri.parse(stUri).right.get,
@@ -382,7 +389,8 @@ object ApiImpl {
         gitApiPort,
         restrictEditsToLocalhost,
         defaultJsonldLocalhostContext,
-        defaultJsonldLocalhostContextLocation
+        defaultJsonldLocalhostContextLocation,
+        defaultJsonldLocalhostContextCacheTtlMs
       )
     }
 
@@ -416,6 +424,9 @@ object ApiImpl {
 
     private def envAlias(name: String): Option[String] = name match {
       case "storageSparqlEndpointUri" => Some("STORAGE_SPARQL_ENDPOINT_URI")
+      case "defaultJsonldLocalhostContext" => Some("DEFAULT_JSONLD_LOCALHOST_CONTEXT")
+      case "defaultJsonldLocalhostContextLocation" => Some("DEFAULT_JSONLD_LOCALHOST_CONTEXT_LOCATION")
+      case "defaultJsonldLocalhostContextCacheTtlMs" => Some("DEFAULT_JSONLD_LOCALHOST_CONTEXT_CACHE_TTL_MS")
       case _ => None
     }
   }

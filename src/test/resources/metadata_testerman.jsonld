@@ -1,0 +1,25 @@
+{
+  "@context": "http://localhost:3000/res/context.jsonld",
+  "@graph": [
+    {
+      "@id": "http://localhost:3000/testerman",
+      "@type": "databus:Account",
+      "foaf:accountName": "testerman",
+      "name": "testerman"
+    },
+    {
+      "@id": "http://localhost:3000/testerman#this",
+      "@type": ["foaf:Person", "PersonalProfileDocument"],
+      "key": { "@id": "http://localhost:3000/testerman#key" },
+      "foaf:account": { "@id": "http://localhost:3000/testerman" },
+      "displayName": "Test Label",
+      "databus:account": "http://localhost:3000/testerman"
+    },
+    {
+      "@id": "http://localhost:3000/testerman#doc",
+      "@type": "PersonalProfileDocument",
+      "maker": "http://localhost:3000/testerman#this",
+      "primaryTopic": "http://localhost:3000/testerman#this"
+    }
+  ]
+}

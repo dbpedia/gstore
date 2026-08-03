@@ -29,6 +29,8 @@
     <appender-ref ref="FILE" />
   </root>
 
+  <logger name="gstore.jsonld" level="WARN"/>
+
   <logger name="org.apache.jena.jdbc" level="OFF"/>
 
 </configuration>

@@ -8,6 +8,7 @@ import com.apicatalog.jsonld.loader.{DocumentLoader, DocumentLoaderOptions, Http
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.net.{URI, URL}
+import java.nio.charset.StandardCharsets
 import com.mchange.v2.c3p0.ComboPooledDataSource
 import org.apache.jena.graph.{Graph, Node}
 import org.apache.jena.iri.ViolationCodes
@@ -25,6 +26,8 @@ import sttp.model.Uri
 
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.{Handler, Level, LogRecord, Logger}
+import scala.collection.JavaConverters._
+import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
 
@@ -305,7 +308,7 @@ object RdfConversions {
 
   object RDFGraphSerialiser {
     def init(inputFormat: RDFContentFormat, extractor: GraphBytesExtractor, data: Array[Byte], base: Option[String]) = inputFormat match {
-      case JSONLD => new JsonLDSerialiser(extractor, data, base)
+      case JSONLD => new JsonLDSerialiser(extractor, JsonLDSerialiser.normalizeInlineContext(data), base)
       case other => new RDFGraphSerialiser(other, extractor, data, base)
     }
 
@@ -368,6 +371,10 @@ object RdfConversions {
 
     import JsonLDSerialiser._
 
+    JsonLDSerialiser.log.warn(
+      s"JSON-LD parse start base=${base.getOrElse("<none>")} @context=${JsonLDSerialiser.describeContext(data)}"
+    )
+
     private val ctx = jsonLdContext(base)
 
     override def modifyParser(parser: RDFParserBuilder) =
@@ -381,20 +388,41 @@ object RdfConversions {
   }
 
   object JsonLDSerialiser {
-    private val DocumentCache = new LRUDocumentCacheLoader(new CachingJsonldContexts(32), JsonLdInit.initLoader)
+    private val log = JsonldContextLoaderLog.logger
+    private val DefaultCacheTtl = 15.minutes
+    private var documentCache: AliasingTtlDocumentCacheLoader =
+      createDocumentCache(Map.empty, DefaultCacheTtl)
+    private var activeAliases: Map[String, String] = Map.empty
 
-    def preloadContextFromAnotherUri(ctxUri: String, downloadUri: String): Try[Unit] = Try {
-      val dl: DocumentLoader = HttpLoader.defaultInstance()
-      val d = dl.loadDocument(new URI(downloadUri), new DocumentLoaderOptions())
-      DocumentCache.put(ctxUri, d)
+    def configure(config: Config): Unit = {
+      val requestedAliases = (for {
+        local <- config.defaultJsonldLocalhostContext if local.nonEmpty
+        remote <- config.defaultJsonldLocalhostContextLocation if remote.nonEmpty
+      } yield local -> remote).toMap
+      if (requestedAliases.nonEmpty) {
+        activeAliases = requestedAliases
+      }
+      val ttl = config.defaultJsonldLocalhostContextCacheTtlMs.millis
+      log.warn(s"JSON-LD loader configure aliases=$activeAliases ttl=$ttl")
+      documentCache = createDocumentCache(activeAliases, ttl)
     }
+
+    private def createDocumentCache(
+      aliases: Map[String, String],
+      ttl: FiniteDuration
+    ): AliasingTtlDocumentCacheLoader =
+      new AliasingTtlDocumentCacheLoader(
+        new CachingJsonldContexts(32, ttl),
+        JsonLdInit.initLoader,
+        aliases
+      )
 
     private[databus] def jsonLdContext(base: Option[String]): util.Context =
       jenaContext(jsonldOpts(base))
 
     private def jsonldOpts(base: Option[String]): JsonLdOptions = {
       val o = new JsonLdOptions()
-      o.setDocumentLoader(DocumentCache)
+      o.setDocumentLoader(documentCache)
       o.setUriValidation(true)
       base.flatMap(b => Try(new URI(b)).toOption)
         .foreach(o.setBase)
@@ -409,12 +437,37 @@ object RdfConversions {
 
     def contextUrl(data: Array[Byte]): Try[URL] = Try {
       val d = JsonDocument.of(new ByteArrayInputStream(data))
-      new URL(
-        d.getJsonContent.get()
-          .getValue(s"/${Keywords.CONTEXT}")
-          .toString.drop(1).dropRight(1)
-      )
+      contextValueToUrl(d.getJsonContent.get().getValue(s"/${Keywords.CONTEXT}"))
     }
+
+    private[databus] def describeContext(data: Array[Byte]): String = Try {
+      val d = JsonDocument.of(new ByteArrayInputStream(data))
+      Option(d.getJsonContent.get().getValue(s"/${Keywords.CONTEXT}"))
+        .map(_.toString)
+        .getOrElse("<missing>")
+    }.getOrElse("<unreadable>")
+
+    private def contextValueToUrl(contextValue: jakarta.json.JsonValue): URL = {
+      import jakarta.json.JsonValue.ValueType
+      contextValue.getValueType match {
+        case ValueType.STRING =>
+          new URL(contextValue.asInstanceOf[jakarta.json.JsonString].getString)
+        case ValueType.ARRAY =>
+          val values = contextValue.asJsonArray().asScala.map(v => describeJsonValue(v)).mkString("[", ", ", "]")
+          throw new IllegalArgumentException(s"JSON-LD @context is an array (use a single URL only): $values")
+        case ValueType.OBJECT =>
+          throw new IllegalArgumentException("JSON-LD @context is inline; use external context URL only for aliased localhost contexts")
+        case _ =>
+          throw new IllegalArgumentException(s"Unsupported JSON-LD @context type: ${contextValue.getValueType}")
+      }
+    }
+
+    private def describeJsonValue(value: jakarta.json.JsonValue): String =
+      if (value.getValueType == jakarta.json.JsonValue.ValueType.STRING) {
+        value.asInstanceOf[jakarta.json.JsonString].getString
+      } else {
+        value.getValueType.toString
+      }
 
   }
 

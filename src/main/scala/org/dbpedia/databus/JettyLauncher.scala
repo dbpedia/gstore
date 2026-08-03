@@ -9,8 +9,6 @@ import org.scalatra.servlet.ScalatraListener
 import org.eclipse.jetty.server.handler.ContextHandlerCollection
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 import scala.util._
 import scala.xml.XML
 
@@ -45,6 +43,8 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
       .map(XML.load)
       .map(ApiImpl.Config.fromWebXml)
       .getOrElse(ApiImpl.Config.default)
+
+    RdfConversions.JsonLDSerialiser.configure(config)
 
     val scalatraCtx = scalatraContext(webXml, config.restrictEditsToLocalhost)
 
@@ -83,21 +83,6 @@ object JettyLauncher { // this is my entry object as specified in sbt project de
         |git repo: http://localhost:${port}${browserPath}
         |sparql endpoint: http://localhost:${port}${sparqlPath}
         |""".stripMargin)
-
-    (for {
-      local <- config.defaultJsonldLocalhostContext
-      remote <- config.defaultJsonldLocalhostContextLocation
-    } yield (local, remote))
-      .foreach(p =>
-        Future(RdfConversions.JsonLDSerialiser.preloadContextFromAnotherUri(p._1, p._2).get)
-          .onComplete{
-            case util.Failure(exception) => log.info(s"Failed to load remote context for localhost: ${exception.getMessage}")
-            case util.Success(_) => log.info(
-              s"""Successfully loaded remote context for localhost.
-                 |Localhost context: ${p._1}.
-                 |Remote context: ${p._2}""".stripMargin)
-          }
-      )
 
     server.join
   }

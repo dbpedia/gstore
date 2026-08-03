@@ -44,8 +44,9 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
     Some("localhost"),
     Some(port),
     false,
-    Some(""),
-    Some("")
+    None,
+    None,
+    900000L
   )
 
   implicit val sw = new DatabusSwagger
@@ -112,7 +113,10 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
     val vbytes = Files.readAllBytes(Paths.get(getClass.getClassLoader.getResource(vfile).getFile))
     val validContext = JsonLDSerialiser.contextUrl(vbytes).get.toString
 
-    RdfConversions.JsonLDSerialiser.preloadContextFromAnotherUri(localhostContext, validContext)
+    RdfConversions.JsonLDSerialiser.configure(config.copy(
+      defaultJsonldLocalhostContext = Some(localhostContext),
+      defaultJsonldLocalhostContextLocation = Some(validContext)
+    ))
 
     post(s"/databus/document/save?repo=kuckuck&path=pa/$file", bytes) {
       status should equal(200)
