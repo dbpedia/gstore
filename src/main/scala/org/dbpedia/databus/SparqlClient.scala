@@ -447,6 +447,36 @@ object RdfConversions {
         .getOrElse("<missing>")
     }.getOrElse("<unreadable>")
 
+    /** Replace `{ "@context": { "@context": { ...terms } } }` with the configured alias URL. */
+    private[databus] def normalizeInlineContext(data: Array[Byte]): Array[Byte] =
+      activeAliases.keys.headOption.fold(data)(rewriteDoubleWrappedContext(data, _))
+
+    private def rewriteDoubleWrappedContext(data: Array[Byte], localContextUrl: String): Array[Byte] =
+      Try {
+        import jakarta.json.Json
+        import jakarta.json.JsonValue.ValueType
+
+        val root = Json.createReader(new ByteArrayInputStream(data)).readValue().asJsonObject()
+        if (!root.containsKey(Keywords.CONTEXT)) return data
+
+        root.get(Keywords.CONTEXT).getValueType match {
+          case ValueType.OBJECT if root.getJsonObject(Keywords.CONTEXT).containsKey(Keywords.CONTEXT) =>
+            val out = new ByteArrayOutputStream()
+            val builder = Json.createObjectBuilder()
+            root.entrySet().asScala.foreach { entry =>
+              if (entry.getKey == Keywords.CONTEXT) {
+                builder.add(Keywords.CONTEXT, localContextUrl)
+              } else {
+                builder.add(entry.getKey, entry.getValue)
+              }
+            }
+            Json.createWriter(out).write(builder.build())
+            log.warn(s"JSON-LD replaced double-wrapped inline @context with $localContextUrl")
+            out.toByteArray
+          case _ => data
+        }
+      }.getOrElse(data)
+
     private def contextValueToUrl(contextValue: jakarta.json.JsonValue): URL = {
       import jakarta.json.JsonValue.ValueType
       contextValue.getValueType match {
