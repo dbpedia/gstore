@@ -10,11 +10,13 @@
     </encoder>
   </appender>
 
+  <property name="LOG_DIR" value="${logsFolder:-./logs/}"/>
+
   <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-    <file>${logsFolder}gstore.log</file>
+    <file>${LOG_DIR}gstore.log</file>
     <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
       <!-- daily rollover -->
-      <fileNamePattern>gstore.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+      <fileNamePattern>${LOG_DIR}gstore.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
       <!-- keep 30 days' worth of history capped at 3GB total size -->
       <maxHistory>30</maxHistory>
       <totalSizeCap>3GB</totalSizeCap>
@@ -28,8 +30,6 @@
     <appender-ref ref="STDOUT" />
     <appender-ref ref="FILE" />
   </root>
-
-  <logger name="gstore.jsonld" level="WARN"/>
 
   <logger name="org.apache.jena.jdbc" level="OFF"/>
 

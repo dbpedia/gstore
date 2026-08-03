@@ -21,6 +21,7 @@ tmp/*
 
 # akka specific
 logs/*
+logsFolder_IS_UNDEFINED*
 
 # sbt specific
 target/

@@ -123,7 +123,7 @@ class AliasingTtlDocumentCacheLoader(
     val key = normalizeUri(url.toString)
     Option(cache.get(key)) match {
       case Some(doc) =>
-        log.warn(
+        log.debug(
           s"JSON-LD context cache HIT url=$key documentUrl=${doc.getDocumentUrl} contextUrl=${doc.getContextUrl}"
         )
         doc
@@ -135,21 +135,21 @@ class AliasingTtlDocumentCacheLoader(
   private def loadMiss(key: String, url: URI, options: DocumentLoaderOptions): Document =
     normalizedAliases.get(key) match {
       case Some(remoteUri) =>
-        log.warn(s"JSON-LD context ALIAS fetch local=$key remote=$remoteUri")
+        log.debug(s"JSON-LD context ALIAS fetch local=$key remote=$remoteUri")
         loadAndCacheAlias(key, new URI(remoteUri), options)
       case None =>
         remoteToLocal.get(key) match {
           case Some(local) =>
             val canonical = Option(cache.get(local)).getOrElse {
-              log.warn(s"JSON-LD context ALIAS canonical fetch local=$local source=$key")
+              log.debug(s"JSON-LD context ALIAS canonical fetch local=$local source=$key")
               loadAndCacheAlias(local, url, options)
             }
-            log.warn(s"JSON-LD context ALIAS reverse local=$local requested=$key")
+            log.debug(s"JSON-LD context ALIAS reverse local=$local requested=$key")
             AliasedDocument.forRequest(canonical, url)
           case None =>
-            log.warn(s"JSON-LD context DIRECT fetch url=$key")
+            log.debug(s"JSON-LD context DIRECT fetch url=$key")
             val doc = documentLoader.loadDocument(url, options)
-            log.warn(
+            log.debug(
               s"JSON-LD context DIRECT loaded url=$key documentUrl=${doc.getDocumentUrl} contextUrl=${doc.getContextUrl}"
             )
             cache.put(key, doc)
@@ -159,12 +159,12 @@ class AliasingTtlDocumentCacheLoader(
 
   private def loadAndCacheAlias(requestedKey: String, fetchUri: URI, options: DocumentLoaderOptions): Document = {
     val fetched = documentLoader.loadDocument(fetchUri, options)
-    log.warn(
+    log.debug(
       s"JSON-LD context ALIAS source loaded fetchUri=$fetchUri documentUrl=${fetched.getDocumentUrl} contextUrl=${fetched.getContextUrl}"
     )
     val aliased = AliasedDocument(fetched, new URI(requestedKey))
     cache.put(requestedKey, aliased)
-    log.warn(
+    log.debug(
       s"JSON-LD context ALIAS cached key=$requestedKey documentUrl=${aliased.getDocumentUrl} contextUrl=${aliased.getContextUrl}"
     )
     aliased

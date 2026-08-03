@@ -37,6 +37,8 @@ libraryDependencies ++= Seq(
   "org.scalatra" %% "scalatra-scalatest" % ScalatraVersion % Test,
 )
 
+Test / javaOptions += "-DlogsFolder=./logs/"
+
 assemblyMergeStrategy in assembly := {
   case PathList("META-INF", "MANIFEST.MF") => MergeStrategy.discard
   case PathList("META-INF", "services", _*) => MergeStrategy.concat

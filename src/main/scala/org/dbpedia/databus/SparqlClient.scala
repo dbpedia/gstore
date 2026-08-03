@@ -371,7 +371,7 @@ object RdfConversions {
 
     import JsonLDSerialiser._
 
-    JsonLDSerialiser.log.warn(
+    JsonLDSerialiser.log.debug(
       s"JSON-LD parse start base=${base.getOrElse("<none>")} @context=${JsonLDSerialiser.describeContext(data)}"
     )
 
@@ -403,7 +403,7 @@ object RdfConversions {
         activeAliases = requestedAliases
       }
       val ttl = config.defaultJsonldLocalhostContextCacheTtlMs.millis
-      log.warn(s"JSON-LD loader configure aliases=$activeAliases ttl=$ttl")
+      log.debug(s"JSON-LD loader configure aliases=$activeAliases ttl=$ttl")
       documentCache = createDocumentCache(activeAliases, ttl)
     }
 
@@ -471,7 +471,7 @@ object RdfConversions {
               }
             }
             Json.createWriter(out).write(builder.build())
-            log.warn(s"JSON-LD replaced double-wrapped inline @context with $localContextUrl")
+            log.debug(s"JSON-LD replaced double-wrapped inline @context with $localContextUrl")
             out.toByteArray
           case _ => data
         }
