@@ -137,4 +137,71 @@ class CacheTests extends FlatSpec with Matchers with BeforeAndAfter {
     fetchCount.get() should be(2)
   }
 
+  "AliasingTtlDocumentCacheLoader" should "retry localhost fetch via fallback base on failure" in {
+    val localUri = "http://localhost:3000/res/context.jsonld"
+    val fallbackUri = "http://172.17.0.1:3000/res/context.jsonld"
+    val fetchCount = new AtomicInteger(0)
+    val document = new StubDocument
+    val backingLoader = new DocumentLoader {
+      override def loadDocument(url: URI, options: DocumentLoaderOptions): Document = {
+        val n = fetchCount.incrementAndGet()
+        if (n == 1) {
+          url.toString should be(localUri)
+          throw new RuntimeException("connection refused")
+        }
+        url.toString should be(fallbackUri)
+        document
+      }
+    }
+    val cache = new CachingJsonldContexts(32, defaultTtl)
+    val loader = new AliasingTtlDocumentCacheLoader(cache, backingLoader, Map.empty, Some("http://172.17.0.1"))
+
+    val returned = loader.loadDocument(new URI(localUri), new DocumentLoaderOptions())
+    returned shouldBe a[AliasedDocument]
+    returned.getDocumentUrl.toString should be(localUri)
+    fetchCount.get() should be(2)
+  }
+
+  "AliasingTtlDocumentCacheLoader" should "not retry non-localhost URLs on failure" in {
+    val uri = "https://example.org/context.jsonld"
+    val fetchCount = new AtomicInteger(0)
+    val backingLoader = new DocumentLoader {
+      override def loadDocument(url: URI, options: DocumentLoaderOptions): Document = {
+        fetchCount.incrementAndGet()
+        throw new RuntimeException("connection refused")
+      }
+    }
+    val cache = new CachingJsonldContexts(32, defaultTtl)
+    val loader = new AliasingTtlDocumentCacheLoader(cache, backingLoader, Map.empty, Some("http://172.17.0.1"))
+
+    intercept[RuntimeException] {
+      loader.loadDocument(new URI(uri), new DocumentLoaderOptions())
+    }
+    fetchCount.get() should be(1)
+  }
+
+  "AliasingTtlDocumentCacheLoader" should "not retry localhost when fallback is not configured" in {
+    val localUri = "http://localhost:3000/res/context.jsonld"
+    val fetchCount = new AtomicInteger(0)
+    val backingLoader = new DocumentLoader {
+      override def loadDocument(url: URI, options: DocumentLoaderOptions): Document = {
+        fetchCount.incrementAndGet()
+        throw new RuntimeException("connection refused")
+      }
+    }
+    val cache = new CachingJsonldContexts(32, defaultTtl)
+    val loader = new AliasingTtlDocumentCacheLoader(cache, backingLoader, Map.empty)
+
+    intercept[RuntimeException] {
+      loader.loadDocument(new URI(localUri), new DocumentLoaderOptions())
+    }
+    fetchCount.get() should be(1)
+  }
+
+  "AliasingTtlDocumentCacheLoader.rewriteLocalhostUrl" should "keep port and path" in {
+    val original = new URI("http://localhost:3000/res/context.jsonld")
+    val rewritten = AliasingTtlDocumentCacheLoader.rewriteLocalhostUrl(original, "http://172.17.0.1")
+    rewritten.toString should be("http://172.17.0.1:3000/res/context.jsonld")
+  }
+
 }

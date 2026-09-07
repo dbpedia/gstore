@@ -329,7 +329,8 @@ object ApiImpl {
                     restrictEditsToLocalhost: Boolean,
                     defaultJsonldLocalhostContext: Option[String],
                     defaultJsonldLocalhostContextLocation: Option[String],
-                    defaultJsonldLocalhostContextCacheTtlMs: Long)
+                    defaultJsonldLocalhostContextCacheTtlMs: Long,
+                    localhostContextFallbackUrl: Option[String])
 
 
   object Config {
@@ -371,6 +372,7 @@ object ApiImpl {
       val defaultJsonldLocalhostContextCacheTtlMs = getParam("defaultJsonldLocalhostContextCacheTtlMs")
         .map(_.toLong)
         .getOrElse(900000L)
+      val localhostContextFallbackUrl = getParam("localhostContextFallbackUrl")
 
       ApiImpl.Config(
         Uri.parse(stUri).right.get,
@@ -390,7 +392,8 @@ object ApiImpl {
         restrictEditsToLocalhost,
         defaultJsonldLocalhostContext,
         defaultJsonldLocalhostContextLocation,
-        defaultJsonldLocalhostContextCacheTtlMs
+        defaultJsonldLocalhostContextCacheTtlMs,
+        localhostContextFallbackUrl
       )
     }
 
@@ -427,6 +430,7 @@ object ApiImpl {
       case "defaultJsonldLocalhostContext" => Some("DEFAULT_JSONLD_LOCALHOST_CONTEXT")
       case "defaultJsonldLocalhostContextLocation" => Some("DEFAULT_JSONLD_LOCALHOST_CONTEXT_LOCATION")
       case "defaultJsonldLocalhostContextCacheTtlMs" => Some("DEFAULT_JSONLD_LOCALHOST_CONTEXT_CACHE_TTL_MS")
+      case "localhostContextFallbackUrl" => Some("GSTORE_LOCALHOST_CONTEXT_FALLBACK_URL")
       case _ => None
     }
   }

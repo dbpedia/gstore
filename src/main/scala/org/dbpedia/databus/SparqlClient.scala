@@ -403,18 +403,22 @@ object RdfConversions {
         activeAliases = requestedAliases
       }
       val ttl = config.defaultJsonldLocalhostContextCacheTtlMs.millis
-      log.debug(s"JSON-LD loader configure aliases=$activeAliases ttl=$ttl")
-      documentCache = createDocumentCache(activeAliases, ttl)
+      log.debug(
+        s"JSON-LD loader configure aliases=$activeAliases ttl=$ttl fallback=${config.localhostContextFallbackUrl}"
+      )
+      documentCache = createDocumentCache(activeAliases, ttl, config.localhostContextFallbackUrl)
     }
 
     private def createDocumentCache(
       aliases: Map[String, String],
-      ttl: FiniteDuration
+      ttl: FiniteDuration,
+      localhostFallbackBase: Option[String] = None
     ): AliasingTtlDocumentCacheLoader =
       new AliasingTtlDocumentCacheLoader(
         new CachingJsonldContexts(32, ttl),
         JsonLdInit.initLoader,
-        aliases
+        aliases,
+        localhostFallbackBase
       )
 
     private[databus] def jsonLdContext(base: Option[String]): util.Context =

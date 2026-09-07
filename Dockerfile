@@ -52,6 +52,7 @@ CMD if [[ -n "$EXTRA_ROOT_CERT_PATH" ]]; then \
       -DdefaultJsonldLocalhostContext=$DEFAULT_JSONLD_LOCALHOST_CONTEXT \
       -DdefaultJsonldLocalhostContextLocation=$DEFAULT_JSONLD_LOCALHOST_CONTEXT_LOCATION \
       -DdefaultJsonldLocalhostContextCacheTtlMs=$DEFAULT_JSONLD_LOCALHOST_CONTEXT_CACHE_TTL_MS \
+      -DlocalhostContextFallbackUrl=$GSTORE_LOCALHOST_CONTEXT_FALLBACK_URL \
       -DrestrictEditsToLocalhost=$RESTRICT_EDITS_TO_LOCALHOST \
       -Dlog.level=$LOG_LEVEL \
       -DstorageDbName=$STORAGE_DB_NAME \

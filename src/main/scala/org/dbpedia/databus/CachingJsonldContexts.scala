@@ -15,6 +15,7 @@ import java.net.URI
 import java.util.Optional
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.FiniteDuration
+import scala.util.control.NonFatal
 
 object JsonldContextLoaderLog {
   val logger = LoggerFactory.getLogger("gstore.jsonld")
@@ -109,10 +110,26 @@ object CachingJsonldContexts {
 
 }
 
+object AliasingTtlDocumentCacheLoader {
+  private val LocalHosts = Set("localhost", "127.0.0.1", "[::1]", "::1")
+
+  private[databus] def isLocalhost(uri: URI): Boolean =
+    Option(uri.getHost).exists(h => LocalHosts.contains(h.toLowerCase))
+
+  /** Replace localhost host with fallback base, keeping port and path. */
+  private[databus] def rewriteLocalhostUrl(original: URI, fallbackBase: String): URI = {
+    val base = fallbackBase.stripSuffix("/")
+    val portPart = if (original.getPort != -1) s":${original.getPort}" else ""
+    val path = Option(original.getRawPath).getOrElse("")
+    new URI(s"$base$portPart$path")
+  }
+}
+
 class AliasingTtlDocumentCacheLoader(
   private val cache: Cache[String, Document],
   private val documentLoader: DocumentLoader,
-  aliases: Map[String, String]
+  aliases: Map[String, String],
+  localhostFallbackBase: Option[String] = None
 ) extends DocumentLoader {
 
   private val log = JsonldContextLoaderLog.logger
@@ -147,15 +164,26 @@ class AliasingTtlDocumentCacheLoader(
             log.debug(s"JSON-LD context ALIAS reverse local=$local requested=$key")
             AliasedDocument.forRequest(canonical, url)
           case None =>
-            log.debug(s"JSON-LD context DIRECT fetch url=$key")
-            val doc = documentLoader.loadDocument(url, options)
-            log.debug(
-              s"JSON-LD context DIRECT loaded url=$key documentUrl=${doc.getDocumentUrl} contextUrl=${doc.getContextUrl}"
-            )
-            cache.put(key, doc)
-            doc
+            loadDirect(key, url, options)
         }
     }
+
+  private def loadDirect(key: String, url: URI, options: DocumentLoaderOptions): Document = {
+    log.debug(s"JSON-LD context DIRECT fetch url=$key")
+    try {
+      val doc = documentLoader.loadDocument(url, options)
+      log.debug(
+        s"JSON-LD context DIRECT loaded url=$key documentUrl=${doc.getDocumentUrl} contextUrl=${doc.getContextUrl}"
+      )
+      cache.put(key, doc)
+      doc
+    } catch {
+      case NonFatal(_) if localhostFallbackBase.isDefined && AliasingTtlDocumentCacheLoader.isLocalhost(url) =>
+        val fallbackUri = AliasingTtlDocumentCacheLoader.rewriteLocalhostUrl(url, localhostFallbackBase.get)
+        log.debug(s"JSON-LD context LOCALHOST fallback original=$key retry=$fallbackUri")
+        loadAndCacheAlias(key, fallbackUri, options)
+    }
+  }
 
   private def loadAndCacheAlias(requestedKey: String, fetchUri: URI, options: DocumentLoaderOptions): Document = {
     val fetched = documentLoader.loadDocument(fetchUri, options)

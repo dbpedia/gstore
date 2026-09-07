@@ -46,7 +46,8 @@ class DatabusScalatraTest extends ScalatraFlatSpec with BeforeAndAfter {
     false,
     None,
     None,
-    900000L
+    900000L,
+    None
   )
 
   implicit val sw = new DatabusSwagger
