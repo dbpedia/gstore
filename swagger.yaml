@@ -60,6 +60,12 @@ paths:
           type: string
           required: false
           example: "bla@bla.bla"
+        - in: query
+          name: commit
+          description: "If false, the document is overwritten in the repository without a git commit (for volatile data, e.g. statistics). Default is true."
+          type: boolean
+          required: false
+          example: false
       responses:
         "200":
           description: "Successful operation."

@@ -8,10 +8,7 @@ import java.util.Base64
 import java.util.concurrent.ConcurrentHashMap
 import org.dbpedia.databus.RemoteGitlabHttpClient.{CreateFile, DeleteFile, FileAction, UpdateFile}
 import org.eclipse.jgit.api.Git
-import org.eclipse.jgit.lib.{Constants, Repository}
-import org.eclipse.jgit.revwalk.RevWalk
-import org.eclipse.jgit.treewalk.TreeWalk
-import org.eclipse.jgit.treewalk.filter.PathFilter
+import org.eclipse.jgit.lib.Repository
 import sttp.client3._
 import sttp.model.Uri
 import org.json4s._
@@ -35,6 +32,9 @@ trait GitClient {
   def readFile(projectName: String, name: String): Try[Array[Byte]]
 
   def commitSeveralFiles(projectName: String, filenameAndData: Map[String, Array[Byte]], author_name: Option[String], author_email: Option[String]): Try[String]
+
+  /** Overwrites the files in the repository without committing them (for volatile data). */
+  def writeSeveralFiles(projectName: String, filenameAndData: Map[String, Array[Byte]]): Try[Unit]
 
   def deleteSeveralFiles(projectName: String, names: Seq[String], author_name: Option[String], author_email: Option[String]): Try[String]
 
@@ -74,26 +74,11 @@ class LocalGitClient(rootPath: Path) extends GitClient {
       ).map(_ => name)
     }
 
+  // Reads from the working tree (equal to HEAD for committed files) so that uncommitted
+  // files written by writeSeveralFiles can be read as well
   override def readFile(projectName: String, name: String): Try[Array[Byte]] =
     wrapWithSync(projectName) {
-      Try {
-        val repository = Git.open(getRepoPathFromUsername(projectName).toFile).getRepository
-        // find the HEAD
-        val lastCommitId = repository.resolve(Constants.HEAD)
-        // now we have to get the commit
-        val revWalk = new RevWalk(repository)
-        val commit = revWalk.parseCommit(lastCommitId)
-        // and using commit's tree find the path
-        val tree = commit.getTree
-        val treeWalk = new TreeWalk(repository)
-        treeWalk.addTree(tree)
-        treeWalk.setRecursive(true)
-        treeWalk.setFilter(PathFilter.create(getRelativeFilePath(name).toString))
-        treeWalk.next()
-        val objectId = treeWalk.getObjectId(0)
-        val loader = repository.open(objectId)
-        loader.getBytes
-      }
+      Try(Files.readAllBytes(getFilePath(projectName, name)))
     }
 
   override def commitSeveralFiles(projectName: String, filenameAndData: Map[String, Array[Byte]], author_name: Option[String], author_email: Option[String]): Try[String] =
@@ -102,14 +87,8 @@ class LocalGitClient(rootPath: Path) extends GitClient {
         val git = Git.open(getRepoPathFromUsername(projectName).toFile)
         val add = git.add()
 
-        filenameAndData.foreach {
-          case (fp, data) =>
-            val pa = getRelativeFilePath(fp)
-            val apa = getFilePath(projectName, fp)
-            Files.createDirectories(apa.getParent)
-            Files.write(apa, data)
-            add.addFilepattern(pa.toString)
-        }
+        writeToWorkingTree(projectName, filenameAndData)
+        filenameAndData.keys.foreach(fp => add.addFilepattern(getRelativeFilePath(fp).toString))
         add.call()
 
         val (name, email) = nameAndEmail(author_name, author_email)
@@ -156,6 +135,19 @@ class LocalGitClient(rootPath: Path) extends GitClient {
               c.getAuthorIdent.getEmailAddress)
           )
       }
+    }
+
+  override def writeSeveralFiles(projectName: String, filenameAndData: Map[String, Array[Byte]]): Try[Unit] =
+    wrapWithSync(projectName) {
+      Try(writeToWorkingTree(projectName, filenameAndData))
+    }
+
+  private def writeToWorkingTree(projectName: String, filenameAndData: Map[String, Array[Byte]]): Unit =
+    filenameAndData.foreach {
+      case (fp, data) =>
+        val apa = getFilePath(projectName, fp)
+        Files.createDirectories(apa.getParent)
+        Files.write(apa, data)
     }
 
   private def wrapWithSync[R](name: String)(func: => R): R =
@@ -243,6 +235,9 @@ class RemoteGitlabHttpClient(rootUser: String, rootPass: String, scheme: String,
           .orElse(commitSeveralActions(id, filenameAndData.map(p => UpdateFile(p._1, p._2)).toSeq))
       )
   }.flatMap(_ => Try(throw new RuntimeException("author and email not implemented")))
+
+  override def writeSeveralFiles(projectName: String, filenameAndData: Map[String, Array[Byte]]): Try[Unit] =
+    Failure(new UnsupportedOperationException("Saving without commit is not supported with a remote git"))
 
   // todo: author name and email just ignored, this needs fix if we would want to use this feature some day with gitlab
   override def deleteSeveralFiles(projectName: String, names: Seq[String], author_name: Option[String], author_email: Option[String]): Try[String] =

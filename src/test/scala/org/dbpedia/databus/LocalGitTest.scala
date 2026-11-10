@@ -101,6 +101,21 @@ class LocalGitTest extends FlatSpec with Matchers with BeforeAndAfter {
     treeWalk.next() should be(false)
   }
 
+  "Client" should "overwrite files without committing" in {
+    val cli = new LocalGitClient(rp)
+
+    val pn = "test"
+    cli.createProject(pn)
+    cli.commitSeveralFiles(pn, Map("stats.txt" -> "1".getBytes), None, None).isSuccess should be(true)
+    val commitsBefore = allCommits(pn).size
+
+    cli.writeSeveralFiles(pn, Map("stats.txt" -> "2".getBytes, "/new/stats.txt" -> "3".getBytes)).isSuccess should be(true)
+
+    cli.readFile(pn, "stats.txt").get should be("2".getBytes())
+    cli.readFile(pn, "/new/stats.txt").get should be("3".getBytes())
+    allCommits(pn).size should be(commitsBefore)
+  }
+
   "Client" should "delete twice" in {
     val cli = new LocalGitClient(rp)
 

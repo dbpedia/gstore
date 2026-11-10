@@ -84,20 +84,20 @@ class ApiImpl(config: Config, batchSize: Int = 1000) extends DatabusApi {
                         path: String,
                         prefix: Option[String],
                         author_name: Option[String],
-                        author_email: Option[String])
+                        author_email: Option[String],
+                        commit: Option[Boolean])
                        (request: HttpServletRequest): Try[OperationSuccess] = {
     val pa = gitPath(path)
     val graphId = generateGraphId(prefix.getOrElse(getPrefix(request)), repo, pa)
     validateEmail(author_email).flatMap(email => {
       wrapWithUnsupportedException(formatFromPath(path), path).flatMap { format =>
-        val saveRawBody: () => Try[OperationSuccess] = () => saveFiles(
-          repo,
-          Map(
-            pa -> body
-          ),
-          author_name,
-          email)
-          .map(hash => OperationSuccess(graphId, hash))
+        val saveRawBody: () => Try[OperationSuccess] = () =>
+          (if (commit.contains(false)) {
+            // no commit hash for uncommitted (volatile) documents
+            ensureProject(repo).flatMap(_ => client.writeSeveralFiles(repo, Map(pa -> body))).map(_ => "")
+          } else {
+            saveFiles(repo, Map(pa -> body), author_name, email)
+          }).map(hash => OperationSuccess(graphId, hash))
         rdfExtractor(format).map { extr =>
           RdfConversions.RDFGraphSerialiser.init(extr._2, extr._1, body, Some(graphId)).graph
             .flatMap(model => {
@@ -145,7 +145,7 @@ class ApiImpl(config: Config, batchSize: Int = 1000) extends DatabusApi {
 
   override def getFileMapException404(e: Throwable)(request: HttpServletRequest): Option[OperationFailure] = e match {
     case _: FileNotFoundException => Some(OperationFailure(e.getMessage))
-    case _: NoSuchFileException => Some(OperationFailure(e.getMessage))
+    case _: NoSuchFileException => Some(OperationFailure("File not found."))
     case _: RepositoryNotFoundException => Some(OperationFailure("File not found."))
     case _: ArrayIndexOutOfBoundsException => Some(OperationFailure("File not found"))
     case _: MissingObjectException => Some(OperationFailure("File not found."))
@@ -250,11 +250,15 @@ class ApiImpl(config: Config, batchSize: Int = 1000) extends DatabusApi {
                         fullFilenamesAndData: Map[String, Array[Byte]],
                         author_name: Option[String],
                         author_email: Option[String]): Try[String] =
-    (if (!client.projectExists(username)) {
+    ensureProject(username)
+      .flatMap(_ => client.commitSeveralFiles(username, fullFilenamesAndData, author_name, author_email))
+
+  private def ensureProject(username: String): Try[Any] =
+    if (!client.projectExists(username)) {
       client.createProject(username)
     } else {
       Success(Unit)
-    }).flatMap(_ => client.commitSeveralFiles(username, fullFilenamesAndData, author_name, author_email))
+    }
 
 
   private def deleteFileFromGit(username: String,

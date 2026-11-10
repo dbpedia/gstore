@@ -23,6 +23,12 @@ curl -X 'POST'   'http://localhost:3002/document/save?repo=kurzum&path=example.j
   "url": "http://www.janedoe.com"
 }'
 ```
+### Saving without a git commit
+For volatile data (e.g. statistics that are overwritten frequently) add `commit=false` to `/document/save`. The document is overwritten in the repository and its graph is replaced in the triple store, but no git commit is created, so the repository history does not grow. Reads return the latest saved content. Not supported with a remote (Gitlab) git.
+```
+curl -X 'POST'   'http://localhost:3002/document/save?repo=kurzum&path=stats.jsonld&commit=false'   -H 'Content-Type: application/ld+json'   -d '{ "@id": "http://example.org/x", "http://example.org/count": 42 }'
+```
+
 ### Example: Query over saved file
 ```
 curl --data-urlencode query="SELECT * {GRAPH </kurzum/example.jsonld> {?s ?p ?o }}" http://localhost:3003/sparql
