@@ -23,6 +23,7 @@ ENV LOG_LEVEL=INFO
 ENV DEFAULT_JSONLD_LOCALHOST_CONTEXT=http://localhost:3000/res/context.jsonld
 ENV DEFAULT_JSONLD_LOCALHOST_CONTEXT_LOCATION=https://databus.dbpedia.org/res/context.jsonld
 ENV DEFAULT_JSONLD_LOCALHOST_CONTEXT_CACHE_TTL_MS=900000
+ENV GSTORE_LOCALHOST_CONTEXT_FALLBACK_URL=http://host.docker.internal
 
 RUN apk update
 RUN apk upgrade

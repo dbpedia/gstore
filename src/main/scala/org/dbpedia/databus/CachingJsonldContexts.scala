@@ -116,12 +116,25 @@ object AliasingTtlDocumentCacheLoader {
   private[databus] def isLocalhost(uri: URI): Boolean =
     Option(uri.getHost).exists(h => LocalHosts.contains(h.toLowerCase))
 
+  private def normalizeFallbackBase(fallbackBase: String): URI = {
+    val trimmed = fallbackBase.trim.stripSuffix("/")
+    val withScheme = if (trimmed.contains("://")) trimmed else s"http://$trimmed"
+    new URI(withScheme)
+  }
+
   /** Replace localhost host with fallback base, keeping port and path. */
   private[databus] def rewriteLocalhostUrl(original: URI, fallbackBase: String): URI = {
-    val base = fallbackBase.stripSuffix("/")
-    val portPart = if (original.getPort != -1) s":${original.getPort}" else ""
-    val path = Option(original.getRawPath).getOrElse("")
-    new URI(s"$base$portPart$path")
+    val base = normalizeFallbackBase(fallbackBase)
+    val port = if (original.getPort != -1) original.getPort else base.getPort
+    new URI(
+      base.getScheme,
+      null,
+      base.getHost,
+      port,
+      original.getRawPath,
+      original.getRawQuery,
+      original.getRawFragment
+    )
   }
 }
 
@@ -151,6 +164,14 @@ class AliasingTtlDocumentCacheLoader(
 
   private def loadMiss(key: String, url: URI, options: DocumentLoaderOptions): Document =
     normalizedAliases.get(key) match {
+      case Some(remoteUri) if AliasingTtlDocumentCacheLoader.isLocalhost(url) && localhostFallbackBase.isDefined =>
+        try {
+          loadDirect(key, url, options)
+        } catch {
+          case NonFatal(_) =>
+            log.info(s"JSON-LD context localhost+fallback failed for $key, trying remote alias $remoteUri")
+            loadAndCacheAlias(key, new URI(remoteUri), options)
+        }
       case Some(remoteUri) =>
         log.debug(s"JSON-LD context ALIAS fetch local=$key remote=$remoteUri")
         loadAndCacheAlias(key, new URI(remoteUri), options)
@@ -178,9 +199,9 @@ class AliasingTtlDocumentCacheLoader(
       cache.put(key, doc)
       doc
     } catch {
-      case NonFatal(_) if localhostFallbackBase.isDefined && AliasingTtlDocumentCacheLoader.isLocalhost(url) =>
+      case NonFatal(e) if localhostFallbackBase.isDefined && AliasingTtlDocumentCacheLoader.isLocalhost(url) =>
         val fallbackUri = AliasingTtlDocumentCacheLoader.rewriteLocalhostUrl(url, localhostFallbackBase.get)
-        log.debug(s"JSON-LD context LOCALHOST fallback original=$key retry=$fallbackUri")
+        log.info(s"JSON-LD context LOCALHOST fallback original=$key retry=$fallbackUri (${e.getMessage})")
         loadAndCacheAlias(key, fallbackUri, options)
     }
   }

@@ -204,4 +204,35 @@ class CacheTests extends FlatSpec with Matchers with BeforeAndAfter {
     rewritten.toString should be("http://172.17.0.1:3000/res/context.jsonld")
   }
 
+  it should "accept fallback host without scheme" in {
+    val original = new URI("http://localhost:3000/res/context.jsonld")
+    val rewritten = AliasingTtlDocumentCacheLoader.rewriteLocalhostUrl(original, "host.docker.internal")
+    rewritten.toString should be("http://host.docker.internal:3000/res/context.jsonld")
+  }
+
+  "AliasingTtlDocumentCacheLoader" should "try localhost fallback before remote alias" in {
+    val localUri = "http://localhost:3000/res/context.jsonld"
+    val remoteUri = "https://example.org/context.jsonld"
+    val fallbackUri = "http://host.docker.internal:3000/res/context.jsonld"
+    val fetchCount = new AtomicInteger(0)
+    val document = new StubDocument
+    val backingLoader = new DocumentLoader {
+      override def loadDocument(url: URI, options: DocumentLoaderOptions): Document = {
+        val n = fetchCount.incrementAndGet()
+        url.toString match {
+          case `localUri` => throw new RuntimeException("connection refused")
+          case `fallbackUri` => document
+          case other => throw new AssertionError(s"unexpected fetch: $other")
+        }
+      }
+    }
+    val cache = new CachingJsonldContexts(32, defaultTtl)
+    val loader = new AliasingTtlDocumentCacheLoader(
+      cache, backingLoader, Map(localUri -> remoteUri), Some("host.docker.internal")
+    )
+
+    loader.loadDocument(new URI(localUri), new DocumentLoaderOptions()).getDocumentUrl.toString should be(localUri)
+    fetchCount.get() should be(2)
+  }
+
 }
